@@ -116,10 +116,15 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler
                 return false;
             }
 
-            if (Uri.TryCreate(RequestUri, UriKind.Absolute, out _))
+            if (Uri.TryCreate(RequestUri, UriKind.Absolute, out var configuredUri) &&
+                (string.Equals(configuredUri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(configuredUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)))
             {
                 return request.RequestUri.IsAbsoluteUri &&
-                    string.Equals(request.RequestUri.AbsoluteUri, RequestUri, StringComparison.Ordinal);
+                    string.Equals(
+                        request.RequestUri.AbsoluteUri,
+                        configuredUri.AbsoluteUri,
+                        StringComparison.Ordinal);
             }
 
             var actualUri = request.RequestUri.IsAbsoluteUri
