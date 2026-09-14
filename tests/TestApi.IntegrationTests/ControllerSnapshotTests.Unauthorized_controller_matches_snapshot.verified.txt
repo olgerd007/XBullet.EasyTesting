@@ -1,0 +1,8 @@
+{
+  Request: {
+    Method: GET,
+    Url: /api/secure/me
+  },
+  StatusCode: 401,
+  ReasonPhrase: Unauthorized
+}

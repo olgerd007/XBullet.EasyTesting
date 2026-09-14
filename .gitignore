@@ -1,0 +1,10 @@
+**/bin/
+**/obj/
+.vs/
+TestResults/
+artifacts/
+coverage/
+*.trx
+*.received.*
+*.user
+*.suo
