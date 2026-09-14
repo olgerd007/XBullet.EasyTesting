@@ -1,0 +1,17 @@
+{
+  "Request": {
+    "Method": "GET",
+    "Url": "/api/secure/me"
+  },
+  "StatusCode": 200,
+  "ReasonPhrase": "OK",
+  "Headers": {
+    "Content-Type": [
+      "application/json; charset=utf-8"
+    ]
+  },
+  "Body": {
+    "name": "Grace",
+    "subject": "user-84"
+  }
+}

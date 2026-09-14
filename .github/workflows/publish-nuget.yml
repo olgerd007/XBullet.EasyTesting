@@ -1,0 +1,108 @@
+name: Publish NuGet packages
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_NOLOGO: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Resolve package version
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_IS_PRERELEASE: ${{ github.event.release.prerelease }}
+        run: |
+          version="${RELEASE_TAG#v}"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
+            echo "Release tag '$RELEASE_TAG' must be a semantic version such as v1.2.3 or v1.2.3-preview.1."
+            exit 1
+          fi
+
+          if [[ "$RELEASE_IS_PRERELEASE" == "true" && "$version" != *-* ]]; then
+            echo "A GitHub pre-release must use a pre-release tag such as v1.2.3-preview.1."
+            exit 1
+          fi
+
+          if [[ "$RELEASE_IS_PRERELEASE" != "true" && "$version" == *-* ]]; then
+            echo "A stable GitHub Release cannot use a pre-release version tag."
+            exit 1
+          fi
+
+          echo "PACKAGE_VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Restore
+        run: dotnet restore XBullet.EasyTesting.sln
+
+      - name: Build
+        shell: bash
+        run: |
+          dotnet build XBullet.EasyTesting.sln \
+            --configuration Release \
+            --no-restore \
+            -p:Version="$PACKAGE_VERSION"
+
+      - name: Test
+        run: >-
+          dotnet test XBullet.EasyTesting.sln
+          --configuration Release
+          --no-build
+
+      - name: Pack release
+        shell: bash
+        run: |
+          for project in src/*/*.csproj; do
+            dotnet pack "$project" \
+              --configuration Release \
+              --no-build \
+              --output artifacts/packages \
+              -p:PackageVersion="$PACKAGE_VERSION" \
+              -p:Version="$PACKAGE_VERSION"
+          done
+
+      - name: Upload release packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-packages
+          path: |
+            artifacts/packages/*.nupkg
+            artifacts/packages/*.snupkg
+          if-no-files-found: error
+
+      - name: Log in to NuGet.org with trusted publishing
+        id: nuget-login
+        uses: NuGet/login@v1
+        with:
+          user: olgerd007
+
+      - name: Publish to NuGet.org
+        shell: bash
+        env:
+          NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
+        run: |
+          for package in artifacts/packages/*.nupkg artifacts/packages/*.snupkg; do
+            dotnet nuget push "$package" \
+              --api-key "$NUGET_API_KEY" \
+              --source https://api.nuget.org/v3/index.json \
+              --skip-duplicate
+          done
