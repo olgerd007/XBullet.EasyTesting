@@ -4,6 +4,7 @@ namespace XBullet.EasyTesting.Hosting;
 public sealed class TestScenarioContext
 {
     private readonly List<Func<ValueTask>> _cleanupActions = [];
+    private readonly List<TestScenarioEnvironmentResourceRegistration> _environmentResources = [];
 
     internal TestScenarioContext(string scenarioId)
     {
@@ -12,6 +13,38 @@ public sealed class TestScenarioContext
 
     /// <summary>Gets the unique identifier for this scenario scope.</summary>
     public string ScenarioId { get; }
+
+    internal IReadOnlyList<TestScenarioEnvironmentResourceRegistration> EnvironmentResources =>
+        _environmentResources;
+
+    internal void AddEnvironmentResource(
+        string name,
+        ITestScenarioEnvironmentResource resource)
+    {
+        _environmentResources.Add(new TestScenarioEnvironmentResourceRegistration(name, resource));
+        DisposeWithScenario(resource);
+    }
+
+    internal TResource GetEnvironmentResource<TResource>(string name)
+        where TResource : class, ITestScenarioEnvironmentResource
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        var registration = _environmentResources.SingleOrDefault(resource =>
+            string.Equals(resource.Name, name, StringComparison.OrdinalIgnoreCase));
+        if (registration is null)
+        {
+            throw new KeyNotFoundException(
+                $"No test scenario environment resource named '{name}' is registered.");
+        }
+
+        if (registration.Resource is not TResource typedResource)
+        {
+            throw new InvalidOperationException(
+                $"The test scenario environment resource '{name}' is not a {typeof(TResource).FullName}.");
+        }
+
+        return typedResource;
+    }
 
     /// <summary>Registers an asynchronously disposable scenario-owned resource.</summary>
     public void DisposeWithScenario(IAsyncDisposable resource)
@@ -60,3 +93,7 @@ public sealed class TestScenarioContext
         }
     }
 }
+
+internal sealed record TestScenarioEnvironmentResourceRegistration(
+    string Name,
+    ITestScenarioEnvironmentResource Resource);

@@ -8,6 +8,7 @@ public sealed class TestScenarioScopeBuilder
 {
     private readonly List<Action<IConfigurationBuilder>> _configurationActions = [];
     private readonly List<Action<IServiceCollection>> _serviceActions = [];
+    private readonly TestScenarioEnvironmentBuilder _environment = new();
 
     /// <summary>Adds a configuration override that exists only for this scenario.</summary>
     public TestScenarioScopeBuilder ConfigureConfiguration(
@@ -26,8 +27,29 @@ public sealed class TestScenarioScopeBuilder
         return this;
     }
 
+    /// <summary>Adds an external dependency owned by this scenario.</summary>
+    public TestScenarioScopeBuilder UseEnvironmentResource(
+        string name,
+        ITestScenarioEnvironmentResource resource)
+    {
+        ArgumentNullException.ThrowIfNull(resource);
+        _environment.AddResource(name, _ => resource);
+        return this;
+    }
+
+    /// <summary>Adds an external dependency factory owned by this scenario.</summary>
+    public TestScenarioScopeBuilder UseEnvironmentResource(
+        string name,
+        Func<TestScenarioContext, ITestScenarioEnvironmentResource> createResource)
+    {
+        _environment.AddResource(name, createResource);
+        return this;
+    }
+
     internal IReadOnlyList<Action<IConfigurationBuilder>> ConfigurationActions =>
         _configurationActions;
 
     internal IReadOnlyList<Action<IServiceCollection>> ServiceActions => _serviceActions;
+
+    internal TestScenarioEnvironmentBuilder Environment => _environment;
 }

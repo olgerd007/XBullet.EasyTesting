@@ -13,6 +13,7 @@ public sealed class EasyTestHostBuilder<TEntryPoint>
     private readonly List<Action<IConfigurationBuilder>> _configurationActions = [];
     private readonly List<Action<IServiceCollection>> _serviceActions = [];
     private readonly List<Action<TestAuthenticationSchemeBuilder>> _authenticationActions = [];
+    private readonly List<Action<TestScenarioEnvironmentBuilder>> _environmentActions = [];
     private bool _built;
 
     /// <summary>Adds an application-configuration action and returns this builder.</summary>
@@ -44,6 +45,16 @@ public sealed class EasyTestHostBuilder<TEntryPoint>
         return this;
     }
 
+    /// <summary>Adds external dependencies that are created for every test scenario.</summary>
+    public EasyTestHostBuilder<TEntryPoint> ConfigureEnvironment(
+        Action<TestScenarioEnvironmentBuilder> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        EnsureNotBuilt();
+        _environmentActions.Add(configure);
+        return this;
+    }
+
     /// <summary>Creates the configured application factory. A builder can be built only once.</summary>
     public AuthenticatedWebApplicationFactory<TEntryPoint> Build()
     {
@@ -52,8 +63,9 @@ public sealed class EasyTestHostBuilder<TEntryPoint>
         var serviceActions = _serviceActions.ToArray();
         var configurationActions = _configurationActions.ToArray();
         var authenticationActions = _authenticationActions.ToArray();
+        var environmentActions = _environmentActions.ToArray();
 
-        return AuthenticatedWebApplicationFactory<TEntryPoint>.Create(
+        return AuthenticatedWebApplicationFactory<TEntryPoint>.CreateWithEnvironment(
             services =>
             {
                 foreach (var configure in serviceActions)
@@ -73,6 +85,13 @@ public sealed class EasyTestHostBuilder<TEntryPoint>
                 foreach (var configure in authenticationActions)
                 {
                     configure(authentication);
+                }
+            },
+            environment =>
+            {
+                foreach (var configure in environmentActions)
+                {
+                    configure(environment);
                 }
             });
     }

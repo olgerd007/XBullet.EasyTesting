@@ -64,6 +64,15 @@ public sealed class TestScenarioBuilder<TEntryPoint>
         return this;
     }
 
+    /// <summary>Configures the client with Federation and API-user test identities.</summary>
+    public TestScenarioBuilder<TEntryPoint> AsFederatedUser(
+        Action<TestFederatedUserBuilder> configure)
+    {
+        EnsureNotExecuted();
+        _client.AsFederatedUser(configure);
+        return this;
+    }
+
     /// <summary>Uses a locally signed token with the application's real JWT bearer handler.</summary>
     public TestScenarioBuilder<TEntryPoint> AsJwt(Action<TestJwtBuilder>? configure = null)
     {

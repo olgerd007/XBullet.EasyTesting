@@ -28,6 +28,19 @@ The EF Core in-memory provider does not enforce relational constraints or suppor
 Use `EntityFrameworkWebApplicationFactory<TEntryPoint, TDbContext>` with SQLite or the same
 relational provider used in production when those behaviors are relevant to the test.
 
+For an application that exposes `IntegrationTestStartup` and must not execute `Program.Main`, use
+the equivalent Startup-based host. It runs directly on `TestServer` and keeps the same database and
+scenario APIs:
+
+```csharp
+public sealed class StartupTestHost
+    : StartupEntityFrameworkWebApplicationFactory<IntegrationTestStartup, AppDbContext>
+{
+    protected override void ConfigureDatabaseServices(IServiceCollection services) =>
+        services.AddDbContext<AppDbContext>(options => options.UseSqlite(_connection));
+}
+```
+
 ```csharp
 var product = await factory.QueryDatabaseAsync(
     (database, cancellationToken) => database.Products

@@ -1,0 +1,65 @@
+#nullable enable
+override XBullet.EasyTesting.Azure.StubAzureHttpPipelineTransport.CreateRequest() -> Azure.Core.Request!
+override XBullet.EasyTesting.Azure.StubAzureHttpPipelineTransport.Process(Azure.Core.HttpMessage! message) -> void
+override XBullet.EasyTesting.Azure.StubAzureHttpPipelineTransport.ProcessAsync(Azure.Core.HttpMessage! message) -> System.Threading.Tasks.ValueTask
+override XBullet.EasyTesting.Azure.TestAzureResponse.ClientRequestId.get -> string!
+override XBullet.EasyTesting.Azure.TestAzureResponse.ClientRequestId.set -> void
+override XBullet.EasyTesting.Azure.TestAzureResponse.ContentStream.get -> System.IO.Stream?
+override XBullet.EasyTesting.Azure.TestAzureResponse.ContentStream.set -> void
+override XBullet.EasyTesting.Azure.TestAzureResponse.Dispose() -> void
+override XBullet.EasyTesting.Azure.TestAzureResponse.ReasonPhrase.get -> string!
+override XBullet.EasyTesting.Azure.TestAzureResponse.Status.get -> int
+override XBullet.EasyTesting.Azure.TestTokenCredential.GetToken(Azure.Core.TokenRequestContext requestContext, System.Threading.CancellationToken cancellationToken) -> Azure.Core.AccessToken
+override XBullet.EasyTesting.Azure.TestTokenCredential.GetTokenAsync(Azure.Core.TokenRequestContext requestContext, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<Azure.Core.AccessToken>
+static XBullet.EasyTesting.Azure.AzureTestData.AsyncPageable<T>(params Azure.Page<T>![]! pages) -> Azure.AsyncPageable<T>!
+static XBullet.EasyTesting.Azure.AzureTestData.ModelResponse<T>(T value, int status = 200, System.Action<XBullet.EasyTesting.Azure.TestAzureResponse!>? configure = null) -> Azure.Response<T>!
+static XBullet.EasyTesting.Azure.AzureTestData.Page<T>(System.Collections.Generic.IEnumerable<T>! values, string? continuationToken = null, Azure.Response? response = null) -> Azure.Page<T>!
+static XBullet.EasyTesting.Azure.AzureTestData.Pageable<T>(params Azure.Page<T>![]! pages) -> Azure.Pageable<T>!
+static XBullet.EasyTesting.Azure.AzureTestData.Response(int status = 200, string? reasonPhrase = null) -> XBullet.EasyTesting.Azure.TestAzureResponse!
+static XBullet.EasyTesting.Azure.AzureTestingExtensions.ReplaceAzureClient<TClient>(this XBullet.EasyTesting.Hosting.TestScenarioScopeBuilder! builder, TClient! client) -> XBullet.EasyTesting.Hosting.TestScenarioScopeBuilder!
+static XBullet.EasyTesting.Azure.AzureTestingExtensions.ReplaceAzureClient<TEntryPoint, TClient>(this XBullet.EasyTesting.Hosting.EasyTestHostBuilder<TEntryPoint!>! builder, TClient! client) -> XBullet.EasyTesting.Hosting.EasyTestHostBuilder<TEntryPoint!>!
+static XBullet.EasyTesting.Azure.AzureTestingExtensions.UseAzureTestCredential(this XBullet.EasyTesting.Hosting.TestScenarioScopeBuilder! builder, XBullet.EasyTesting.Azure.TestTokenCredential! credential) -> XBullet.EasyTesting.Hosting.TestScenarioScopeBuilder!
+static XBullet.EasyTesting.Azure.AzureTestingExtensions.UseAzureTestCredential<TEntryPoint>(this XBullet.EasyTesting.Hosting.EasyTestHostBuilder<TEntryPoint!>! builder, XBullet.EasyTesting.Azure.TestTokenCredential! credential) -> XBullet.EasyTesting.Hosting.EasyTestHostBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Azure.AzureTestData
+XBullet.EasyTesting.Azure.AzureTestingExtensions
+XBullet.EasyTesting.Azure.AzureTransportVerificationException
+XBullet.EasyTesting.Azure.AzureTransportVerificationException.AzureTransportVerificationException(string! message) -> void
+XBullet.EasyTesting.Azure.RecordedAzureRequest
+XBullet.EasyTesting.Azure.RecordedAzureRequest.Content.get -> System.BinaryData?
+XBullet.EasyTesting.Azure.RecordedAzureRequest.Headers.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+XBullet.EasyTesting.Azure.RecordedAzureRequest.Method.get -> Azure.Core.RequestMethod
+XBullet.EasyTesting.Azure.RecordedAzureRequest.Uri.get -> System.Uri!
+XBullet.EasyTesting.Azure.StubAzureHttpPipelineTransport
+XBullet.EasyTesting.Azure.StubAzureHttpPipelineTransport.CallCount.get -> int
+XBullet.EasyTesting.Azure.StubAzureHttpPipelineTransport.CaptureDiagnosticsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<object?>
+XBullet.EasyTesting.Azure.StubAzureHttpPipelineTransport.RemainingResponseCount.get -> int
+XBullet.EasyTesting.Azure.StubAzureHttpPipelineTransport.Requests.get -> System.Collections.Generic.IReadOnlyList<XBullet.EasyTesting.Azure.RecordedAzureRequest!>!
+XBullet.EasyTesting.Azure.StubAzureHttpPipelineTransport.Reset() -> XBullet.EasyTesting.Azure.StubAzureHttpPipelineTransport!
+XBullet.EasyTesting.Azure.StubAzureHttpPipelineTransport.ResetAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+XBullet.EasyTesting.Azure.StubAzureHttpPipelineTransport.Respond(int status = 200, System.BinaryData? content = null, string? contentType = null) -> XBullet.EasyTesting.Azure.StubAzureHttpPipelineTransport!
+XBullet.EasyTesting.Azure.StubAzureHttpPipelineTransport.Respond(System.Func<XBullet.EasyTesting.Azure.RecordedAzureRequest!, Azure.Response!>! responseFactory) -> XBullet.EasyTesting.Azure.StubAzureHttpPipelineTransport!
+XBullet.EasyTesting.Azure.StubAzureHttpPipelineTransport.RespondJson<T>(T value, int status = 200, System.Text.Json.JsonSerializerOptions? serializerOptions = null) -> XBullet.EasyTesting.Azure.StubAzureHttpPipelineTransport!
+XBullet.EasyTesting.Azure.StubAzureHttpPipelineTransport.StubAzureHttpPipelineTransport() -> void
+XBullet.EasyTesting.Azure.StubAzureHttpPipelineTransport.Verify(System.Func<XBullet.EasyTesting.Azure.RecordedAzureRequest!, bool>! predicate, int expectedCount, string? description = null) -> XBullet.EasyTesting.Azure.StubAzureHttpPipelineTransport!
+XBullet.EasyTesting.Azure.StubAzureHttpPipelineTransport.VerifyCalled(Azure.Core.RequestMethod method, string! requestUri, int expectedCount = 1) -> XBullet.EasyTesting.Azure.StubAzureHttpPipelineTransport!
+XBullet.EasyTesting.Azure.TestAzureResponse
+XBullet.EasyTesting.Azure.TestAzureResponse.FromValue<T>(T value) -> Azure.Response<T>!
+XBullet.EasyTesting.Azure.TestAzureResponse.TestAzureResponse(int status = 200, string? reasonPhrase = null) -> void
+XBullet.EasyTesting.Azure.TestAzureResponse.WithContent(System.BinaryData! content, string? contentType = null) -> XBullet.EasyTesting.Azure.TestAzureResponse!
+XBullet.EasyTesting.Azure.TestAzureResponse.WithHeader(string! name, params string![]! values) -> XBullet.EasyTesting.Azure.TestAzureResponse!
+XBullet.EasyTesting.Azure.TestAzureResponse.WithHeader(string! name, string! value) -> XBullet.EasyTesting.Azure.TestAzureResponse!
+XBullet.EasyTesting.Azure.TestAzureResponse.WithJsonContent<T>(T value, System.Text.Json.JsonSerializerOptions? serializerOptions = null) -> XBullet.EasyTesting.Azure.TestAzureResponse!
+XBullet.EasyTesting.Azure.TestTokenCredential
+XBullet.EasyTesting.Azure.TestTokenCredential.CaptureDiagnosticsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<object?>
+XBullet.EasyTesting.Azure.TestTokenCredential.FailWith(System.Exception! exception) -> XBullet.EasyTesting.Azure.TestTokenCredential!
+XBullet.EasyTesting.Azure.TestTokenCredential.RequestCount.get -> int
+XBullet.EasyTesting.Azure.TestTokenCredential.Requests.get -> System.Collections.Generic.IReadOnlyList<XBullet.EasyTesting.Azure.TestTokenRequest!>!
+XBullet.EasyTesting.Azure.TestTokenCredential.Reset() -> XBullet.EasyTesting.Azure.TestTokenCredential!
+XBullet.EasyTesting.Azure.TestTokenCredential.ResetAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+XBullet.EasyTesting.Azure.TestTokenCredential.SucceedWith(string! token, System.DateTimeOffset? expiresOn = null) -> XBullet.EasyTesting.Azure.TestTokenCredential!
+XBullet.EasyTesting.Azure.TestTokenCredential.TestTokenCredential(string! token = "xbullet-test-token", System.DateTimeOffset? expiresOn = null) -> void
+XBullet.EasyTesting.Azure.TestTokenRequest
+XBullet.EasyTesting.Azure.TestTokenRequest.Claims.get -> string?
+XBullet.EasyTesting.Azure.TestTokenRequest.ParentRequestId.get -> string?
+XBullet.EasyTesting.Azure.TestTokenRequest.Scopes.get -> System.Collections.Generic.IReadOnlyList<string!>!
+XBullet.EasyTesting.Azure.TestTokenRequest.TenantId.get -> string?

@@ -398,3 +398,44 @@ XBullet.EasyTesting.Hosting.TestHttpResponseAssertions.HaveStatusCode(System.Net
 XBullet.EasyTesting.Hosting.TestHttpResponseVerificationException
 XBullet.EasyTesting.Hosting.TestHttpResponseVerificationException.TestHttpResponseVerificationException(string! message, System.Exception? innerException = null) -> void
 XBullet.EasyTesting.Hosting.TestScenarioResult.Should() -> XBullet.EasyTesting.Hosting.TestHttpResponseAssertions!
+const XBullet.EasyTesting.Authentication.TestAuthenticationDefaults.ApiUserIdentityAuthenticationType = "ApiUserIdentity" -> string!
+const XBullet.EasyTesting.Authentication.TestAuthenticationDefaults.FederationAuthenticationType = "Federation" -> string!
+virtual XBullet.EasyTesting.Authentication.TestClaimsPrincipalFactory.CreatePrincipal(XBullet.EasyTesting.Authentication.TestUser! user) -> System.Security.Claims.ClaimsPrincipal!
+virtual XBullet.EasyTesting.Authentication.TestClaimsPrincipalFactory.CreateAdditionalIdentity(XBullet.EasyTesting.Authentication.TestIdentity! identity) -> System.Security.Claims.ClaimsIdentity!
+virtual XBullet.EasyTesting.Authentication.TestClaimsPrincipalFactory.CreatePrimaryIdentity(XBullet.EasyTesting.Authentication.TestUser! user) -> System.Security.Claims.ClaimsIdentity!
+override XBullet.EasyTesting.Hosting.StartupAuthenticatedWebApplicationFactory<TStartup>.CreateHostBuilder() -> Microsoft.Extensions.Hosting.IHostBuilder!
+override XBullet.EasyTesting.Hosting.StartupAuthenticatedWebApplicationFactory<TStartup>.ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder! builder) -> void
+XBullet.EasyTesting.Authentication.TestAuthenticationSchemeBuilder.MapFederation(string! authenticationScheme) -> XBullet.EasyTesting.Authentication.TestAuthenticationSchemeBuilder!
+XBullet.EasyTesting.Authentication.ITestClaimsPrincipalFactory
+XBullet.EasyTesting.Authentication.ITestClaimsPrincipalFactory.CreatePrincipal(XBullet.EasyTesting.Authentication.TestUser! user) -> System.Security.Claims.ClaimsPrincipal!
+XBullet.EasyTesting.Authentication.TestClaimsPrincipalFactory
+XBullet.EasyTesting.Authentication.TestClaimsPrincipalFactory.TestClaimsPrincipalFactory() -> void
+XBullet.EasyTesting.Authentication.TestFederatedUserBuilder
+XBullet.EasyTesting.Authentication.TestFederatedUserBuilder.Build() -> XBullet.EasyTesting.Authentication.TestUser!
+XBullet.EasyTesting.Authentication.TestFederatedUserBuilder.TestFederatedUserBuilder(string! authenticationScheme = "IntegrationTest") -> void
+XBullet.EasyTesting.Authentication.TestFederatedUserBuilder.WithApiUserClaim(string! type, string! value) -> XBullet.EasyTesting.Authentication.TestFederatedUserBuilder!
+XBullet.EasyTesting.Authentication.TestFederatedUserBuilder.WithApiUserIdentity(System.Action<XBullet.EasyTesting.Authentication.TestIdentityBuilder!>! configure) -> XBullet.EasyTesting.Authentication.TestFederatedUserBuilder!
+XBullet.EasyTesting.Authentication.TestFederatedUserBuilder.WithAuthenticationProperty(string! key, string? value) -> XBullet.EasyTesting.Authentication.TestFederatedUserBuilder!
+XBullet.EasyTesting.Authentication.TestFederatedUserBuilder.WithFederationAuthenticationType(string! authenticationType) -> XBullet.EasyTesting.Authentication.TestFederatedUserBuilder!
+XBullet.EasyTesting.Authentication.TestFederatedUserBuilder.WithFederationClaim(string! type, string! value) -> XBullet.EasyTesting.Authentication.TestFederatedUserBuilder!
+XBullet.EasyTesting.Authentication.TestFederatedUserBuilder.WithName(string! name) -> XBullet.EasyTesting.Authentication.TestFederatedUserBuilder!
+XBullet.EasyTesting.Authentication.TestFederatedUserBuilder.WithNameIdentifier(string! nameIdentifier) -> XBullet.EasyTesting.Authentication.TestFederatedUserBuilder!
+XBullet.EasyTesting.Authentication.TestFederatedUserBuilder.WithRole(string! role) -> XBullet.EasyTesting.Authentication.TestFederatedUserBuilder!
+XBullet.EasyTesting.Authentication.TestFederatedUserBuilder.WithRoles(params string![]! roles) -> XBullet.EasyTesting.Authentication.TestFederatedUserBuilder!
+XBullet.EasyTesting.Hosting.StartupAuthenticatedWebApplicationFactory<TStartup>
+XBullet.EasyTesting.Hosting.StartupAuthenticatedWebApplicationFactory<TStartup>.StartupAuthenticatedWebApplicationFactory() -> void
+XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint>.AsFederatedUser(System.Action<XBullet.EasyTesting.Authentication.TestFederatedUserBuilder!>! configure) -> XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.AsFederatedUser(System.Action<XBullet.EasyTesting.Authentication.TestFederatedUserBuilder!>! configure) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.ITestScenarioEnvironmentResource
+XBullet.EasyTesting.Hosting.TestScenarioEnvironmentBuilder
+XBullet.EasyTesting.Hosting.TestScenarioEnvironmentBuilder.TestScenarioEnvironmentBuilder() -> void
+virtual XBullet.EasyTesting.Hosting.AuthenticatedWebApplicationFactory<TEntryPoint>.ConfigureScenarioEnvironment(XBullet.EasyTesting.Hosting.TestScenarioEnvironmentBuilder! environment) -> void
+XBullet.EasyTesting.Hosting.EasyTestHostBuilder<TEntryPoint>.ConfigureEnvironment(System.Action<XBullet.EasyTesting.Hosting.TestScenarioEnvironmentBuilder!>! configure) -> XBullet.EasyTesting.Hosting.EasyTestHostBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.ITestScenarioEnvironmentResource.CaptureDiagnosticsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<object?>
+XBullet.EasyTesting.Hosting.ITestScenarioEnvironmentResource.ConfigureConfiguration(Microsoft.Extensions.Configuration.IConfigurationBuilder! configuration) -> void
+XBullet.EasyTesting.Hosting.ITestScenarioEnvironmentResource.ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> void
+XBullet.EasyTesting.Hosting.ITestScenarioEnvironmentResource.StartAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+XBullet.EasyTesting.Hosting.TestScenarioEnvironmentBuilder.AddResource(string! name, System.Func<XBullet.EasyTesting.Hosting.TestScenarioContext!, XBullet.EasyTesting.Hosting.ITestScenarioEnvironmentResource!>! createResource) -> XBullet.EasyTesting.Hosting.TestScenarioEnvironmentBuilder!
+XBullet.EasyTesting.Hosting.TestScenarioScope<TEntryPoint>.GetEnvironmentResource<TResource>(string! name) -> TResource!
+XBullet.EasyTesting.Hosting.TestScenarioScopeBuilder.UseEnvironmentResource(string! name, System.Func<XBullet.EasyTesting.Hosting.TestScenarioContext!, XBullet.EasyTesting.Hosting.ITestScenarioEnvironmentResource!>! createResource) -> XBullet.EasyTesting.Hosting.TestScenarioScopeBuilder!
+XBullet.EasyTesting.Hosting.TestScenarioScopeBuilder.UseEnvironmentResource(string! name, XBullet.EasyTesting.Hosting.ITestScenarioEnvironmentResource! resource) -> XBullet.EasyTesting.Hosting.TestScenarioScopeBuilder!

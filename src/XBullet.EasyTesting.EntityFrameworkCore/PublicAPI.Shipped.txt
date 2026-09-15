@@ -38,3 +38,7 @@ override sealed XBullet.EasyTesting.EntityFrameworkCore.InMemoryEntityFrameworkW
 virtual XBullet.EasyTesting.EntityFrameworkCore.InMemoryEntityFrameworkWebApplicationFactory<TEntryPoint, TDbContext>.ConfigureInMemoryDatabase(Microsoft.EntityFrameworkCore.DbContextOptionsBuilder! options) -> void
 XBullet.EasyTesting.EntityFrameworkCore.InMemoryEntityFrameworkWebApplicationFactory<TEntryPoint, TDbContext>
 XBullet.EasyTesting.EntityFrameworkCore.InMemoryEntityFrameworkWebApplicationFactory<TEntryPoint, TDbContext>.InMemoryEntityFrameworkWebApplicationFactory() -> void
+XBullet.EasyTesting.EntityFrameworkCore.StartupEntityFrameworkWebApplicationFactory<TStartup, TDbContext>
+override XBullet.EasyTesting.EntityFrameworkCore.StartupEntityFrameworkWebApplicationFactory<TStartup, TDbContext>.CreateHostBuilder() -> Microsoft.Extensions.Hosting.IHostBuilder!
+override XBullet.EasyTesting.EntityFrameworkCore.StartupEntityFrameworkWebApplicationFactory<TStartup, TDbContext>.ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder! builder) -> void
+XBullet.EasyTesting.EntityFrameworkCore.StartupEntityFrameworkWebApplicationFactory<TStartup, TDbContext>.StartupEntityFrameworkWebApplicationFactory() -> void

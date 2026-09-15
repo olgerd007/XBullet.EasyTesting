@@ -13,6 +13,8 @@ public sealed class TestAuthenticationSchemeBuilder
 
     internal string ApiKeyScheme { get; private set; } = TestAuthenticationDefaults.AuthenticationScheme;
 
+    internal string FederationScheme { get; private set; } = TestAuthenticationDefaults.AuthenticationScheme;
+
     internal IReadOnlyCollection<string> AdditionalSchemes => _additionalSchemes;
 
     internal IReadOnlyCollection<EndToEndJwtRegistration> EndToEndJwtRegistrations =>
@@ -56,6 +58,13 @@ public sealed class TestAuthenticationSchemeBuilder
     public TestAuthenticationSchemeBuilder MapApiKey(string authenticationScheme)
     {
         ApiKeyScheme = AddScheme(authenticationScheme);
+        return this;
+    }
+
+    /// <summary>Maps Federation test identities to the application's authentication scheme.</summary>
+    public TestAuthenticationSchemeBuilder MapFederation(string authenticationScheme)
+    {
+        FederationScheme = AddScheme(authenticationScheme);
         return this;
     }
 

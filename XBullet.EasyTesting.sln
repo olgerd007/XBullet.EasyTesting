@@ -15,6 +15,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XBullet.EasyTesting.Http", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XBullet.EasyTesting.Messaging", "src\XBullet.EasyTesting.Messaging\XBullet.EasyTesting.Messaging.csproj", "{FE22ED61-99BB-4FB9-9502-7D529370AD23}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XBullet.EasyTesting.Observability", "src\XBullet.EasyTesting.Observability\XBullet.EasyTesting.Observability.csproj", "{C2F7EBB4-A0A7-44DC-89F5-1DD5E5CA1272}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XBullet.EasyTesting.Testcontainers", "src\XBullet.EasyTesting.Testcontainers\XBullet.EasyTesting.Testcontainers.csproj", "{2F1D9554-6196-44D4-82EB-766C7DE2C55D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XBullet.EasyTesting.Aspire", "src\XBullet.EasyTesting.Aspire\XBullet.EasyTesting.Aspire.csproj", "{5719B696-45B2-449A-8B66-67DB1E24902D}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestApi", "tests\TestApi\TestApi.csproj", "{6FE20BD9-7C11-474F-B4CC-8639457F3827}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XBullet.EasyTesting.Tests", "tests\XBullet.EasyTesting.Tests\XBullet.EasyTesting.Tests.csproj", "{752EA01A-8B21-4326-9099-E14DC5AC4230}"
@@ -26,6 +32,14 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestFunctions", "tests\TestFunctions\TestFunctions.csproj", "{B1F10000-2C7E-4AA0-9000-000000000002}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestFunctions.IntegrationTests", "tests\TestFunctions.IntegrationTests\TestFunctions.IntegrationTests.csproj", "{B1F10000-2C7E-4AA0-9000-000000000003}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestAppHost", "tests\TestAppHost\TestAppHost.csproj", "{78BA4D29-8E40-4CA4-B39D-0B3E95C5A1DE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestAspireApi", "tests\TestAspireApi\TestAspireApi.csproj", "{82C79470-5997-45C5-AB95-1B6C1E6E0051}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XBullet.EasyTesting.Azure", "src\XBullet.EasyTesting.Azure\XBullet.EasyTesting.Azure.csproj", "{67BF6115-3AA6-4AD1-9606-6135F02B5FE5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XBullet.EasyTesting.ContainerTests", "tests\XBullet.EasyTesting.ContainerTests\XBullet.EasyTesting.ContainerTests.csproj", "{B1F10000-2C7E-4AA0-9000-000000000004}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -57,6 +71,18 @@ Global
 		{FE22ED61-99BB-4FB9-9502-7D529370AD23}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FE22ED61-99BB-4FB9-9502-7D529370AD23}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FE22ED61-99BB-4FB9-9502-7D529370AD23}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C2F7EBB4-A0A7-44DC-89F5-1DD5E5CA1272}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C2F7EBB4-A0A7-44DC-89F5-1DD5E5CA1272}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C2F7EBB4-A0A7-44DC-89F5-1DD5E5CA1272}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C2F7EBB4-A0A7-44DC-89F5-1DD5E5CA1272}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2F1D9554-6196-44D4-82EB-766C7DE2C55D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2F1D9554-6196-44D4-82EB-766C7DE2C55D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2F1D9554-6196-44D4-82EB-766C7DE2C55D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2F1D9554-6196-44D4-82EB-766C7DE2C55D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5719B696-45B2-449A-8B66-67DB1E24902D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5719B696-45B2-449A-8B66-67DB1E24902D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5719B696-45B2-449A-8B66-67DB1E24902D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5719B696-45B2-449A-8B66-67DB1E24902D}.Release|Any CPU.Build.0 = Release|Any CPU
 		{6FE20BD9-7C11-474F-B4CC-8639457F3827}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{6FE20BD9-7C11-474F-B4CC-8639457F3827}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6FE20BD9-7C11-474F-B4CC-8639457F3827}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -81,5 +107,21 @@ Global
 		{B1F10000-2C7E-4AA0-9000-000000000003}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B1F10000-2C7E-4AA0-9000-000000000003}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B1F10000-2C7E-4AA0-9000-000000000003}.Release|Any CPU.Build.0 = Release|Any CPU
+		{78BA4D29-8E40-4CA4-B39D-0B3E95C5A1DE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{78BA4D29-8E40-4CA4-B39D-0B3E95C5A1DE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{78BA4D29-8E40-4CA4-B39D-0B3E95C5A1DE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{78BA4D29-8E40-4CA4-B39D-0B3E95C5A1DE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{82C79470-5997-45C5-AB95-1B6C1E6E0051}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{82C79470-5997-45C5-AB95-1B6C1E6E0051}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{82C79470-5997-45C5-AB95-1B6C1E6E0051}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{82C79470-5997-45C5-AB95-1B6C1E6E0051}.Release|Any CPU.Build.0 = Release|Any CPU
+		{67BF6115-3AA6-4AD1-9606-6135F02B5FE5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{67BF6115-3AA6-4AD1-9606-6135F02B5FE5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{67BF6115-3AA6-4AD1-9606-6135F02B5FE5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{67BF6115-3AA6-4AD1-9606-6135F02B5FE5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B1F10000-2C7E-4AA0-9000-000000000004}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B1F10000-2C7E-4AA0-9000-000000000004}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B1F10000-2C7E-4AA0-9000-000000000004}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B1F10000-2C7E-4AA0-9000-000000000004}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

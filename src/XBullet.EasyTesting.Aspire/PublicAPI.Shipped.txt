@@ -1,0 +1,42 @@
+#nullable enable
+const XBullet.EasyTesting.Aspire.AspireApplicationDiagnostics.ExceptionDataKey = "XBullet.EasyTesting.Aspire.Diagnostics" -> string!
+static XBullet.EasyTesting.Aspire.AspireTestHost.Create<TAppHost>() -> XBullet.EasyTesting.Aspire.AspireTestHostBuilder<TAppHost!>!
+XBullet.EasyTesting.Aspire.AspireApplicationDiagnostics
+XBullet.EasyTesting.Aspire.AspireApplicationDiagnostics.AspireApplicationDiagnostics(System.DateTimeOffset capturedAt, System.Collections.Generic.IReadOnlyList<XBullet.EasyTesting.Aspire.AspireResourceDiagnostics!>! resources) -> void
+XBullet.EasyTesting.Aspire.AspireApplicationDiagnostics.CapturedAt.get -> System.DateTimeOffset
+XBullet.EasyTesting.Aspire.AspireApplicationDiagnostics.Resources.get -> System.Collections.Generic.IReadOnlyList<XBullet.EasyTesting.Aspire.AspireResourceDiagnostics!>!
+XBullet.EasyTesting.Aspire.AspireResourceDiagnostics
+XBullet.EasyTesting.Aspire.AspireResourceDiagnostics.AspireResourceDiagnostics(string! name, string? resourceId, string? resourceType, string? state, string? healthStatus, int? exitCode, System.Collections.Generic.IReadOnlyList<XBullet.EasyTesting.Aspire.AspireResourceLogEntry!>! logs) -> void
+XBullet.EasyTesting.Aspire.AspireResourceDiagnostics.ExitCode.get -> int?
+XBullet.EasyTesting.Aspire.AspireResourceDiagnostics.HealthStatus.get -> string?
+XBullet.EasyTesting.Aspire.AspireResourceDiagnostics.Logs.get -> System.Collections.Generic.IReadOnlyList<XBullet.EasyTesting.Aspire.AspireResourceLogEntry!>!
+XBullet.EasyTesting.Aspire.AspireResourceDiagnostics.Name.get -> string!
+XBullet.EasyTesting.Aspire.AspireResourceDiagnostics.ResourceId.get -> string?
+XBullet.EasyTesting.Aspire.AspireResourceDiagnostics.ResourceType.get -> string?
+XBullet.EasyTesting.Aspire.AspireResourceDiagnostics.State.get -> string?
+XBullet.EasyTesting.Aspire.AspireResourceLogEntry
+XBullet.EasyTesting.Aspire.AspireResourceLogEntry.AspireResourceLogEntry(int lineNumber, string! content, bool isError) -> void
+XBullet.EasyTesting.Aspire.AspireResourceLogEntry.Content.get -> string!
+XBullet.EasyTesting.Aspire.AspireResourceLogEntry.IsError.get -> bool
+XBullet.EasyTesting.Aspire.AspireResourceLogEntry.LineNumber.get -> int
+XBullet.EasyTesting.Aspire.AspireTestApplication<TAppHost>
+XBullet.EasyTesting.Aspire.AspireTestApplication<TAppHost>.Application.get -> Aspire.Hosting.DistributedApplication!
+XBullet.EasyTesting.Aspire.AspireTestApplication<TAppHost>.CaptureDiagnosticsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<XBullet.EasyTesting.Aspire.AspireApplicationDiagnostics!>
+XBullet.EasyTesting.Aspire.AspireTestApplication<TAppHost>.CreateHttpClient(string! resourceName, string! endpointName) -> System.Net.Http.HttpClient!
+XBullet.EasyTesting.Aspire.AspireTestApplication<TAppHost>.CreateHttpClient(string! resourceName) -> System.Net.Http.HttpClient!
+XBullet.EasyTesting.Aspire.AspireTestApplication<TAppHost>.Diagnostics.get -> XBullet.EasyTesting.Aspire.AspireApplicationDiagnostics?
+XBullet.EasyTesting.Aspire.AspireTestApplication<TAppHost>.DisposeAsync() -> System.Threading.Tasks.ValueTask
+XBullet.EasyTesting.Aspire.AspireTestApplication<TAppHost>.GetConnectionStringAsync(string! resourceName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<string?>
+XBullet.EasyTesting.Aspire.AspireTestApplication<TAppHost>.GetEndpoint(string! resourceName, string! endpointName) -> System.Uri!
+XBullet.EasyTesting.Aspire.AspireTestApplication<TAppHost>.GetEndpoint(string! resourceName) -> System.Uri!
+XBullet.EasyTesting.Aspire.AspireTestApplication<TAppHost>.ResourceNames.get -> System.Collections.Generic.IReadOnlyList<string!>!
+XBullet.EasyTesting.Aspire.AspireTestApplication<TAppHost>.WaitForResourceAsync(string! resourceName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+XBullet.EasyTesting.Aspire.AspireTestHost
+XBullet.EasyTesting.Aspire.AspireTestHostBuilder<TAppHost>
+XBullet.EasyTesting.Aspire.AspireTestHostBuilder<TAppHost>.ConfigureAppHost(System.Action<Aspire.Hosting.Testing.IDistributedApplicationTestingBuilder!>! configure) -> XBullet.EasyTesting.Aspire.AspireTestHostBuilder<TAppHost!>!
+XBullet.EasyTesting.Aspire.AspireTestHostBuilder<TAppHost>.RunAsync(System.Func<XBullet.EasyTesting.Aspire.AspireTestApplication<TAppHost!>!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>! test, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+XBullet.EasyTesting.Aspire.AspireTestHostBuilder<TAppHost>.StartAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<XBullet.EasyTesting.Aspire.AspireTestApplication<TAppHost!>!>!
+XBullet.EasyTesting.Aspire.AspireTestHostBuilder<TAppHost>.WaitForResource(string! resourceName) -> XBullet.EasyTesting.Aspire.AspireTestHostBuilder<TAppHost!>!
+XBullet.EasyTesting.Aspire.AspireTestHostBuilder<TAppHost>.WithArguments(params string![]! arguments) -> XBullet.EasyTesting.Aspire.AspireTestHostBuilder<TAppHost!>!
+XBullet.EasyTesting.Aspire.AspireTestHostBuilder<TAppHost>.WithMaximumDiagnosticLinesPerResource(int maximumLines) -> XBullet.EasyTesting.Aspire.AspireTestHostBuilder<TAppHost!>!
+XBullet.EasyTesting.Aspire.AspireTestHostBuilder<TAppHost>.WithStartupTimeout(System.TimeSpan timeout) -> XBullet.EasyTesting.Aspire.AspireTestHostBuilder<TAppHost!>!
