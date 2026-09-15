@@ -40,6 +40,9 @@ public sealed class RecordedMessageBus : ITestScenarioResource
         }
     }
 
+    /// <summary>Starts a fluent assertion chain over the recorded messages.</summary>
+    public RecordedMessageBusAssertions Should() => new(this);
+
     /// <summary>Records a serialized copy of one published message.</summary>
     public void Record<T>(
         string transport,
@@ -126,4 +129,6 @@ public sealed class RecordedMessageBus : ITestScenarioResource
             Messages
         });
     }
+
+    internal JsonSerializerOptions SerializerOptions => _serializerOptions;
 }

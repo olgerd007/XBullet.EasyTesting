@@ -121,8 +121,9 @@ public static class SnapshotAssert
             throw new ArgumentException("The calling source file could not be determined.", nameof(sourceFile));
         }
 
-        var sourceDirectory = Path.GetDirectoryName(sourceFile)
-            ?? throw new ArgumentException("The calling source directory could not be determined.", nameof(sourceFile));
+        var sourceDirectory = Path.GetFullPath(
+            Path.GetDirectoryName(sourceFile)
+                ?? throw new ArgumentException("The calling source directory could not be determined.", nameof(sourceFile)));
         var directory = string.IsNullOrWhiteSpace(settings.Directory)
             ? Path.Combine(sourceDirectory, "__snapshots__")
             : Path.GetFullPath(settings.Directory, sourceDirectory);

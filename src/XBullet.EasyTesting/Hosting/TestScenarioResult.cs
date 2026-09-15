@@ -14,6 +14,9 @@ public sealed class TestScenarioResult : IDisposable
     /// <summary>Gets the HTTP response produced by the scenario.</summary>
     public HttpResponseMessage Response { get; }
 
+    /// <summary>Starts a fluent assertion chain over the response.</summary>
+    public TestHttpResponseAssertions Should() => new(Response);
+
     /// <inheritdoc />
     public void Dispose()
     {

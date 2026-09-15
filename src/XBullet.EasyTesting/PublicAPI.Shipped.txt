@@ -1,0 +1,400 @@
+#nullable enable
+const XBullet.EasyTesting.Authentication.AzureAdClaimTypes.AuthorizedParty = "azp" -> string!
+const XBullet.EasyTesting.Authentication.AzureAdClaimTypes.ObjectId = "oid" -> string!
+const XBullet.EasyTesting.Authentication.AzureAdClaimTypes.PreferredUsername = "preferred_username" -> string!
+const XBullet.EasyTesting.Authentication.AzureAdClaimTypes.Roles = "roles" -> string!
+const XBullet.EasyTesting.Authentication.AzureAdClaimTypes.Scope = "scp" -> string!
+const XBullet.EasyTesting.Authentication.AzureAdClaimTypes.TenantId = "tid" -> string!
+const XBullet.EasyTesting.Authentication.TestApiKeyBuilder.KeyIdClaim = "api_key_id" -> string!
+const XBullet.EasyTesting.Authentication.TestAuthenticationDefaults.ApiKeyAuthenticationMethod = "ApiKey" -> string!
+const XBullet.EasyTesting.Authentication.TestAuthenticationDefaults.ApiKeyAuthenticationType = "ApiKey" -> string!
+const XBullet.EasyTesting.Authentication.TestAuthenticationDefaults.AuthenticationMethodClaim = "integration_test_authentication_method" -> string!
+const XBullet.EasyTesting.Authentication.TestAuthenticationDefaults.AuthenticationScheme = "IntegrationTest" -> string!
+const XBullet.EasyTesting.Authentication.TestAuthenticationDefaults.AzureAdAuthenticationMethod = "AzureAd" -> string!
+const XBullet.EasyTesting.Authentication.TestAuthenticationDefaults.AzureAdAuthenticationType = "AzureAd" -> string!
+const XBullet.EasyTesting.Authentication.TestAuthenticationDefaults.ClientCertificateHeaderName = "X-XBullet-Test-Client-Certificate" -> string!
+const XBullet.EasyTesting.Authentication.TestAuthenticationDefaults.UserHeaderName = "X-Integration-Test-User" -> string!
+const XBullet.EasyTesting.Hosting.TestScenarioDiagnostics.ExceptionDataKey = "XBullet.EasyTesting.TestScenarioDiagnostics" -> string!
+override XBullet.EasyTesting.Authentication.TestAuthenticationEvent.Equals(object? obj) -> bool
+override XBullet.EasyTesting.Authentication.TestAuthenticationEvent.GetHashCode() -> int
+override XBullet.EasyTesting.Authentication.TestAuthenticationEvent.ToString() -> string!
+override XBullet.EasyTesting.Authentication.TestClaim.Equals(object? obj) -> bool
+override XBullet.EasyTesting.Authentication.TestClaim.GetHashCode() -> int
+override XBullet.EasyTesting.Authentication.TestClaim.ToString() -> string!
+override XBullet.EasyTesting.Authentication.TestIdentity.Equals(object? obj) -> bool
+override XBullet.EasyTesting.Authentication.TestIdentity.GetHashCode() -> int
+override XBullet.EasyTesting.Authentication.TestIdentity.ToString() -> string!
+override XBullet.EasyTesting.Authentication.TestUser.Equals(object? obj) -> bool
+override XBullet.EasyTesting.Authentication.TestUser.GetHashCode() -> int
+override XBullet.EasyTesting.Authentication.TestUser.ToString() -> string!
+override XBullet.EasyTesting.Hosting.AuthenticatedWebApplicationFactory<TEntryPoint>.ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder! builder) -> void
+override XBullet.EasyTesting.Hosting.AuthenticatedWebApplicationFactory<TEntryPoint>.Dispose(bool disposing) -> void
+override XBullet.EasyTesting.Hosting.TestScenarioDiagnostics.Equals(object? obj) -> bool
+override XBullet.EasyTesting.Hosting.TestScenarioDiagnostics.GetHashCode() -> int
+override XBullet.EasyTesting.Hosting.TestScenarioDiagnostics.ToString() -> string!
+static XBullet.EasyTesting.Authentication.HttpClientAuthenticationExtensions.AuthenticateAs(this System.Net.Http.HttpClient! client, XBullet.EasyTesting.Authentication.TestUser! user) -> System.Net.Http.HttpClient!
+static XBullet.EasyTesting.Authentication.HttpClientAuthenticationExtensions.AuthenticateAs(this System.Net.Http.HttpRequestMessage! request, XBullet.EasyTesting.Authentication.TestUser! user) -> System.Net.Http.HttpRequestMessage!
+static XBullet.EasyTesting.Authentication.HttpClientAuthenticationExtensions.UseAnonymousUser(this System.Net.Http.HttpClient! client) -> System.Net.Http.HttpClient!
+static XBullet.EasyTesting.Authentication.TestAuthenticationEvent.operator !=(XBullet.EasyTesting.Authentication.TestAuthenticationEvent? left, XBullet.EasyTesting.Authentication.TestAuthenticationEvent? right) -> bool
+static XBullet.EasyTesting.Authentication.TestAuthenticationEvent.operator ==(XBullet.EasyTesting.Authentication.TestAuthenticationEvent? left, XBullet.EasyTesting.Authentication.TestAuthenticationEvent? right) -> bool
+static XBullet.EasyTesting.Authentication.TestClaim.operator !=(XBullet.EasyTesting.Authentication.TestClaim? left, XBullet.EasyTesting.Authentication.TestClaim? right) -> bool
+static XBullet.EasyTesting.Authentication.TestClaim.operator ==(XBullet.EasyTesting.Authentication.TestClaim? left, XBullet.EasyTesting.Authentication.TestClaim? right) -> bool
+static XBullet.EasyTesting.Authentication.TestIdentity.operator !=(XBullet.EasyTesting.Authentication.TestIdentity? left, XBullet.EasyTesting.Authentication.TestIdentity? right) -> bool
+static XBullet.EasyTesting.Authentication.TestIdentity.operator ==(XBullet.EasyTesting.Authentication.TestIdentity? left, XBullet.EasyTesting.Authentication.TestIdentity? right) -> bool
+static XBullet.EasyTesting.Authentication.TestJwtAuthority.Create(System.Action<XBullet.EasyTesting.Authentication.TestJwtAuthorityOptions!>? configure = null) -> XBullet.EasyTesting.Authentication.TestJwtAuthority!
+static XBullet.EasyTesting.Authentication.TestUser.Create(string! name = "integration-test-user", string? nameIdentifier = null, System.Collections.Generic.IEnumerable<string!>? roles = null, System.Collections.Generic.IEnumerable<XBullet.EasyTesting.Authentication.TestClaim!>? claims = null, string! authenticationScheme = "IntegrationTest", string! authenticationType = "IntegrationTest") -> XBullet.EasyTesting.Authentication.TestUser!
+static XBullet.EasyTesting.Authentication.TestUser.CreateBuilder() -> XBullet.EasyTesting.Authentication.TestUserBuilder!
+static XBullet.EasyTesting.Authentication.TestUser.operator !=(XBullet.EasyTesting.Authentication.TestUser? left, XBullet.EasyTesting.Authentication.TestUser? right) -> bool
+static XBullet.EasyTesting.Authentication.TestUser.operator ==(XBullet.EasyTesting.Authentication.TestUser? left, XBullet.EasyTesting.Authentication.TestUser? right) -> bool
+static XBullet.EasyTesting.Hosting.AuthenticatedWebApplicationFactory<TEntryPoint>.Create(System.Action<Microsoft.Extensions.DependencyInjection.IServiceCollection!>? configureServices = null, System.Action<Microsoft.Extensions.Configuration.IConfigurationBuilder!>? configureConfiguration = null, System.Action<XBullet.EasyTesting.Authentication.TestAuthenticationSchemeBuilder!>? configureAuthentication = null) -> XBullet.EasyTesting.Hosting.AuthenticatedWebApplicationFactory<TEntryPoint!>!
+static XBullet.EasyTesting.Hosting.EasyTestHost.Create<TEntryPoint>() -> XBullet.EasyTesting.Hosting.EasyTestHostBuilder<TEntryPoint!>!
+static XBullet.EasyTesting.Hosting.TestScenarioDiagnostics.operator !=(XBullet.EasyTesting.Hosting.TestScenarioDiagnostics? left, XBullet.EasyTesting.Hosting.TestScenarioDiagnostics? right) -> bool
+static XBullet.EasyTesting.Hosting.TestScenarioDiagnostics.operator ==(XBullet.EasyTesting.Hosting.TestScenarioDiagnostics? left, XBullet.EasyTesting.Hosting.TestScenarioDiagnostics? right) -> bool
+virtual XBullet.EasyTesting.Hosting.AuthenticatedWebApplicationFactory<TEntryPoint>.CaptureScenarioDiagnosticsAsync(XBullet.EasyTesting.Hosting.TestScenarioScope<TEntryPoint!>! scope, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<object?>
+virtual XBullet.EasyTesting.Hosting.AuthenticatedWebApplicationFactory<TEntryPoint>.CleanupScenarioAsync(XBullet.EasyTesting.Hosting.TestScenarioScope<TEntryPoint!>! scope, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+virtual XBullet.EasyTesting.Hosting.AuthenticatedWebApplicationFactory<TEntryPoint>.ConfigureServicesForScenario(Microsoft.Extensions.DependencyInjection.IServiceCollection! services, XBullet.EasyTesting.Hosting.TestScenarioContext! context) -> void
+virtual XBullet.EasyTesting.Hosting.AuthenticatedWebApplicationFactory<TEntryPoint>.ConfigureServicesForTests(Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> void
+virtual XBullet.EasyTesting.Hosting.AuthenticatedWebApplicationFactory<TEntryPoint>.ConfigureTestAuthentication(XBullet.EasyTesting.Authentication.TestAuthenticationSchemeBuilder! authentication) -> void
+virtual XBullet.EasyTesting.Hosting.AuthenticatedWebApplicationFactory<TEntryPoint>.ConfigureTestConfiguration(Microsoft.Extensions.Configuration.IConfigurationBuilder! configuration) -> void
+virtual XBullet.EasyTesting.Hosting.AuthenticatedWebApplicationFactory<TEntryPoint>.InitializeScenarioAsync(XBullet.EasyTesting.Hosting.TestScenarioScope<TEntryPoint!>! scope, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+XBullet.EasyTesting.Authentication.AzureAdClaimTypes
+XBullet.EasyTesting.Authentication.HttpClientAuthenticationExtensions
+XBullet.EasyTesting.Authentication.TestApiKeyBuilder
+XBullet.EasyTesting.Authentication.TestApiKeyBuilder.Build() -> XBullet.EasyTesting.Authentication.TestUser!
+XBullet.EasyTesting.Authentication.TestApiKeyBuilder.TestApiKeyBuilder(string! authenticationScheme = "IntegrationTest") -> void
+XBullet.EasyTesting.Authentication.TestApiKeyBuilder.WithClaim(string! type, string! value) -> XBullet.EasyTesting.Authentication.TestApiKeyBuilder!
+XBullet.EasyTesting.Authentication.TestApiKeyBuilder.WithClientName(string! clientName) -> XBullet.EasyTesting.Authentication.TestApiKeyBuilder!
+XBullet.EasyTesting.Authentication.TestApiKeyBuilder.WithKeyId(string! keyId) -> XBullet.EasyTesting.Authentication.TestApiKeyBuilder!
+XBullet.EasyTesting.Authentication.TestApiKeyBuilder.WithRole(string! role) -> XBullet.EasyTesting.Authentication.TestApiKeyBuilder!
+XBullet.EasyTesting.Authentication.TestApiKeyBuilder.WithRoles(params string![]! roles) -> XBullet.EasyTesting.Authentication.TestApiKeyBuilder!
+XBullet.EasyTesting.Authentication.TestApiKeyInjectionOptions
+XBullet.EasyTesting.Authentication.TestApiKeyInjectionOptions.AsDefaultScheme() -> XBullet.EasyTesting.Authentication.TestApiKeyInjectionOptions!
+XBullet.EasyTesting.Authentication.TestApiKeyInjectionOptions.AuthenticationScheme.get -> string!
+XBullet.EasyTesting.Authentication.TestApiKeyInjectionOptions.HeaderName.get -> string!
+XBullet.EasyTesting.Authentication.TestApiKeyInjectionOptions.HeaderName.set -> void
+XBullet.EasyTesting.Authentication.TestApiKeyInjectionOptions.QueryParameterName.get -> string!
+XBullet.EasyTesting.Authentication.TestApiKeyInjectionOptions.QueryParameterName.set -> void
+XBullet.EasyTesting.Authentication.TestApiKeyInjectionOptions.TestApiKeyInjectionOptions() -> void
+XBullet.EasyTesting.Authentication.TestApiKeyInjectionOptions.UseAsDefaultScheme.get -> bool
+XBullet.EasyTesting.Authentication.TestApiKeyInjectionOptions.UseAsDefaultScheme.set -> void
+XBullet.EasyTesting.Authentication.TestApiKeyInjectionOptions.WithHeaderName(string! headerName) -> XBullet.EasyTesting.Authentication.TestApiKeyInjectionOptions!
+XBullet.EasyTesting.Authentication.TestApiKeyInjectionOptions.WithQueryParameterName(string! parameterName) -> XBullet.EasyTesting.Authentication.TestApiKeyInjectionOptions!
+XBullet.EasyTesting.Authentication.TestAuthenticationDefaults
+XBullet.EasyTesting.Authentication.TestAuthenticationEvent
+XBullet.EasyTesting.Authentication.TestAuthenticationEvent.<Clone>$() -> XBullet.EasyTesting.Authentication.TestAuthenticationEvent!
+XBullet.EasyTesting.Authentication.TestAuthenticationEvent.AuthenticationScheme.get -> string!
+XBullet.EasyTesting.Authentication.TestAuthenticationEvent.AuthenticationScheme.init -> void
+XBullet.EasyTesting.Authentication.TestAuthenticationEvent.Deconstruct(out XBullet.EasyTesting.Authentication.TestAuthenticationEventKind Kind, out string! AuthenticationScheme, out string! Method, out string! Path, out System.DateTimeOffset Timestamp, out string? FailureType, out string? FailureMessage) -> void
+XBullet.EasyTesting.Authentication.TestAuthenticationEvent.Equals(XBullet.EasyTesting.Authentication.TestAuthenticationEvent? other) -> bool
+XBullet.EasyTesting.Authentication.TestAuthenticationEvent.FailureMessage.get -> string?
+XBullet.EasyTesting.Authentication.TestAuthenticationEvent.FailureMessage.init -> void
+XBullet.EasyTesting.Authentication.TestAuthenticationEvent.FailureType.get -> string?
+XBullet.EasyTesting.Authentication.TestAuthenticationEvent.FailureType.init -> void
+XBullet.EasyTesting.Authentication.TestAuthenticationEvent.Kind.get -> XBullet.EasyTesting.Authentication.TestAuthenticationEventKind
+XBullet.EasyTesting.Authentication.TestAuthenticationEvent.Kind.init -> void
+XBullet.EasyTesting.Authentication.TestAuthenticationEvent.Method.get -> string!
+XBullet.EasyTesting.Authentication.TestAuthenticationEvent.Method.init -> void
+XBullet.EasyTesting.Authentication.TestAuthenticationEvent.Path.get -> string!
+XBullet.EasyTesting.Authentication.TestAuthenticationEvent.Path.init -> void
+XBullet.EasyTesting.Authentication.TestAuthenticationEvent.TestAuthenticationEvent(XBullet.EasyTesting.Authentication.TestAuthenticationEventKind Kind, string! AuthenticationScheme, string! Method, string! Path, System.DateTimeOffset Timestamp, string? FailureType = null, string? FailureMessage = null) -> void
+XBullet.EasyTesting.Authentication.TestAuthenticationEvent.Timestamp.get -> System.DateTimeOffset
+XBullet.EasyTesting.Authentication.TestAuthenticationEvent.Timestamp.init -> void
+XBullet.EasyTesting.Authentication.TestAuthenticationEventAssertions
+XBullet.EasyTesting.Authentication.TestAuthenticationEventAssertions.HaveChallenge(int exactly = 1, string? authenticationScheme = null) -> XBullet.EasyTesting.Authentication.TestAuthenticationEventAssertions!
+XBullet.EasyTesting.Authentication.TestAuthenticationEventAssertions.HaveForbidden(int exactly = 1, string? authenticationScheme = null) -> XBullet.EasyTesting.Authentication.TestAuthenticationEventAssertions!
+XBullet.EasyTesting.Authentication.TestAuthenticationEventAssertions.HaveValidatedCredential(int exactly = 1, string? authenticationScheme = null) -> XBullet.EasyTesting.Authentication.TestAuthenticationEventAssertions!
+XBullet.EasyTesting.Authentication.TestAuthenticationEventAssertions.HaveValidationFailure(int exactly = 1, string? authenticationScheme = null) -> XBullet.EasyTesting.Authentication.TestAuthenticationEventAssertions!
+XBullet.EasyTesting.Authentication.TestAuthenticationEventAssertions.NotHave(XBullet.EasyTesting.Authentication.TestAuthenticationEventKind kind, string? authenticationScheme = null) -> XBullet.EasyTesting.Authentication.TestAuthenticationEventAssertions!
+XBullet.EasyTesting.Authentication.TestAuthenticationEventKind
+XBullet.EasyTesting.Authentication.TestAuthenticationEventKind.Challenge = 2 -> XBullet.EasyTesting.Authentication.TestAuthenticationEventKind
+XBullet.EasyTesting.Authentication.TestAuthenticationEventKind.Forbidden = 3 -> XBullet.EasyTesting.Authentication.TestAuthenticationEventKind
+XBullet.EasyTesting.Authentication.TestAuthenticationEventKind.TokenValidated = 0 -> XBullet.EasyTesting.Authentication.TestAuthenticationEventKind
+XBullet.EasyTesting.Authentication.TestAuthenticationEventKind.ValidationFailed = 1 -> XBullet.EasyTesting.Authentication.TestAuthenticationEventKind
+XBullet.EasyTesting.Authentication.TestAuthenticationEventRecorder
+XBullet.EasyTesting.Authentication.TestAuthenticationEventRecorder.CaptureDiagnosticsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<object?>
+XBullet.EasyTesting.Authentication.TestAuthenticationEventRecorder.Events.get -> System.Collections.Generic.IReadOnlyList<XBullet.EasyTesting.Authentication.TestAuthenticationEvent!>!
+XBullet.EasyTesting.Authentication.TestAuthenticationEventRecorder.Reset() -> void
+XBullet.EasyTesting.Authentication.TestAuthenticationEventRecorder.ResetAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+XBullet.EasyTesting.Authentication.TestAuthenticationEventRecorder.Should() -> XBullet.EasyTesting.Authentication.TestAuthenticationEventAssertions!
+XBullet.EasyTesting.Authentication.TestAuthenticationEventRecorder.TestAuthenticationEventRecorder() -> void
+XBullet.EasyTesting.Authentication.TestAuthenticationEventVerificationException
+XBullet.EasyTesting.Authentication.TestAuthenticationEventVerificationException.TestAuthenticationEventVerificationException(string! message) -> void
+XBullet.EasyTesting.Authentication.TestAuthenticationHandler
+XBullet.EasyTesting.Authentication.TestAuthenticationHandler.TestAuthenticationHandler(Microsoft.Extensions.Options.IOptionsMonitor<XBullet.EasyTesting.Authentication.TestAuthenticationOptions!>! options, Microsoft.Extensions.Logging.ILoggerFactory! logger, System.Text.Encodings.Web.UrlEncoder! encoder) -> void
+XBullet.EasyTesting.Authentication.TestAuthenticationOptions
+XBullet.EasyTesting.Authentication.TestAuthenticationOptions.TestAuthenticationOptions() -> void
+XBullet.EasyTesting.Authentication.TestAuthenticationSchemeBuilder
+XBullet.EasyTesting.Authentication.TestAuthenticationSchemeBuilder.MapApiKey(string! authenticationScheme) -> XBullet.EasyTesting.Authentication.TestAuthenticationSchemeBuilder!
+XBullet.EasyTesting.Authentication.TestAuthenticationSchemeBuilder.MapAzureAd(string! authenticationScheme) -> XBullet.EasyTesting.Authentication.TestAuthenticationSchemeBuilder!
+XBullet.EasyTesting.Authentication.TestAuthenticationSchemeBuilder.MapScheme(string! authenticationScheme) -> XBullet.EasyTesting.Authentication.TestAuthenticationSchemeBuilder!
+XBullet.EasyTesting.Authentication.TestAuthenticationSchemeBuilder.TestAuthenticationSchemeBuilder() -> void
+XBullet.EasyTesting.Authentication.TestAuthenticationSchemeBuilder.UseEndToEndApiKey(string! authenticationScheme, System.Action<XBullet.EasyTesting.Authentication.TestApiKeyInjectionOptions!>? configure = null) -> XBullet.EasyTesting.Authentication.TestAuthenticationSchemeBuilder!
+XBullet.EasyTesting.Authentication.TestAuthenticationSchemeBuilder.UseEndToEndClientCertificate(string! authenticationScheme, System.Action<XBullet.EasyTesting.Authentication.TestClientCertificateOptions!>? configure = null) -> XBullet.EasyTesting.Authentication.TestAuthenticationSchemeBuilder!
+XBullet.EasyTesting.Authentication.TestAuthenticationSchemeBuilder.UseEndToEndJwt(string! authenticationScheme, System.Action<XBullet.EasyTesting.Authentication.TestJwtAuthorityOptions!>? configure = null) -> XBullet.EasyTesting.Authentication.TestAuthenticationSchemeBuilder!
+XBullet.EasyTesting.Authentication.TestAzureAdUserBuilder
+XBullet.EasyTesting.Authentication.TestAzureAdUserBuilder.Build() -> XBullet.EasyTesting.Authentication.TestUser!
+XBullet.EasyTesting.Authentication.TestAzureAdUserBuilder.TestAzureAdUserBuilder(string! authenticationScheme = "IntegrationTest") -> void
+XBullet.EasyTesting.Authentication.TestAzureAdUserBuilder.WithAppRole(string! role) -> XBullet.EasyTesting.Authentication.TestAzureAdUserBuilder!
+XBullet.EasyTesting.Authentication.TestAzureAdUserBuilder.WithAppRoles(params string![]! roles) -> XBullet.EasyTesting.Authentication.TestAzureAdUserBuilder!
+XBullet.EasyTesting.Authentication.TestAzureAdUserBuilder.WithClaim(string! type, string! value) -> XBullet.EasyTesting.Authentication.TestAzureAdUserBuilder!
+XBullet.EasyTesting.Authentication.TestAzureAdUserBuilder.WithClientId(string! clientId) -> XBullet.EasyTesting.Authentication.TestAzureAdUserBuilder!
+XBullet.EasyTesting.Authentication.TestAzureAdUserBuilder.WithName(string! name) -> XBullet.EasyTesting.Authentication.TestAzureAdUserBuilder!
+XBullet.EasyTesting.Authentication.TestAzureAdUserBuilder.WithObjectId(string! objectId) -> XBullet.EasyTesting.Authentication.TestAzureAdUserBuilder!
+XBullet.EasyTesting.Authentication.TestAzureAdUserBuilder.WithPreferredUsername(string! preferredUsername) -> XBullet.EasyTesting.Authentication.TestAzureAdUserBuilder!
+XBullet.EasyTesting.Authentication.TestAzureAdUserBuilder.WithScope(string! scope) -> XBullet.EasyTesting.Authentication.TestAzureAdUserBuilder!
+XBullet.EasyTesting.Authentication.TestAzureAdUserBuilder.WithScopes(params string![]! scopes) -> XBullet.EasyTesting.Authentication.TestAzureAdUserBuilder!
+XBullet.EasyTesting.Authentication.TestAzureAdUserBuilder.WithTenantId(string! tenantId) -> XBullet.EasyTesting.Authentication.TestAzureAdUserBuilder!
+XBullet.EasyTesting.Authentication.TestClaim
+XBullet.EasyTesting.Authentication.TestClaim.<Clone>$() -> XBullet.EasyTesting.Authentication.TestClaim!
+XBullet.EasyTesting.Authentication.TestClaim.Deconstruct(out string! Type, out string! Value) -> void
+XBullet.EasyTesting.Authentication.TestClaim.Equals(XBullet.EasyTesting.Authentication.TestClaim? other) -> bool
+XBullet.EasyTesting.Authentication.TestClaim.TestClaim(string! Type, string! Value) -> void
+XBullet.EasyTesting.Authentication.TestClaim.Type.get -> string!
+XBullet.EasyTesting.Authentication.TestClaim.Type.init -> void
+XBullet.EasyTesting.Authentication.TestClaim.Value.get -> string!
+XBullet.EasyTesting.Authentication.TestClaim.Value.init -> void
+XBullet.EasyTesting.Authentication.TestClientCertificateBuilder
+XBullet.EasyTesting.Authentication.TestClientCertificateBuilder.Build() -> System.Security.Cryptography.X509Certificates.X509Certificate2!
+XBullet.EasyTesting.Authentication.TestClientCertificateBuilder.TestClientCertificateBuilder() -> void
+XBullet.EasyTesting.Authentication.TestClientCertificateBuilder.ValidFrom(System.DateTimeOffset notBefore, System.DateTimeOffset notAfter) -> XBullet.EasyTesting.Authentication.TestClientCertificateBuilder!
+XBullet.EasyTesting.Authentication.TestClientCertificateBuilder.WithSubject(string! subject) -> XBullet.EasyTesting.Authentication.TestClientCertificateBuilder!
+XBullet.EasyTesting.Authentication.TestClientCertificateOptions
+XBullet.EasyTesting.Authentication.TestClientCertificateOptions.AsDefaultScheme() -> XBullet.EasyTesting.Authentication.TestClientCertificateOptions!
+XBullet.EasyTesting.Authentication.TestClientCertificateOptions.TestClientCertificateOptions() -> void
+XBullet.EasyTesting.Authentication.TestClientCertificateOptions.UseAsDefaultScheme.get -> bool
+XBullet.EasyTesting.Authentication.TestClientCertificateOptions.UseAsDefaultScheme.set -> void
+XBullet.EasyTesting.Authentication.TestIdentity
+XBullet.EasyTesting.Authentication.TestIdentity.<Clone>$() -> XBullet.EasyTesting.Authentication.TestIdentity!
+XBullet.EasyTesting.Authentication.TestIdentity.AuthenticationType.get -> string!
+XBullet.EasyTesting.Authentication.TestIdentity.AuthenticationType.init -> void
+XBullet.EasyTesting.Authentication.TestIdentity.Claims.get -> System.Collections.Generic.IReadOnlyCollection<XBullet.EasyTesting.Authentication.TestClaim!>!
+XBullet.EasyTesting.Authentication.TestIdentity.Claims.init -> void
+XBullet.EasyTesting.Authentication.TestIdentity.Equals(XBullet.EasyTesting.Authentication.TestIdentity? other) -> bool
+XBullet.EasyTesting.Authentication.TestIdentity.NameClaimType.get -> string!
+XBullet.EasyTesting.Authentication.TestIdentity.NameClaimType.init -> void
+XBullet.EasyTesting.Authentication.TestIdentity.RoleClaimType.get -> string!
+XBullet.EasyTesting.Authentication.TestIdentity.RoleClaimType.init -> void
+XBullet.EasyTesting.Authentication.TestIdentity.TestIdentity() -> void
+XBullet.EasyTesting.Authentication.TestIdentityBuilder
+XBullet.EasyTesting.Authentication.TestIdentityBuilder.Build() -> XBullet.EasyTesting.Authentication.TestIdentity!
+XBullet.EasyTesting.Authentication.TestIdentityBuilder.TestIdentityBuilder() -> void
+XBullet.EasyTesting.Authentication.TestIdentityBuilder.WithAuthenticationType(string! authenticationType) -> XBullet.EasyTesting.Authentication.TestIdentityBuilder!
+XBullet.EasyTesting.Authentication.TestIdentityBuilder.WithClaim(string! type, string! value) -> XBullet.EasyTesting.Authentication.TestIdentityBuilder!
+XBullet.EasyTesting.Authentication.TestIdentityBuilder.WithClaimTypes(string! nameClaimType, string! roleClaimType) -> XBullet.EasyTesting.Authentication.TestIdentityBuilder!
+XBullet.EasyTesting.Authentication.TestJwtAuthority
+XBullet.EasyTesting.Authentication.TestJwtAuthority.CaptureDiagnosticsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<object?>
+XBullet.EasyTesting.Authentication.TestJwtAuthority.CreateExpiredToken(System.Action<XBullet.EasyTesting.Authentication.TestJwtBuilder!>? configure = null) -> string!
+XBullet.EasyTesting.Authentication.TestJwtAuthority.CreateFutureNotBeforeToken(System.Action<XBullet.EasyTesting.Authentication.TestJwtBuilder!>? configure = null) -> string!
+XBullet.EasyTesting.Authentication.TestJwtAuthority.CreateInvalidSignatureToken(System.Action<XBullet.EasyTesting.Authentication.TestJwtBuilder!>? configure = null) -> string!
+XBullet.EasyTesting.Authentication.TestJwtAuthority.CreateToken(System.Action<XBullet.EasyTesting.Authentication.TestJwtBuilder!>? configure = null) -> string!
+XBullet.EasyTesting.Authentication.TestJwtAuthority.CreateUnknownKeyToken(System.Action<XBullet.EasyTesting.Authentication.TestJwtBuilder!>? configure = null) -> string!
+XBullet.EasyTesting.Authentication.TestJwtAuthority.CreateUnsignedToken(System.Action<XBullet.EasyTesting.Authentication.TestJwtBuilder!>? configure = null) -> string!
+XBullet.EasyTesting.Authentication.TestJwtAuthority.CreateWrongAudienceToken(System.Action<XBullet.EasyTesting.Authentication.TestJwtBuilder!>? configure = null) -> string!
+XBullet.EasyTesting.Authentication.TestJwtAuthority.CreateWrongIssuerToken(System.Action<XBullet.EasyTesting.Authentication.TestJwtBuilder!>? configure = null) -> string!
+XBullet.EasyTesting.Authentication.TestJwtAuthority.CurrentKeyId.get -> string!
+XBullet.EasyTesting.Authentication.TestJwtAuthority.DiscoveryRequestCount.get -> int
+XBullet.EasyTesting.Authentication.TestJwtAuthority.Dispose() -> void
+XBullet.EasyTesting.Authentication.TestJwtAuthority.GetDiscoveryDocument() -> object!
+XBullet.EasyTesting.Authentication.TestJwtAuthority.GetJsonWebKeySet() -> object!
+XBullet.EasyTesting.Authentication.TestJwtAuthority.JwksRequestCount.get -> int
+XBullet.EasyTesting.Authentication.TestJwtAuthority.Options.get -> XBullet.EasyTesting.Authentication.TestJwtAuthorityOptions!
+XBullet.EasyTesting.Authentication.TestJwtAuthority.ResetAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+XBullet.EasyTesting.Authentication.TestJwtAuthority.RotateSigningKey(bool retainPreviousKey = false) -> string!
+XBullet.EasyTesting.Authentication.TestJwtAuthorityOptions
+XBullet.EasyTesting.Authentication.TestJwtAuthorityOptions.Audience.get -> string!
+XBullet.EasyTesting.Authentication.TestJwtAuthorityOptions.Audience.set -> void
+XBullet.EasyTesting.Authentication.TestJwtAuthorityOptions.ClockSkew.get -> System.TimeSpan
+XBullet.EasyTesting.Authentication.TestJwtAuthorityOptions.ClockSkew.set -> void
+XBullet.EasyTesting.Authentication.TestJwtAuthorityOptions.DiscoveryPath.get -> string!
+XBullet.EasyTesting.Authentication.TestJwtAuthorityOptions.DiscoveryPath.set -> void
+XBullet.EasyTesting.Authentication.TestJwtAuthorityOptions.Issuer.get -> string!
+XBullet.EasyTesting.Authentication.TestJwtAuthorityOptions.Issuer.set -> void
+XBullet.EasyTesting.Authentication.TestJwtAuthorityOptions.JwksPath.get -> string!
+XBullet.EasyTesting.Authentication.TestJwtAuthorityOptions.JwksPath.set -> void
+XBullet.EasyTesting.Authentication.TestJwtAuthorityOptions.SaveAccessToken() -> XBullet.EasyTesting.Authentication.TestJwtAuthorityOptions!
+XBullet.EasyTesting.Authentication.TestJwtAuthorityOptions.SaveToken.get -> bool
+XBullet.EasyTesting.Authentication.TestJwtAuthorityOptions.SaveToken.set -> void
+XBullet.EasyTesting.Authentication.TestJwtAuthorityOptions.TestJwtAuthorityOptions() -> void
+XBullet.EasyTesting.Authentication.TestJwtAuthorityOptions.TokenLifetime.get -> System.TimeSpan
+XBullet.EasyTesting.Authentication.TestJwtAuthorityOptions.TokenLifetime.set -> void
+XBullet.EasyTesting.Authentication.TestJwtAuthorityOptions.UseAsDefaultScheme.get -> bool
+XBullet.EasyTesting.Authentication.TestJwtAuthorityOptions.UseAsDefaultScheme.set -> void
+XBullet.EasyTesting.Authentication.TestJwtAuthorityOptions.WithAudience(string! audience) -> XBullet.EasyTesting.Authentication.TestJwtAuthorityOptions!
+XBullet.EasyTesting.Authentication.TestJwtAuthorityOptions.WithClockSkew(System.TimeSpan clockSkew) -> XBullet.EasyTesting.Authentication.TestJwtAuthorityOptions!
+XBullet.EasyTesting.Authentication.TestJwtAuthorityOptions.WithDiscoveryPath(string! discoveryPath) -> XBullet.EasyTesting.Authentication.TestJwtAuthorityOptions!
+XBullet.EasyTesting.Authentication.TestJwtAuthorityOptions.WithIssuer(string! issuer) -> XBullet.EasyTesting.Authentication.TestJwtAuthorityOptions!
+XBullet.EasyTesting.Authentication.TestJwtAuthorityOptions.WithJwksPath(string! jwksPath) -> XBullet.EasyTesting.Authentication.TestJwtAuthorityOptions!
+XBullet.EasyTesting.Authentication.TestJwtAuthorityOptions.WithoutDefaultScheme() -> XBullet.EasyTesting.Authentication.TestJwtAuthorityOptions!
+XBullet.EasyTesting.Authentication.TestJwtAuthorityOptions.WithTokenLifetime(System.TimeSpan tokenLifetime) -> XBullet.EasyTesting.Authentication.TestJwtAuthorityOptions!
+XBullet.EasyTesting.Authentication.TestJwtBuilder
+XBullet.EasyTesting.Authentication.TestJwtBuilder.AddAudience(string! audience) -> XBullet.EasyTesting.Authentication.TestJwtBuilder!
+XBullet.EasyTesting.Authentication.TestJwtBuilder.ExpiresAfter(System.TimeSpan lifetime) -> XBullet.EasyTesting.Authentication.TestJwtBuilder!
+XBullet.EasyTesting.Authentication.TestJwtBuilder.ExpiresAt(System.DateTimeOffset expires) -> XBullet.EasyTesting.Authentication.TestJwtBuilder!
+XBullet.EasyTesting.Authentication.TestJwtBuilder.NotBefore(System.DateTimeOffset notBefore) -> XBullet.EasyTesting.Authentication.TestJwtBuilder!
+XBullet.EasyTesting.Authentication.TestJwtBuilder.WithAudience(string! audience) -> XBullet.EasyTesting.Authentication.TestJwtBuilder!
+XBullet.EasyTesting.Authentication.TestJwtBuilder.WithClaim(string! type, string! value) -> XBullet.EasyTesting.Authentication.TestJwtBuilder!
+XBullet.EasyTesting.Authentication.TestJwtBuilder.WithIssuer(string! issuer) -> XBullet.EasyTesting.Authentication.TestJwtBuilder!
+XBullet.EasyTesting.Authentication.TestJwtBuilder.WithName(string! name) -> XBullet.EasyTesting.Authentication.TestJwtBuilder!
+XBullet.EasyTesting.Authentication.TestJwtBuilder.WithRole(string! role) -> XBullet.EasyTesting.Authentication.TestJwtBuilder!
+XBullet.EasyTesting.Authentication.TestJwtBuilder.WithRoles(params string![]! roles) -> XBullet.EasyTesting.Authentication.TestJwtBuilder!
+XBullet.EasyTesting.Authentication.TestJwtBuilder.WithScope(string! scope) -> XBullet.EasyTesting.Authentication.TestJwtBuilder!
+XBullet.EasyTesting.Authentication.TestJwtBuilder.WithScopes(params string![]! scopes) -> XBullet.EasyTesting.Authentication.TestJwtBuilder!
+XBullet.EasyTesting.Authentication.TestJwtBuilder.WithSubject(string! subject) -> XBullet.EasyTesting.Authentication.TestJwtBuilder!
+XBullet.EasyTesting.Authentication.TestUser
+XBullet.EasyTesting.Authentication.TestUser.<Clone>$() -> XBullet.EasyTesting.Authentication.TestUser!
+XBullet.EasyTesting.Authentication.TestUser.AdditionalIdentities.get -> System.Collections.Generic.IReadOnlyCollection<XBullet.EasyTesting.Authentication.TestIdentity!>!
+XBullet.EasyTesting.Authentication.TestUser.AdditionalIdentities.init -> void
+XBullet.EasyTesting.Authentication.TestUser.AuthenticationProperties.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string?>!
+XBullet.EasyTesting.Authentication.TestUser.AuthenticationProperties.init -> void
+XBullet.EasyTesting.Authentication.TestUser.AuthenticationScheme.get -> string!
+XBullet.EasyTesting.Authentication.TestUser.AuthenticationScheme.init -> void
+XBullet.EasyTesting.Authentication.TestUser.AuthenticationType.get -> string!
+XBullet.EasyTesting.Authentication.TestUser.AuthenticationType.init -> void
+XBullet.EasyTesting.Authentication.TestUser.Claims.get -> System.Collections.Generic.IReadOnlyCollection<XBullet.EasyTesting.Authentication.TestClaim!>!
+XBullet.EasyTesting.Authentication.TestUser.Claims.init -> void
+XBullet.EasyTesting.Authentication.TestUser.Equals(XBullet.EasyTesting.Authentication.TestUser? other) -> bool
+XBullet.EasyTesting.Authentication.TestUser.Name.get -> string!
+XBullet.EasyTesting.Authentication.TestUser.Name.init -> void
+XBullet.EasyTesting.Authentication.TestUser.NameIdentifier.get -> string!
+XBullet.EasyTesting.Authentication.TestUser.NameIdentifier.init -> void
+XBullet.EasyTesting.Authentication.TestUser.Roles.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
+XBullet.EasyTesting.Authentication.TestUser.Roles.init -> void
+XBullet.EasyTesting.Authentication.TestUser.TestUser() -> void
+XBullet.EasyTesting.Authentication.TestUserBuilder
+XBullet.EasyTesting.Authentication.TestUserBuilder.Build() -> XBullet.EasyTesting.Authentication.TestUser!
+XBullet.EasyTesting.Authentication.TestUserBuilder.TestUserBuilder() -> void
+XBullet.EasyTesting.Authentication.TestUserBuilder.WithAuthenticationProperty(string! key, string? value) -> XBullet.EasyTesting.Authentication.TestUserBuilder!
+XBullet.EasyTesting.Authentication.TestUserBuilder.WithAuthenticationScheme(string! authenticationScheme) -> XBullet.EasyTesting.Authentication.TestUserBuilder!
+XBullet.EasyTesting.Authentication.TestUserBuilder.WithAuthenticationType(string! authenticationType) -> XBullet.EasyTesting.Authentication.TestUserBuilder!
+XBullet.EasyTesting.Authentication.TestUserBuilder.WithClaim(string! type, string! value) -> XBullet.EasyTesting.Authentication.TestUserBuilder!
+XBullet.EasyTesting.Authentication.TestUserBuilder.WithIdentity(System.Action<XBullet.EasyTesting.Authentication.TestIdentityBuilder!>! configure) -> XBullet.EasyTesting.Authentication.TestUserBuilder!
+XBullet.EasyTesting.Authentication.TestUserBuilder.WithName(string! name) -> XBullet.EasyTesting.Authentication.TestUserBuilder!
+XBullet.EasyTesting.Authentication.TestUserBuilder.WithNameIdentifier(string! nameIdentifier) -> XBullet.EasyTesting.Authentication.TestUserBuilder!
+XBullet.EasyTesting.Authentication.TestUserBuilder.WithRole(string! role) -> XBullet.EasyTesting.Authentication.TestUserBuilder!
+XBullet.EasyTesting.Authentication.TestUserBuilder.WithRoles(params string![]! roles) -> XBullet.EasyTesting.Authentication.TestUserBuilder!
+XBullet.EasyTesting.Hosting.AuthenticatedWebApplicationFactory<TEntryPoint>
+XBullet.EasyTesting.Hosting.AuthenticatedWebApplicationFactory<TEntryPoint>.AuthenticatedWebApplicationFactory() -> void
+XBullet.EasyTesting.Hosting.AuthenticatedWebApplicationFactory<TEntryPoint>.AuthenticationEvents.get -> XBullet.EasyTesting.Authentication.TestAuthenticationEventRecorder!
+XBullet.EasyTesting.Hosting.AuthenticatedWebApplicationFactory<TEntryPoint>.Client() -> XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.AuthenticatedWebApplicationFactory<TEntryPoint>.CreateAnonymousClient(Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions? options = null) -> System.Net.Http.HttpClient!
+XBullet.EasyTesting.Hosting.AuthenticatedWebApplicationFactory<TEntryPoint>.CreateAuthenticatedClient(XBullet.EasyTesting.Authentication.TestUser? user = null, Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions? options = null) -> System.Net.Http.HttpClient!
+XBullet.EasyTesting.Hosting.AuthenticatedWebApplicationFactory<TEntryPoint>.CreateTestScenarioScopeAsync(System.Action<XBullet.EasyTesting.Hosting.TestScenarioScopeBuilder!>? configure = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<XBullet.EasyTesting.Hosting.TestScenarioScope<TEntryPoint!>!>!
+XBullet.EasyTesting.Hosting.AuthenticatedWebApplicationFactory<TEntryPoint>.JwtAuthority(string? authenticationScheme = null) -> XBullet.EasyTesting.Authentication.TestJwtAuthority!
+XBullet.EasyTesting.Hosting.AuthenticatedWebApplicationFactory<TEntryPoint>.RegisterScenarioResource(string! name, System.Action! reset, System.Func<object?>! captureDiagnostics) -> void
+XBullet.EasyTesting.Hosting.AuthenticatedWebApplicationFactory<TEntryPoint>.RegisterScenarioResource(string! name, XBullet.EasyTesting.Hosting.ITestScenarioResource! resource) -> void
+XBullet.EasyTesting.Hosting.AuthenticatedWebApplicationFactory<TEntryPoint>.RunInTestScenarioScopeAsync(System.Func<XBullet.EasyTesting.Hosting.TestScenarioScope<TEntryPoint!>!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>! test, System.Action<XBullet.EasyTesting.Hosting.TestScenarioScopeBuilder!>? configure = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+XBullet.EasyTesting.Hosting.AuthenticatedWebApplicationFactory<TEntryPoint>.RunInTestScenarioScopeAsync<TResult>(System.Func<XBullet.EasyTesting.Hosting.TestScenarioScope<TEntryPoint!>!, System.Threading.CancellationToken, System.Threading.Tasks.Task<TResult>!>! test, System.Action<XBullet.EasyTesting.Hosting.TestScenarioScopeBuilder!>? configure = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TResult>!
+XBullet.EasyTesting.Hosting.AuthenticatedWebApplicationFactory<TEntryPoint>.Scenario() -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.EasyTestHost
+XBullet.EasyTesting.Hosting.EasyTestHostBuilder<TEntryPoint>
+XBullet.EasyTesting.Hosting.EasyTestHostBuilder<TEntryPoint>.Build() -> XBullet.EasyTesting.Hosting.AuthenticatedWebApplicationFactory<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.EasyTestHostBuilder<TEntryPoint>.ConfigureAuthentication(System.Action<XBullet.EasyTesting.Authentication.TestAuthenticationSchemeBuilder!>! configure) -> XBullet.EasyTesting.Hosting.EasyTestHostBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.EasyTestHostBuilder<TEntryPoint>.ConfigureConfiguration(System.Action<Microsoft.Extensions.Configuration.IConfigurationBuilder!>! configure) -> XBullet.EasyTesting.Hosting.EasyTestHostBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.EasyTestHostBuilder<TEntryPoint>.ConfigureServices(System.Action<Microsoft.Extensions.DependencyInjection.IServiceCollection!>! configure) -> XBullet.EasyTesting.Hosting.EasyTestHostBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.EasyTestHostBuilder<TEntryPoint>.EasyTestHostBuilder() -> void
+XBullet.EasyTesting.Hosting.ITestScenarioResource
+XBullet.EasyTesting.Hosting.ITestScenarioResource.CaptureDiagnosticsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<object?>
+XBullet.EasyTesting.Hosting.ITestScenarioResource.ResetAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint>
+XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint>.AsAnonymous() -> XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint>.AsApiKey(System.Action<XBullet.EasyTesting.Authentication.TestApiKeyBuilder!>! configure) -> XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint>.AsAzureAdUser(System.Action<XBullet.EasyTesting.Authentication.TestAzureAdUserBuilder!>! configure) -> XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint>.AsExpiredJwt(System.Action<XBullet.EasyTesting.Authentication.TestJwtBuilder!>? configure = null) -> XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint>.AsJwt(string! authenticationScheme, System.Action<XBullet.EasyTesting.Authentication.TestJwtBuilder!>? configure = null) -> XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint>.AsJwt(System.Action<XBullet.EasyTesting.Authentication.TestJwtBuilder!>? configure = null) -> XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint>.AsJwtNotYetValid(System.Action<XBullet.EasyTesting.Authentication.TestJwtBuilder!>? configure = null) -> XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint>.AsJwtWithInvalidSignature(System.Action<XBullet.EasyTesting.Authentication.TestJwtBuilder!>? configure = null) -> XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint>.AsJwtWithUnknownKey(System.Action<XBullet.EasyTesting.Authentication.TestJwtBuilder!>? configure = null) -> XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint>.AsJwtWithWrongAudience(System.Action<XBullet.EasyTesting.Authentication.TestJwtBuilder!>? configure = null) -> XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint>.AsJwtWithWrongIssuer(System.Action<XBullet.EasyTesting.Authentication.TestJwtBuilder!>? configure = null) -> XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint>.AsMalformedJwt(string! value = "not-a-valid-jwt") -> XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint>.AsUnsignedJwt(System.Action<XBullet.EasyTesting.Authentication.TestJwtBuilder!>? configure = null) -> XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint>.AsUser(System.Action<XBullet.EasyTesting.Authentication.TestUserBuilder!>! configure) -> XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint>.AsUser(XBullet.EasyTesting.Authentication.TestUser! user) -> XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint>.Build() -> System.Net.Http.HttpClient!
+XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint>.WithApiKeyHeader(string! value, string? headerName = null) -> XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint>.WithApiKeyQuery(string! value, string? parameterName = null) -> XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint>.WithBaseAddress(System.Uri! baseAddress) -> XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint>.WithClientCertificate(string! authenticationScheme, System.Action<XBullet.EasyTesting.Authentication.TestClientCertificateBuilder!>? configure = null) -> XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint>.WithClientCertificate(string! authenticationScheme, System.Security.Cryptography.X509Certificates.X509Certificate2! certificate) -> XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint>.WithClientCertificate(System.Action<XBullet.EasyTesting.Authentication.TestClientCertificateBuilder!>? configure = null) -> XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint>.WithClientCertificate(System.Security.Cryptography.X509Certificates.X509Certificate2! certificate) -> XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint>.WithHeader(string! name, string! value) -> XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint>.WithoutCookies() -> XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint>.WithoutRedirects() -> XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.Arrange(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task!>! arrangement) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.AsAnonymous() -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.AsApiKey(System.Action<XBullet.EasyTesting.Authentication.TestApiKeyBuilder!>! configure) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.AsAzureAdUser(System.Action<XBullet.EasyTesting.Authentication.TestAzureAdUserBuilder!>! configure) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.AsExpiredJwt(System.Action<XBullet.EasyTesting.Authentication.TestJwtBuilder!>? configure = null) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.AsJwt(string! authenticationScheme, System.Action<XBullet.EasyTesting.Authentication.TestJwtBuilder!>? configure = null) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.AsJwt(System.Action<XBullet.EasyTesting.Authentication.TestJwtBuilder!>? configure = null) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.AsJwtNotYetValid(System.Action<XBullet.EasyTesting.Authentication.TestJwtBuilder!>? configure = null) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.AsJwtWithInvalidSignature(System.Action<XBullet.EasyTesting.Authentication.TestJwtBuilder!>? configure = null) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.AsJwtWithUnknownKey(System.Action<XBullet.EasyTesting.Authentication.TestJwtBuilder!>? configure = null) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.AsJwtWithWrongAudience(System.Action<XBullet.EasyTesting.Authentication.TestJwtBuilder!>? configure = null) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.AsJwtWithWrongIssuer(System.Action<XBullet.EasyTesting.Authentication.TestJwtBuilder!>? configure = null) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.AsMalformedJwt(string! value = "not-a-valid-jwt") -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.AsUnsignedJwt(System.Action<XBullet.EasyTesting.Authentication.TestJwtBuilder!>? configure = null) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.AsUser(System.Action<XBullet.EasyTesting.Authentication.TestUserBuilder!>! configure) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.AsUser(XBullet.EasyTesting.Authentication.TestUser! user) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.Delete(string! requestUri) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.ExecuteAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<XBullet.EasyTesting.Hosting.TestScenarioResult!>!
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.Get(string! requestUri) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.PostJson<T>(string! requestUri, T body) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.PutJson<T>(string! requestUri, T body) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.Send(System.Func<System.Net.Http.HttpClient!, System.Threading.CancellationToken, System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage!>!>! send) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.WithApiKeyHeader(string! value, string? headerName = null) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.WithApiKeyQuery(string! value, string? parameterName = null) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.WithBaseAddress(System.Uri! baseAddress) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.WithClientCertificate(string! authenticationScheme, System.Action<XBullet.EasyTesting.Authentication.TestClientCertificateBuilder!>? configure = null) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.WithClientCertificate(string! authenticationScheme, System.Security.Cryptography.X509Certificates.X509Certificate2! certificate) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.WithClientCertificate(System.Action<XBullet.EasyTesting.Authentication.TestClientCertificateBuilder!>? configure = null) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.WithClientCertificate(System.Security.Cryptography.X509Certificates.X509Certificate2! certificate) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.WithHeader(string! name, string! value) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.WithoutCookies() -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.WithoutRedirects() -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioContext
+XBullet.EasyTesting.Hosting.TestScenarioContext.DisposeWithScenario(System.IAsyncDisposable! resource) -> void
+XBullet.EasyTesting.Hosting.TestScenarioContext.DisposeWithScenario(System.IDisposable! resource) -> void
+XBullet.EasyTesting.Hosting.TestScenarioContext.OnCleanup(System.Func<System.Threading.Tasks.ValueTask>! cleanup) -> void
+XBullet.EasyTesting.Hosting.TestScenarioContext.ScenarioId.get -> string!
+XBullet.EasyTesting.Hosting.TestScenarioDiagnostics
+XBullet.EasyTesting.Hosting.TestScenarioDiagnostics.<Clone>$() -> XBullet.EasyTesting.Hosting.TestScenarioDiagnostics!
+XBullet.EasyTesting.Hosting.TestScenarioDiagnostics.CapturedAt.get -> System.DateTimeOffset
+XBullet.EasyTesting.Hosting.TestScenarioDiagnostics.CapturedAt.init -> void
+XBullet.EasyTesting.Hosting.TestScenarioDiagnostics.Deconstruct(out string! ScenarioId, out System.DateTimeOffset CapturedAt, out System.Collections.Generic.IReadOnlyDictionary<string!, object?>! Resources) -> void
+XBullet.EasyTesting.Hosting.TestScenarioDiagnostics.Equals(XBullet.EasyTesting.Hosting.TestScenarioDiagnostics? other) -> bool
+XBullet.EasyTesting.Hosting.TestScenarioDiagnostics.Resources.get -> System.Collections.Generic.IReadOnlyDictionary<string!, object?>!
+XBullet.EasyTesting.Hosting.TestScenarioDiagnostics.Resources.init -> void
+XBullet.EasyTesting.Hosting.TestScenarioDiagnostics.ScenarioId.get -> string!
+XBullet.EasyTesting.Hosting.TestScenarioDiagnostics.ScenarioId.init -> void
+XBullet.EasyTesting.Hosting.TestScenarioDiagnostics.TestScenarioDiagnostics(string! ScenarioId, System.DateTimeOffset CapturedAt, System.Collections.Generic.IReadOnlyDictionary<string!, object?>! Resources) -> void
+XBullet.EasyTesting.Hosting.TestScenarioResult
+XBullet.EasyTesting.Hosting.TestScenarioResult.Dispose() -> void
+XBullet.EasyTesting.Hosting.TestScenarioResult.Response.get -> System.Net.Http.HttpResponseMessage!
+XBullet.EasyTesting.Hosting.TestScenarioScope<TEntryPoint>
+XBullet.EasyTesting.Hosting.TestScenarioScope<TEntryPoint>.AuthenticationEvents.get -> XBullet.EasyTesting.Authentication.TestAuthenticationEventRecorder!
+XBullet.EasyTesting.Hosting.TestScenarioScope<TEntryPoint>.Client() -> XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioScope<TEntryPoint>.CreateAnonymousClient(Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions? options = null) -> System.Net.Http.HttpClient!
+XBullet.EasyTesting.Hosting.TestScenarioScope<TEntryPoint>.CreateAuthenticatedClient(XBullet.EasyTesting.Authentication.TestUser? user = null, Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions? options = null) -> System.Net.Http.HttpClient!
+XBullet.EasyTesting.Hosting.TestScenarioScope<TEntryPoint>.Diagnostics.get -> XBullet.EasyTesting.Hosting.TestScenarioDiagnostics?
+XBullet.EasyTesting.Hosting.TestScenarioScope<TEntryPoint>.DisposeAsync() -> System.Threading.Tasks.ValueTask
+XBullet.EasyTesting.Hosting.TestScenarioScope<TEntryPoint>.JwtAuthority(string? authenticationScheme = null) -> XBullet.EasyTesting.Authentication.TestJwtAuthority!
+XBullet.EasyTesting.Hosting.TestScenarioScope<TEntryPoint>.Scenario() -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioScope<TEntryPoint>.ScenarioId.get -> string!
+XBullet.EasyTesting.Hosting.TestScenarioScope<TEntryPoint>.Services.get -> System.IServiceProvider!
+XBullet.EasyTesting.Hosting.TestScenarioScopeBuilder
+XBullet.EasyTesting.Hosting.TestScenarioScopeBuilder.ConfigureConfiguration(System.Action<Microsoft.Extensions.Configuration.IConfigurationBuilder!>! configure) -> XBullet.EasyTesting.Hosting.TestScenarioScopeBuilder!
+XBullet.EasyTesting.Hosting.TestScenarioScopeBuilder.ConfigureServices(System.Action<Microsoft.Extensions.DependencyInjection.IServiceCollection!>! configure) -> XBullet.EasyTesting.Hosting.TestScenarioScopeBuilder!
+XBullet.EasyTesting.Hosting.TestScenarioScopeBuilder.TestScenarioScopeBuilder() -> void
+XBullet.EasyTesting.Hosting.TestHttpResponseAssertions
+XBullet.EasyTesting.Hosting.TestHttpResponseAssertions.BeSuccessful() -> XBullet.EasyTesting.Hosting.TestHttpResponseAssertions!
+XBullet.EasyTesting.Hosting.TestHttpResponseAssertions.HaveHeader(string! name) -> XBullet.EasyTesting.Hosting.TestHttpResponseAssertions!
+XBullet.EasyTesting.Hosting.TestHttpResponseAssertions.HaveHeader(string! name, string! expectedValue) -> XBullet.EasyTesting.Hosting.TestHttpResponseAssertions!
+XBullet.EasyTesting.Hosting.TestHttpResponseAssertions.HaveJsonBodyAsync<T>(T expected, System.Text.Json.JsonSerializerOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<XBullet.EasyTesting.Hosting.TestHttpResponseAssertions!>!
+XBullet.EasyTesting.Hosting.TestHttpResponseAssertions.HaveStatusCode(System.Net.HttpStatusCode expected) -> XBullet.EasyTesting.Hosting.TestHttpResponseAssertions!
+XBullet.EasyTesting.Hosting.TestHttpResponseVerificationException
+XBullet.EasyTesting.Hosting.TestHttpResponseVerificationException.TestHttpResponseVerificationException(string! message, System.Exception? innerException = null) -> void
+XBullet.EasyTesting.Hosting.TestScenarioResult.Should() -> XBullet.EasyTesting.Hosting.TestHttpResponseAssertions!

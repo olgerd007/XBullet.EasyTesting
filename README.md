@@ -6,6 +6,8 @@
 
 Reusable infrastructure for integration-testing authenticated ASP.NET Core controllers through an in-memory `TestServer`.
 
+All packages target both .NET 8 and .NET 10.
+
 ## Installation
 
 Install only the packages required by a test project. For example:
@@ -94,8 +96,15 @@ using var result = await factory.Scenario()
     .Get("/api/orders")
     .ExecuteAsync(cancellationToken);
 
-Assert.Equal(HttpStatusCode.OK, result.Response.StatusCode);
+await result.Should()
+    .HaveStatusCode(HttpStatusCode.OK)
+    .HaveJsonBodyAsync(
+        new OrderResponse(42, "Ready"),
+        cancellationToken: cancellationToken);
 ```
+
+Response assertions are test-framework agnostic. In addition to status and structural JSON body
+checks, a scenario result can assert successful responses and response or content headers.
 
 ## Per-test isolation
 
@@ -127,6 +136,20 @@ public sealed class TestApiFactory
     }
 }
 ```
+
+If a test does not depend on relational behavior, the EF Core in-memory provider can be selected
+without any database registration boilerplate:
+
+```csharp
+public sealed class TestApiFactory
+    : InMemoryEntityFrameworkWebApplicationFactory<Program, TestApiDbContext>
+{
+}
+```
+
+Each scenario gets its own in-memory database. Because this provider does not enforce relational
+constraints or support transactions, prefer SQLite or the production relational provider for tests
+that exercise those behaviors.
 
 Run the test body through `RunInTestScenarioScopeAsync` to guarantee failure diagnostics are captured before cleanup. The original exception is preserved, and `TestScenarioDiagnostics` is attached through `exception.Data[TestScenarioDiagnostics.ExceptionDataKey]`:
 
@@ -507,13 +530,11 @@ using var response = await client.PostAsJsonAsync(
     "/api/publishing/kafka/orders",
     new { OrderId = 42, CustomerId = "customer-7", Total = 125.50m });
 
-var published = Assert.Single(
-    factory.PublishedMessages.For(MessageTransportNames.Kafka, "orders.created"));
-var message = published.GetPayload<OrderCreatedMessage>();
-
 Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-Assert.Equal("customer-7", published.Headers["partition-key"]);
-Assert.Equal(42, message!.OrderId);
+factory.PublishedMessages.Should()
+    .ContainSingle(MessageTransportNames.Kafka, "orders.created")
+    .HaveHeader("partition-key", "customer-7")
+    .HavePayload(new OrderCreatedMessage(42));
 ```
 
 Well-known names are included for Kafka, Azure Service Bus, and Azure Notification Hubs. `RecordAsync` also accepts any custom transport or destination, so the same pattern covers RabbitMQ, Event Hubs, SNS/SQS, email, webhooks, or application-specific notification providers. Payloads and headers are copied at publication time to prevent later mutation from changing assertions.
@@ -718,7 +739,11 @@ dotnet build XBullet.EasyTesting.sln --configuration Release --no-restore
 dotnet test XBullet.EasyTesting.sln --configuration Release --no-build
 ```
 
-GitHub Actions runs restore, formatting validation, build, tests, and package creation for pushes and pull requests. To publish packages, add a scoped NuGet.org API key as the `NUGET_API_KEY` repository secret, update `CHANGELOG.md`, and publish a GitHub Release with a semantic-version tag such as `v0.2.0`. The release workflow publishes all `XBullet.EasyTesting.*` packages and their symbol packages.
+GitHub Actions builds and tests on Windows and Ubuntu, records Cobertura code coverage, validates public API approvals, checks package compatibility against the latest stable release, and creates packages for pushes and pull requests.
+
+Publishing uses NuGet.org trusted publishing instead of a long-lived API key. Configure a GitHub trusted publisher for the `olgerd007/XBullet.EasyTesting` repository and `.github/workflows/publish-nuget.yml`, update `CHANGELOG.md`, and publish a GitHub Release with a semantic-version tag such as `v1.2.3`. The release workflow exchanges its GitHub OIDC token for a short-lived NuGet API key, then publishes all `XBullet.EasyTesting.*` packages and their symbol packages.
+
+Public API approval files live beside each package project. New intentional APIs belong in `PublicAPI.Unshipped.txt`; move them to `PublicAPI.Shipped.txt` when preparing a stable release. Unapproved public changes and binary compatibility breaks fail the build or package step.
 
 ### Preview flow
 

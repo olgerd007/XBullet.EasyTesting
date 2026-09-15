@@ -18,7 +18,12 @@ internal sealed class TestClientCertificateStartupFilter : IStartupFilter
             {
                 try
                 {
-                    certificate = new X509Certificate2(Convert.FromBase64String(encoded));
+                    var certificateBytes = Convert.FromBase64String(encoded);
+#if NET9_0_OR_GREATER
+                    certificate = X509CertificateLoader.LoadCertificate(certificateBytes);
+#else
+                    certificate = new X509Certificate2(certificateBytes);
+#endif
                     context.Request.Scheme = "https";
                     context.Connection.ClientCertificate = certificate;
                 }

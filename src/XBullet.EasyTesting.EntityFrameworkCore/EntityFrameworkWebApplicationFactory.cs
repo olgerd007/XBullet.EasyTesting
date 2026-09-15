@@ -1,5 +1,6 @@
 using XBullet.EasyTesting.Hosting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -21,8 +22,7 @@ public abstract class EntityFrameworkWebApplicationFactory<TEntryPoint, TDbConte
     /// </summary>
     protected sealed override void ConfigureServicesForTests(IServiceCollection services)
     {
-        services.RemoveAll<TDbContext>();
-        services.RemoveAll<DbContextOptions<TDbContext>>();
+        RemoveDatabaseServices(services);
         ConfigureDatabaseServices(services);
         ConfigureAdditionalServicesForTests(services);
     }
@@ -248,10 +248,18 @@ public abstract class EntityFrameworkWebApplicationFactory<TEntryPoint, TDbConte
         IServiceCollection services,
         TestScenarioContext context)
     {
-        services.RemoveAll<TDbContext>();
-        services.RemoveAll<DbContextOptions<TDbContext>>();
+        RemoveDatabaseServices(services);
         ConfigureScenarioDatabaseServices(services, context);
         ConfigureAdditionalServicesForScenario(services, context);
+    }
+
+    private static void RemoveDatabaseServices(IServiceCollection services)
+    {
+        services.RemoveAll<TDbContext>();
+        services.RemoveAll<DbContextOptions<TDbContext>>();
+#if NET10_0_OR_GREATER
+        services.RemoveAll<IDbContextOptionsConfiguration<TDbContext>>();
+#endif
     }
 
     /// <inheritdoc />

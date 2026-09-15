@@ -1,0 +1,142 @@
+#nullable enable
+const XBullet.EasyTesting.Snapshots.SnapshotSettings.UpdateModeEnvironmentVariable = "INTEGRATION_TESTS_UPDATE_SNAPSHOTS" -> string!
+override XBullet.EasyTesting.Snapshots.ControllerBinaryBodySnapshot.Equals(object? obj) -> bool
+override XBullet.EasyTesting.Snapshots.ControllerBinaryBodySnapshot.GetHashCode() -> int
+override XBullet.EasyTesting.Snapshots.ControllerBinaryBodySnapshot.ToString() -> string!
+override XBullet.EasyTesting.Snapshots.ControllerRequestSnapshot.Equals(object? obj) -> bool
+override XBullet.EasyTesting.Snapshots.ControllerRequestSnapshot.GetHashCode() -> int
+override XBullet.EasyTesting.Snapshots.ControllerRequestSnapshot.ToString() -> string!
+override XBullet.EasyTesting.Snapshots.ControllerResponseSnapshot.Equals(object? obj) -> bool
+override XBullet.EasyTesting.Snapshots.ControllerResponseSnapshot.GetHashCode() -> int
+override XBullet.EasyTesting.Snapshots.ControllerResponseSnapshot.ToString() -> string!
+override XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshot.Equals(object? obj) -> bool
+override XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshot.GetHashCode() -> int
+override XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshot.ToString() -> string!
+static XBullet.EasyTesting.Snapshots.ControllerBinaryBodySnapshot.operator !=(XBullet.EasyTesting.Snapshots.ControllerBinaryBodySnapshot? left, XBullet.EasyTesting.Snapshots.ControllerBinaryBodySnapshot? right) -> bool
+static XBullet.EasyTesting.Snapshots.ControllerBinaryBodySnapshot.operator ==(XBullet.EasyTesting.Snapshots.ControllerBinaryBodySnapshot? left, XBullet.EasyTesting.Snapshots.ControllerBinaryBodySnapshot? right) -> bool
+static XBullet.EasyTesting.Snapshots.ControllerRequestSnapshot.operator !=(XBullet.EasyTesting.Snapshots.ControllerRequestSnapshot? left, XBullet.EasyTesting.Snapshots.ControllerRequestSnapshot? right) -> bool
+static XBullet.EasyTesting.Snapshots.ControllerRequestSnapshot.operator ==(XBullet.EasyTesting.Snapshots.ControllerRequestSnapshot? left, XBullet.EasyTesting.Snapshots.ControllerRequestSnapshot? right) -> bool
+static XBullet.EasyTesting.Snapshots.ControllerResponseSnapshot.FromResponseAsync(System.Net.Http.HttpResponseMessage! response, XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<XBullet.EasyTesting.Snapshots.ControllerResponseSnapshot!>!
+static XBullet.EasyTesting.Snapshots.ControllerResponseSnapshot.operator !=(XBullet.EasyTesting.Snapshots.ControllerResponseSnapshot? left, XBullet.EasyTesting.Snapshots.ControllerResponseSnapshot? right) -> bool
+static XBullet.EasyTesting.Snapshots.ControllerResponseSnapshot.operator ==(XBullet.EasyTesting.Snapshots.ControllerResponseSnapshot? left, XBullet.EasyTesting.Snapshots.ControllerResponseSnapshot? right) -> bool
+static XBullet.EasyTesting.Snapshots.HttpResponseSnapshotExtensions.ShouldMatchControllerSnapshot(this System.Net.Http.HttpResponseMessage! response, XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions? controllerOptions = null, XBullet.EasyTesting.Snapshots.SnapshotSettings? snapshotSettings = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken), string! sourceFile = "", string! testName = "") -> System.Threading.Tasks.Task!
+static XBullet.EasyTesting.Snapshots.SnapshotAssert.AcceptReceived(string! receivedPath) -> string!
+static XBullet.EasyTesting.Snapshots.SnapshotAssert.MatchAsync(object? actual, XBullet.EasyTesting.Snapshots.SnapshotSettings? settings = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken), string! sourceFile = "", string! testName = "") -> System.Threading.Tasks.Task!
+static XBullet.EasyTesting.Snapshots.SnapshotDiffTool.Rider(string! executable = "rider") -> XBullet.EasyTesting.Snapshots.SnapshotDiffTool!
+static XBullet.EasyTesting.Snapshots.SnapshotDiffTool.VisualStudio(string! executable = "devenv.exe") -> XBullet.EasyTesting.Snapshots.SnapshotDiffTool!
+static XBullet.EasyTesting.Snapshots.SnapshotDiffTool.VisualStudioCode(string! executable = "code") -> XBullet.EasyTesting.Snapshots.SnapshotDiffTool!
+static XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshot.FromRequest(XBullet.EasyTesting.Http.StubHttpRequest! request, XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshotOptions? options = null) -> XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshot!
+static XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshot.operator !=(XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshot? left, XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshot? right) -> bool
+static XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshot.operator ==(XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshot? left, XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshot? right) -> bool
+static XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshotExtensions.ShouldMatchRequestSnapshot(this XBullet.EasyTesting.Http.StubHttpRequest! request, XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshotOptions? requestOptions = null, XBullet.EasyTesting.Snapshots.SnapshotSettings? snapshotSettings = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken), string! sourceFile = "", string! testName = "") -> System.Threading.Tasks.Task!
+static XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshotExtensions.ShouldMatchRequestsSnapshot(this XBullet.EasyTesting.Http.StubHttpMessageHandler! handler, XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshotOptions? requestOptions = null, XBullet.EasyTesting.Snapshots.SnapshotSettings? snapshotSettings = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken), string! sourceFile = "", string! testName = "") -> System.Threading.Tasks.Task!
+XBullet.EasyTesting.Snapshots.ControllerBinaryBodySnapshot
+XBullet.EasyTesting.Snapshots.ControllerBinaryBodySnapshot.<Clone>$() -> XBullet.EasyTesting.Snapshots.ControllerBinaryBodySnapshot!
+XBullet.EasyTesting.Snapshots.ControllerBinaryBodySnapshot.ControllerBinaryBodySnapshot(string! Encoding, string! Value) -> void
+XBullet.EasyTesting.Snapshots.ControllerBinaryBodySnapshot.Deconstruct(out string! Encoding, out string! Value) -> void
+XBullet.EasyTesting.Snapshots.ControllerBinaryBodySnapshot.Encoding.get -> string!
+XBullet.EasyTesting.Snapshots.ControllerBinaryBodySnapshot.Encoding.init -> void
+XBullet.EasyTesting.Snapshots.ControllerBinaryBodySnapshot.Equals(XBullet.EasyTesting.Snapshots.ControllerBinaryBodySnapshot? other) -> bool
+XBullet.EasyTesting.Snapshots.ControllerBinaryBodySnapshot.Value.get -> string!
+XBullet.EasyTesting.Snapshots.ControllerBinaryBodySnapshot.Value.init -> void
+XBullet.EasyTesting.Snapshots.ControllerRequestSnapshot
+XBullet.EasyTesting.Snapshots.ControllerRequestSnapshot.<Clone>$() -> XBullet.EasyTesting.Snapshots.ControllerRequestSnapshot!
+XBullet.EasyTesting.Snapshots.ControllerRequestSnapshot.ControllerRequestSnapshot(string! Method, string? Url) -> void
+XBullet.EasyTesting.Snapshots.ControllerRequestSnapshot.Deconstruct(out string! Method, out string? Url) -> void
+XBullet.EasyTesting.Snapshots.ControllerRequestSnapshot.Equals(XBullet.EasyTesting.Snapshots.ControllerRequestSnapshot? other) -> bool
+XBullet.EasyTesting.Snapshots.ControllerRequestSnapshot.Method.get -> string!
+XBullet.EasyTesting.Snapshots.ControllerRequestSnapshot.Method.init -> void
+XBullet.EasyTesting.Snapshots.ControllerRequestSnapshot.Url.get -> string?
+XBullet.EasyTesting.Snapshots.ControllerRequestSnapshot.Url.init -> void
+XBullet.EasyTesting.Snapshots.ControllerResponseSnapshot
+XBullet.EasyTesting.Snapshots.ControllerResponseSnapshot.<Clone>$() -> XBullet.EasyTesting.Snapshots.ControllerResponseSnapshot!
+XBullet.EasyTesting.Snapshots.ControllerResponseSnapshot.Body.get -> object?
+XBullet.EasyTesting.Snapshots.ControllerResponseSnapshot.Body.init -> void
+XBullet.EasyTesting.Snapshots.ControllerResponseSnapshot.ControllerResponseSnapshot(XBullet.EasyTesting.Snapshots.ControllerRequestSnapshot? Request, int StatusCode, string? ReasonPhrase, System.Collections.Generic.IReadOnlyDictionary<string!, string![]!>! Headers, object? Body) -> void
+XBullet.EasyTesting.Snapshots.ControllerResponseSnapshot.Deconstruct(out XBullet.EasyTesting.Snapshots.ControllerRequestSnapshot? Request, out int StatusCode, out string? ReasonPhrase, out System.Collections.Generic.IReadOnlyDictionary<string!, string![]!>! Headers, out object? Body) -> void
+XBullet.EasyTesting.Snapshots.ControllerResponseSnapshot.Equals(XBullet.EasyTesting.Snapshots.ControllerResponseSnapshot? other) -> bool
+XBullet.EasyTesting.Snapshots.ControllerResponseSnapshot.Headers.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string![]!>!
+XBullet.EasyTesting.Snapshots.ControllerResponseSnapshot.Headers.init -> void
+XBullet.EasyTesting.Snapshots.ControllerResponseSnapshot.ReasonPhrase.get -> string?
+XBullet.EasyTesting.Snapshots.ControllerResponseSnapshot.ReasonPhrase.init -> void
+XBullet.EasyTesting.Snapshots.ControllerResponseSnapshot.Request.get -> XBullet.EasyTesting.Snapshots.ControllerRequestSnapshot?
+XBullet.EasyTesting.Snapshots.ControllerResponseSnapshot.Request.init -> void
+XBullet.EasyTesting.Snapshots.ControllerResponseSnapshot.StatusCode.get -> int
+XBullet.EasyTesting.Snapshots.ControllerResponseSnapshot.StatusCode.init -> void
+XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions
+XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions.ControllerSnapshotOptions() -> void
+XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions.IgnoredHeaders.get -> System.Collections.Generic.ISet<string!>!
+XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions.IgnoringHeaders(params string![]! headerNames) -> XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions!
+XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions.IncludeBody.get -> bool
+XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions.IncludeBody.set -> void
+XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions.IncludeRequest.get -> bool
+XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions.IncludeRequest.set -> void
+XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions.IncludingHeader(string! headerName) -> XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions!
+XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions.WithoutBody() -> XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions!
+XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions.WithoutRequest() -> XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions!
+XBullet.EasyTesting.Snapshots.HttpResponseSnapshotExtensions
+XBullet.EasyTesting.Snapshots.SnapshotAssert
+XBullet.EasyTesting.Snapshots.SnapshotDiffTool
+XBullet.EasyTesting.Snapshots.SnapshotDiffTool.Arguments.get -> System.Collections.Generic.IReadOnlyList<string!>!
+XBullet.EasyTesting.Snapshots.SnapshotDiffTool.Executable.get -> string!
+XBullet.EasyTesting.Snapshots.SnapshotDiffTool.SnapshotDiffTool(string! executable, params string![]! arguments) -> void
+XBullet.EasyTesting.Snapshots.SnapshotMismatchException
+XBullet.EasyTesting.Snapshots.SnapshotMismatchException.DiffToolLaunched.get -> bool
+XBullet.EasyTesting.Snapshots.SnapshotMismatchException.ReceivedPath.get -> string!
+XBullet.EasyTesting.Snapshots.SnapshotMismatchException.VerifiedPath.get -> string!
+XBullet.EasyTesting.Snapshots.SnapshotSettings
+XBullet.EasyTesting.Snapshots.SnapshotSettings.DiffTool.get -> XBullet.EasyTesting.Snapshots.SnapshotDiffTool?
+XBullet.EasyTesting.Snapshots.SnapshotSettings.DiffTool.set -> void
+XBullet.EasyTesting.Snapshots.SnapshotSettings.Directory.get -> string?
+XBullet.EasyTesting.Snapshots.SnapshotSettings.Directory.set -> void
+XBullet.EasyTesting.Snapshots.SnapshotSettings.IgnoreMember(string! memberName) -> XBullet.EasyTesting.Snapshots.SnapshotSettings!
+XBullet.EasyTesting.Snapshots.SnapshotSettings.IgnoreMembers(params string![]! memberNames) -> XBullet.EasyTesting.Snapshots.SnapshotSettings!
+XBullet.EasyTesting.Snapshots.SnapshotSettings.InDirectory(string! directory) -> XBullet.EasyTesting.Snapshots.SnapshotSettings!
+XBullet.EasyTesting.Snapshots.SnapshotSettings.JsonSerializerOptions.get -> System.Text.Json.JsonSerializerOptions!
+XBullet.EasyTesting.Snapshots.SnapshotSettings.JsonSerializerOptions.set -> void
+XBullet.EasyTesting.Snapshots.SnapshotSettings.LaunchDiffTool.get -> bool
+XBullet.EasyTesting.Snapshots.SnapshotSettings.LaunchDiffTool.set -> void
+XBullet.EasyTesting.Snapshots.SnapshotSettings.Named(string! snapshotName) -> XBullet.EasyTesting.Snapshots.SnapshotSettings!
+XBullet.EasyTesting.Snapshots.SnapshotSettings.Scrub(System.Func<string!, string!>! scrubber) -> XBullet.EasyTesting.Snapshots.SnapshotSettings!
+XBullet.EasyTesting.Snapshots.SnapshotSettings.Scrubbers.get -> System.Collections.Generic.IList<System.Func<string!, string!>!>!
+XBullet.EasyTesting.Snapshots.SnapshotSettings.ScrubDateTimes() -> XBullet.EasyTesting.Snapshots.SnapshotSettings!
+XBullet.EasyTesting.Snapshots.SnapshotSettings.ScrubGuids() -> XBullet.EasyTesting.Snapshots.SnapshotSettings!
+XBullet.EasyTesting.Snapshots.SnapshotSettings.ScrubMember(string! memberName) -> XBullet.EasyTesting.Snapshots.SnapshotSettings!
+XBullet.EasyTesting.Snapshots.SnapshotSettings.ScrubMembers(params string![]! memberNames) -> XBullet.EasyTesting.Snapshots.SnapshotSettings!
+XBullet.EasyTesting.Snapshots.SnapshotSettings.SnapshotName.get -> string?
+XBullet.EasyTesting.Snapshots.SnapshotSettings.SnapshotName.set -> void
+XBullet.EasyTesting.Snapshots.SnapshotSettings.SnapshotSettings() -> void
+XBullet.EasyTesting.Snapshots.SnapshotSettings.UpdateMode.get -> XBullet.EasyTesting.Snapshots.SnapshotUpdateMode
+XBullet.EasyTesting.Snapshots.SnapshotSettings.UpdateMode.set -> void
+XBullet.EasyTesting.Snapshots.SnapshotSettings.Updating(XBullet.EasyTesting.Snapshots.SnapshotUpdateMode updateMode) -> XBullet.EasyTesting.Snapshots.SnapshotSettings!
+XBullet.EasyTesting.Snapshots.SnapshotSettings.WithDiffTool(XBullet.EasyTesting.Snapshots.SnapshotDiffTool! diffTool) -> XBullet.EasyTesting.Snapshots.SnapshotSettings!
+XBullet.EasyTesting.Snapshots.SnapshotSettings.WithoutDiffTool() -> XBullet.EasyTesting.Snapshots.SnapshotSettings!
+XBullet.EasyTesting.Snapshots.SnapshotUpdateMode
+XBullet.EasyTesting.Snapshots.SnapshotUpdateMode.All = 2 -> XBullet.EasyTesting.Snapshots.SnapshotUpdateMode
+XBullet.EasyTesting.Snapshots.SnapshotUpdateMode.Missing = 1 -> XBullet.EasyTesting.Snapshots.SnapshotUpdateMode
+XBullet.EasyTesting.Snapshots.SnapshotUpdateMode.None = 0 -> XBullet.EasyTesting.Snapshots.SnapshotUpdateMode
+XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshot
+XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshot.<Clone>$() -> XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshot!
+XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshot.Body.get -> object?
+XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshot.Body.init -> void
+XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshot.Deconstruct(out string! Method, out string? Url, out System.Collections.Generic.IReadOnlyDictionary<string!, string![]!>? Headers, out object? Body) -> void
+XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshot.Equals(XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshot? other) -> bool
+XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshot.Headers.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string![]!>?
+XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshot.Headers.init -> void
+XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshot.Method.get -> string!
+XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshot.Method.init -> void
+XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshot.StubHttpRequestSnapshot(string! Method, string? Url, System.Collections.Generic.IReadOnlyDictionary<string!, string![]!>? Headers, object? Body) -> void
+XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshot.Url.get -> string?
+XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshot.Url.init -> void
+XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshotExtensions
+XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshotOptions
+XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshotOptions.IgnoredHeaders.get -> System.Collections.Generic.ISet<string!>!
+XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshotOptions.IgnoringHeaders(params string![]! headerNames) -> XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshotOptions!
+XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshotOptions.IncludeBody.get -> bool
+XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshotOptions.IncludeBody.set -> void
+XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshotOptions.IncludeHeaders.get -> bool
+XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshotOptions.IncludeHeaders.set -> void
+XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshotOptions.IncludingHeader(string! headerName) -> XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshotOptions!
+XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshotOptions.StubHttpRequestSnapshotOptions() -> void
+XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshotOptions.WithoutBody() -> XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshotOptions!
+XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshotOptions.WithoutHeaders() -> XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshotOptions!
