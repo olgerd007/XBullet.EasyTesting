@@ -6,6 +6,8 @@ The project follows Semantic Versioning. Package versions are produced from GitH
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-09-15
+
 ### Added
 
 - A first-class EF Core in-memory test factory with automatic per-scenario database isolation.

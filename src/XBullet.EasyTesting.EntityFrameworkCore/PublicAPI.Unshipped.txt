@@ -1,6 +1,1 @@
 #nullable enable
-override sealed XBullet.EasyTesting.EntityFrameworkCore.InMemoryEntityFrameworkWebApplicationFactory<TEntryPoint, TDbContext>.ConfigureDatabaseServices(Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> void
-override sealed XBullet.EasyTesting.EntityFrameworkCore.InMemoryEntityFrameworkWebApplicationFactory<TEntryPoint, TDbContext>.ConfigureScenarioDatabaseServices(Microsoft.Extensions.DependencyInjection.IServiceCollection! services, XBullet.EasyTesting.Hosting.TestScenarioContext! context) -> void
-virtual XBullet.EasyTesting.EntityFrameworkCore.InMemoryEntityFrameworkWebApplicationFactory<TEntryPoint, TDbContext>.ConfigureInMemoryDatabase(Microsoft.EntityFrameworkCore.DbContextOptionsBuilder! options) -> void
-XBullet.EasyTesting.EntityFrameworkCore.InMemoryEntityFrameworkWebApplicationFactory<TEntryPoint, TDbContext>
-XBullet.EasyTesting.EntityFrameworkCore.InMemoryEntityFrameworkWebApplicationFactory<TEntryPoint, TDbContext>.InMemoryEntityFrameworkWebApplicationFactory() -> void

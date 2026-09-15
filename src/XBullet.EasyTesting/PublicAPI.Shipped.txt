@@ -389,3 +389,12 @@ XBullet.EasyTesting.Hosting.TestScenarioScopeBuilder
 XBullet.EasyTesting.Hosting.TestScenarioScopeBuilder.ConfigureConfiguration(System.Action<Microsoft.Extensions.Configuration.IConfigurationBuilder!>! configure) -> XBullet.EasyTesting.Hosting.TestScenarioScopeBuilder!
 XBullet.EasyTesting.Hosting.TestScenarioScopeBuilder.ConfigureServices(System.Action<Microsoft.Extensions.DependencyInjection.IServiceCollection!>! configure) -> XBullet.EasyTesting.Hosting.TestScenarioScopeBuilder!
 XBullet.EasyTesting.Hosting.TestScenarioScopeBuilder.TestScenarioScopeBuilder() -> void
+XBullet.EasyTesting.Hosting.TestHttpResponseAssertions
+XBullet.EasyTesting.Hosting.TestHttpResponseAssertions.BeSuccessful() -> XBullet.EasyTesting.Hosting.TestHttpResponseAssertions!
+XBullet.EasyTesting.Hosting.TestHttpResponseAssertions.HaveHeader(string! name) -> XBullet.EasyTesting.Hosting.TestHttpResponseAssertions!
+XBullet.EasyTesting.Hosting.TestHttpResponseAssertions.HaveHeader(string! name, string! expectedValue) -> XBullet.EasyTesting.Hosting.TestHttpResponseAssertions!
+XBullet.EasyTesting.Hosting.TestHttpResponseAssertions.HaveJsonBodyAsync<T>(T expected, System.Text.Json.JsonSerializerOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<XBullet.EasyTesting.Hosting.TestHttpResponseAssertions!>!
+XBullet.EasyTesting.Hosting.TestHttpResponseAssertions.HaveStatusCode(System.Net.HttpStatusCode expected) -> XBullet.EasyTesting.Hosting.TestHttpResponseAssertions!
+XBullet.EasyTesting.Hosting.TestHttpResponseVerificationException
+XBullet.EasyTesting.Hosting.TestHttpResponseVerificationException.TestHttpResponseVerificationException(string! message, System.Exception? innerException = null) -> void
+XBullet.EasyTesting.Hosting.TestScenarioResult.Should() -> XBullet.EasyTesting.Hosting.TestHttpResponseAssertions!
