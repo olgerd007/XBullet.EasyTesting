@@ -28,4 +28,4 @@ dotnet format XBullet.EasyTesting.sln --verify-no-changes --no-restore
 
 ## Releases
 
-Every CI run creates downloadable `VersionPrefix-preview.<run number>` packages without publishing them. Package versions published to NuGet.org are derived from GitHub Release tags. Maintainers should update `CHANGELOG.md`, create a tag such as `v0.1.0`, and publish the corresponding GitHub Release. Public previews use a tag such as `v0.2.0-preview.1` and must be marked as a GitHub pre-release. The release workflow validates, packs, and publishes every project under `src` to NuGet.org.
+Every CI run creates downloadable `VersionPrefix-preview.<run number>` packages without publishing them. Package versions published to NuGet.org are derived from GitHub Release tags. Maintainers should update `CHANGELOG.md`, create a tag such as `v0.2.0`, and publish the corresponding GitHub Release. Public previews use a tag such as `v0.2.0-preview.1` and must be marked as a GitHub pre-release. The release workflow validates, packs, and publishes every project under `src` to NuGet.org.

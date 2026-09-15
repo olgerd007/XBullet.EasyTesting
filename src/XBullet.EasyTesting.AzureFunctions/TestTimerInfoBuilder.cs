@@ -36,4 +36,21 @@ public sealed class TestTimerInfoBuilder
         IsPastDue = _isPastDue,
         ScheduleStatus = _scheduleStatus,
     };
+
+    /// <summary>Creates timer input together with capturable trigger metadata.</summary>
+    public TestTriggerData<TimerInfo> BuildTrigger(string bindingName = "timer")
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(bindingName);
+        var timer = Build();
+        var bindingData = new Dictionary<string, object?>
+        {
+            ["IsPastDue"] = timer.IsPastDue,
+            ["ScheduleStatus"] = timer.ScheduleStatus,
+        };
+        return new TestTriggerData<TimerInfo>(
+            timer,
+            bindingName,
+            "timerTrigger",
+            bindingData);
+    }
 }

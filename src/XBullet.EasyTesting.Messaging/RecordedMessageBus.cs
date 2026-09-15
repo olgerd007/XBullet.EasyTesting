@@ -1,9 +1,10 @@
 using System.Text.Json;
+using XBullet.EasyTesting.Hosting;
 
 namespace XBullet.EasyTesting.Messaging;
 
 /// <summary>Thread-safe, in-memory recording bus used by test publisher adapters.</summary>
-public sealed class RecordedMessageBus
+public sealed class RecordedMessageBus : ITestScenarioResource
 {
     private readonly object _gate = new();
     private readonly List<RecordedMessage> _messages = [];
@@ -105,5 +106,24 @@ public sealed class RecordedMessageBus
         }
 
         return this;
+    }
+
+    /// <inheritdoc />
+    public ValueTask ResetAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        Reset();
+        return ValueTask.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public ValueTask<object?> CaptureDiagnosticsAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return ValueTask.FromResult<object?>(new
+        {
+            Count,
+            Messages
+        });
     }
 }

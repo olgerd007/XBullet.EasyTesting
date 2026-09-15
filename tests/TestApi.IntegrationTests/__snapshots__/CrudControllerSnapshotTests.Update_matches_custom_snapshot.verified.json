@@ -1,0 +1,18 @@
+{
+  "Request": {
+    "Method": "PUT",
+    "Url": "/api/products/921"
+  },
+  "StatusCode": 200,
+  "ReasonPhrase": "OK",
+  "Headers": {
+    "Content-Type": [
+      "application/json; charset=utf-8"
+    ]
+  },
+  "Body": {
+    "id": 921,
+    "name": "Updated name",
+    "price": 25.50
+  }
+}

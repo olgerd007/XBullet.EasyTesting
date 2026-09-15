@@ -1,0 +1,10 @@
+{
+  "Request": {
+    "Method": "DELETE",
+    "Url": "/api/products/931"
+  },
+  "StatusCode": 204,
+  "ReasonPhrase": "No Content",
+  "Headers": {},
+  "Body": null
+}

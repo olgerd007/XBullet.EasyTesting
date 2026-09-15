@@ -1,0 +1,25 @@
+{
+  "Request": {
+    "Method": "GET",
+    "Url": "/api/products"
+  },
+  "StatusCode": 200,
+  "ReasonPhrase": "OK",
+  "Headers": {
+    "Content-Type": [
+      "application/json; charset=utf-8"
+    ]
+  },
+  "Body": [
+    {
+      "id": 911,
+      "name": "Keyboard",
+      "price": 120.0
+    },
+    {
+      "id": 912,
+      "name": "Mouse",
+      "price": 45.0
+    }
+  ]
+}

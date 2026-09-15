@@ -65,6 +65,99 @@ public sealed class OrdersControllerTests
 
 The fluent client is anonymous until `AsUser` is called. Use `factory.Client().AsAnonymous().Build()` or `CreateAnonymousClient()` for `401 Unauthorized` scenarios. A user with insufficient roles or claims receives `403 Forbidden`. `AuthenticateAs` can also be applied to an individual `HttpRequestMessage`, so identities can vary while sharing one client and test server. Existing non-fluent APIs remain available.
 
+For composable configuration without a custom factory subclass, build the host fluently. Multiple callbacks of each kind are applied in registration order, allowing extension packages and test-specific setup to participate independently:
+
+```csharp
+using var factory = EasyTestHost.Create<Program>()
+    .ConfigureConfiguration(configuration =>
+        configuration.AddInMemoryCollection(testSettings))
+    .ConfigureServices(services =>
+    {
+        services.RemoveAll<IClock>();
+        services.AddSingleton<IClock>(new FakeClock());
+    })
+    .ConfigureAuthentication(authentication => authentication
+        .MapAzureAd("Bearer")
+        .MapApiKey("ApiKey"))
+    .Build();
+```
+
+Compose one arrange-and-request flow with `Scenario()`. The result owns both its client and response, so dispose it after assertions:
+
+```csharp
+using var result = await factory.Scenario()
+    .Arrange(cancellationToken => SeedOrdersAsync(cancellationToken))
+    .AsAzureAdUser(user => user
+        .WithTenantId("tenant-42")
+        .WithScope("orders.read"))
+    .WithHeader("X-Correlation-Id", "test-42")
+    .Get("/api/orders")
+    .ExecuteAsync(cancellationToken);
+
+Assert.Equal(HttpStatusCode.OK, result.Response.StatusCode);
+```
+
+## Per-test isolation
+
+Use `TestScenarioScope` when a factory is shared by multiple tests. The factory holds its scenario gate for the complete test lifetime, creates a child host for reversible configuration and service replacements, resets registered mutable resources before and after the test, and invokes provider-specific database isolation hooks.
+
+Register reusable HTTP stubs and message recorders once in the factory. Both implement `ITestScenarioResource`, so their rules, requests, and messages are reset automatically and captured if the test fails:
+
+```csharp
+public sealed class TestApiFactory
+    : EntityFrameworkWebApplicationFactory<Program, TestApiDbContext>
+{
+    public StubHttpMessageHandler ExternalCatalog { get; } = new();
+    public RecordedMessageBus PublishedMessages { get; } = new();
+
+    public TestApiFactory()
+    {
+        RegisterScenarioResource("External catalog", ExternalCatalog);
+        RegisterScenarioResource("Published messages", PublishedMessages);
+    }
+
+    protected override void ConfigureScenarioDatabaseServices(
+        IServiceCollection services,
+        TestScenarioContext context)
+    {
+        var connection = new SqliteConnection("Data Source=:memory:");
+        connection.Open();
+        context.OnCleanup(connection.DisposeAsync);
+        services.AddDbContext<TestApiDbContext>(options => options.UseSqlite(connection));
+    }
+}
+```
+
+Run the test body through `RunInTestScenarioScopeAsync` to guarantee failure diagnostics are captured before cleanup. The original exception is preserved, and `TestScenarioDiagnostics` is attached through `exception.Data[TestScenarioDiagnostics.ExceptionDataKey]`:
+
+```csharp
+await factory.RunInTestScenarioScopeAsync(
+    async (scope, cancellationToken) =>
+    {
+        factory.ExternalCatalog
+            .When(HttpMethod.Get, "/products/701")
+            .RespondJson(externalProduct);
+
+        using var client = scope.Client()
+            .AsUser(TestUser.Create("scenario-user"))
+            .Build();
+        using var response = await client.PostAsync(
+            "/api/products/import/701",
+            content: null,
+            cancellationToken);
+
+        response.EnsureSuccessStatusCode();
+    },
+    configure: scope => scope
+        .ConfigureConfiguration(configuration =>
+            configuration.AddInMemoryCollection(testSettings))
+        .ConfigureServices(services =>
+            services.AddSingleton<IClock>(fakeClock)),
+    cancellationToken);
+```
+
+For manual lifetime control, use `await using var scope = await factory.CreateTestScenarioScopeAsync(...)`. Override `ConfigureScenarioDatabaseServices` to create a database or schema named from `context.ScenarioId`; scenario-owned connections and containers can be registered with `DisposeWithScenario` or `OnCleanup`.
+
 For application-specific dependency replacement, derive from the factory and override `ConfigureServicesForTests`:
 
 ```csharp
@@ -120,7 +213,95 @@ using var apiKeyClient = factory.Client()
 
 Azure AD profiles expose common `oid`, `tid`, `preferred_username`, `scp`, `roles`, and `azp` claims. API-key profiles expose a non-secret `api_key_id`. Both support custom claims and roles. For another authentication type, map its scheme and use `TestUser.CreateBuilder().WithAuthenticationScheme(...)`.
 
-These profiles test controller authentication and authorization without external identity infrastructure. They intentionally bypass signature, issuer, token-expiry, and secret validation. To integration-test the real authentication handler instead, do not map its scheme; send its actual credential with `Client().WithHeader(...)`.
+These profiles test controller authentication and authorization without external identity infrastructure. They intentionally bypass signature, issuer, token-expiry, and secret validation.
+
+### End-to-end authentication
+
+For validation through the application's real handlers, keep `AddJwtBearer` and the application's API-key handler registered in production code, then opt the test factory into end-to-end mode:
+
+```csharp
+protected override void ConfigureTestAuthentication(
+    TestAuthenticationSchemeBuilder authentication)
+{
+    authentication
+        .UseEndToEndJwt("Bearer", authority => authority
+            .WithIssuer("https://identity.orders.test")
+            .WithAudience("orders-api")
+            .WithTokenLifetime(TimeSpan.FromMinutes(2))
+            .WithClockSkew(TimeSpan.Zero)
+            .SaveAccessToken())
+        .UseEndToEndApiKey("ApiKey", apiKey => apiKey
+            .WithHeaderName("X-Api-Key")
+            .WithQueryParameterName("api_key"))
+        .UseEndToEndClientCertificate("Certificate");
+}
+```
+
+`UseEndToEndJwt` connects the named `JwtBearerHandler` to an in-memory OIDC backchannel. The real handler loads discovery metadata and signing keys, validates the token, and refreshes JWKS after key rotation. The same OIDC discovery and JWKS documents are exposed from the test host at `/.well-known/openid-configuration` and `/.well-known/jwks.json`. Tokens can customize issuer, audience, expiry, scopes, roles, subject, name, and arbitrary claims:
+
+```csharp
+using var client = scope.Client()
+    .AsJwt(token => token
+        .WithSubject("user-42")
+        .WithName("Ada")
+        .WithAudience("orders-api")
+        .WithScope("orders.read")
+        .WithRole("Administrator")
+        .ExpiresAfter(TimeSpan.FromMinutes(1)))
+    .Build();
+```
+
+Negative scenarios are explicit: `AsExpiredJwt()`, `AsMalformedJwt()`, `AsJwtWithWrongAudience()`, `AsJwtWithWrongIssuer()`, `AsJwtWithInvalidSignature()`, `AsJwtWithUnknownKey()`, `AsUnsignedJwt()`, and `AsJwtNotYetValid()`. Real API keys can be injected with `WithApiKeyHeader(value)` or `WithApiKeyQuery(value)`; these helpers only transport the credential, leaving parsing and validation to the application's registered API-key handler.
+
+Register multiple authorities with unique discovery and JWKS paths, then select one by scheme. Authorities are also available from the scenario scope for explicit rotation:
+
+```csharp
+authentication.UseEndToEndJwt("PartnerBearer", authority => authority
+    .WithIssuer("https://partner.orders.test")
+    .WithAudience("orders-partner-api")
+    .WithDiscoveryPath("/.well-known/partner/openid-configuration")
+    .WithJwksPath("/.well-known/partner/jwks.json")
+    .WithoutDefaultScheme());
+
+using var partnerClient = scope.Client()
+    .AsJwt("PartnerBearer", token => token.WithClaim("partner", "trusted"))
+    .Build();
+
+scope.JwtAuthority("PartnerBearer").RotateSigningKey();
+```
+
+Authentication events are reset with each `TestScenarioScope`, included in failure diagnostics, and contain no headers, query strings, or raw credentials. Assertions can be chained after a request:
+
+```csharp
+scope.AuthenticationEvents.Should()
+    .HaveValidationFailure(authenticationScheme: "Bearer")
+    .HaveChallenge(authenticationScheme: "Bearer")
+    .NotHave(TestAuthenticationEventKind.Forbidden);
+```
+
+For mTLS, leave the application's real `AddCertificate` scheme registered and use `WithClientCertificate(...)`. XBullet creates a self-signed client certificate, transports it through TestServer as an HTTPS connection certificate, removes the internal transport header, and lets `CertificateAuthenticationHandler` perform validation:
+
+```csharp
+using var client = scope.Client()
+    .WithClientCertificate(certificate => certificate
+        .WithSubject("CN=trusted-test-client"))
+    .Build();
+```
+
+Calling `SaveAccessToken()` on the authority sets the real bearer handler's `SaveToken` option, making the access token available through `AuthenticateAsync().Properties`. A standalone authority can be created with `using var authority = TestJwtAuthority.Create(...)` when a token is needed outside the HTTP client builder.
+
+Simulated users can represent composite principals and authentication-ticket state when handler validation is not under test:
+
+```csharp
+using var client = scope.Client()
+    .AsUser(user => user
+        .WithName("Primary identity")
+        .WithIdentity(identity => identity
+            .WithAuthenticationType("DelegatedIdentity")
+            .WithClaim(ClaimTypes.Name, "Secondary identity"))
+        .WithAuthenticationProperty("refresh_token", "test-value"))
+    .Build();
+```
 
 Anonymous controllers continue to work normally. When the application uses a fallback policy that requires authentication, mark public controllers such as health endpoints with `[AllowAnonymous]` and test them with `CreateAnonymousClient()`.
 
@@ -200,6 +381,7 @@ Arrange an exact outbound response, call the controller, and inspect the databas
 factory.ExternalCatalog
     .Reset()
     .When(HttpMethod.Get, "/products/701")
+    .WithRequestHeader("X-Tenant", "tenant-42")
     .RespondJson(new { Id = 701, Name = "Keyboard", Price = 149.95m });
 
 using var client = factory.Client()
@@ -213,10 +395,72 @@ var savedProduct = await factory.QueryDatabaseAsync(
         .SingleAsync(product => product.Id == 701, cancellationToken));
 
 Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-Assert.Single(factory.ExternalCatalog.Requests);
+factory.ExternalCatalog.VerifyCalled(HttpMethod.Get, "/products/701");
 ```
 
-`Respond`, `RespondJson`, and `RespondText` cover empty, JSON, and text responses. Every call is captured in `Requests`, including its method, URI, headers, and body. An unmatched request receives `501 Not Implemented` with a diagnostic message, making missing arrangements visible without network access.
+Rules can match query parameters, headers, exact text bodies, structural JSON bodies, or a custom `StubHttpRequest` predicate. Query matching is independent of parameter order and supports decoded and repeated values:
+
+```csharp
+stub
+    .When(HttpMethod.Get, "/products")
+    .WithQueryParameter("category", "books")
+    .WithQueryParameter("tag", values => values.Contains("featured"))
+    .RespondJson(products);
+```
+
+Match a complete JSON request body, a root property, or a nested path. JSON-path matching supports dot-separated properties and zero-based array indexes:
+
+```csharp
+stub
+    .When(HttpMethod.Post, "/orders")
+    .WithJsonProperty("tenantId", "tenant-42")
+    .WithJsonPath("$.customer.id", 701)
+    .WithJsonPath("$.items[0].quantity", value => value.GetInt32() > 0)
+    .Respond(HttpStatusCode.Created);
+```
+
+`Respond`, `RespondJson`, and `RespondText` cover empty, JSON, and text responses; callback and asynchronous responses can inspect the captured request. `Throw` simulates network failures. `VerifyCalled`, `VerifyNotCalled`, and `Verify` assert interactions and report every recorded request when verification fails. Every call remains available through `Requests`, including its method, URI, headers, and body.
+
+Return a different response for each consecutive matching request with an explicit sequence. Each entry is consumed once, and an additional call throws `StubHttpSequenceExhaustedException`:
+
+```csharp
+stub
+    .When(HttpMethod.Get, "/catalog/status")
+    .RespondSequence(sequence => sequence
+        .Respond(HttpStatusCode.ServiceUnavailable)
+        .WithDelay(TimeSpan.FromMilliseconds(100))
+        .RespondJson(new { ready = true }));
+```
+
+Use `WithDelay(...)` before any ordinary response to delay every matching call. `TimeoutAfter(...)` throws a deterministic `TimeoutException` after the specified duration, while `Timeout()` waits for the caller's cancellation token or `HttpClient.Timeout`.
+
+Explicit fault helpers cover cancellation and malformed payload handling:
+
+```csharp
+stub.When(HttpMethod.Get, "/cancelled").Cancel();
+stub.When(HttpMethod.Get, "/cancel-later")
+    .CancelAfter(TimeSpan.FromMilliseconds(100));
+stub.When(HttpMethod.Get, "/bad-json")
+    .RespondMalformedJson("{\"incomplete\":");
+stub.When(HttpMethod.Get, "/truncated")
+    .RespondTruncated("{\"partial\":", mediaType: "application/json");
+```
+
+`RespondMalformedJson` rejects valid JSON during rule configuration. `RespondTruncated` returns headers successfully and throws an I/O failure when the application consumes the partial body. These helpers are also available as response-sequence entries.
+
+An unmatched request receives `501 Not Implemented` with diagnostics for every configured rule, including method and URI differences, failed query/header/body predicates, and exceptions thrown by custom predicates.
+
+When `XBullet.EasyTesting.Snapshots` is referenced, snapshot one request or every request captured by the handler with the same update, scrubber, acceptance, and diff-viewer workflow used by controller snapshots:
+
+```csharp
+await stub.ShouldMatchRequestsSnapshot(
+    new StubHttpRequestSnapshotOptions()
+        .IgnoringHeaders("X-Request-Nonce"),
+    new SnapshotSettings()
+        .ScrubMembers("timestamp", "requestId"));
+```
+
+JSON request bodies are captured structurally. Authorization, cookies, API keys, correlation IDs, and tracing headers are excluded by default; use `IncludingHeader` to opt one back in. Use `ShouldMatchRequestSnapshot` on an individual `StubHttpRequest`.
 
 ## Kafka, Azure Service Bus, and notifications
 
@@ -276,7 +520,7 @@ Well-known names are included for Kafka, Azure Service Bus, and Azure Notificati
 
 ## Azure Functions isolated worker
 
-Reference `XBullet.EasyTesting.AzureFunctions` to resolve function classes from a test service provider and invoke HTTP, timer, and Kafka entry points directly:
+Reference `XBullet.EasyTesting.AzureFunctions` to resolve function classes from a test service provider and invoke isolated-worker entry points directly. `TestFunctionContext` supplies non-null trace, binding, retry, function-definition, feature, item, service, and cancellation state:
 
 ```csharp
 var recorder = new RecordingTriggerInvocationSink();
@@ -284,6 +528,13 @@ await using var host = AzureFunctionTestHost.CreateBuilder()
     .AddFunction<ProcessOrderHttpFunction>()
     .AddFunction<CleanupTimerFunction>()
     .AddFunction<ProcessOrderKafkaFunction>()
+    .AddFunction<AdditionalTriggerFunctions>()
+    .UseMiddleware(async (context, next) =>
+    {
+        context.Items["test-middleware"] = "before";
+        await next(context);
+        context.Items["test-middleware"] = "after";
+    })
     .ConfigureServices(services =>
         services.AddSingleton<ITriggerInvocationSink>(recorder))
     .Build();
@@ -303,7 +554,17 @@ var response = await function.RunAsync(request, request.FunctionContext);
 var body = await response.ReadBodyAsJsonAsync<AcceptedOrderResponse>();
 ```
 
-Timer and Kafka trigger values use the same fluent/direct style:
+HTTP requests are automatically captured as an `httpTrigger` input. Retry, tracing, custom binding data, items, and typed invocation features can be configured fluently:
+
+```csharp
+var context = host.CreateContext("ProcessOrder")
+    .WithRetry(retryCount: 2, maxRetryCount: 5)
+    .WithTrace(traceParent, traceState)
+    .WithBindingData("tenant", "test-tenant")
+    .WithFeature(new TestFeature());
+```
+
+Timer and Kafka values retain their simple direct builders and also provide capturable trigger forms through `BuildTrigger`, `JsonTrigger`, and `JsonBatchTrigger`:
 
 ```csharp
 var timer = AzureFunctionTestHost.Timer()
@@ -315,7 +576,41 @@ var kafkaMessage = KafkaTriggerData.Json(
     new KafkaOrderMessage("order-42", 3));
 ```
 
-These tests exercise function code, dependency injection, serialization, and output behavior without Azure Functions Core Tools, storage, or a Kafka broker. They do not validate host indexing, binding expressions, broker connectivity, checkpoints, retries, or deployment configuration; keep a smaller runtime-level test suite for those concerns.
+Service Bus, Queue Storage, Blob, Event Grid, and Event Hubs builders return `TestTriggerData<T>`. Passing it to `InvokeAsync` captures the input and binding metadata, runs configured worker middleware in order, and invokes the function:
+
+```csharp
+var trigger = AzureFunctionTestHost.ServiceBusTrigger()
+    .WithJsonBody(new OrderMessage("order-42", 3))
+    .WithMessageId("message-1")
+    .WithCorrelationId("correlation-1")
+    .Build();
+
+var invocation = await host.InvokeAsync<OrderFunction, string>(
+    "ProcessOrderServiceBus",
+    trigger,
+    (function, message, context) => function.RunAsync(message, context));
+
+Assert.Equal("message-1", invocation.Context.BindingContext.BindingData["MessageId"]);
+Assert.Equal(trigger.Value, invocation.Context.Bindings.GetInput<string>("message"));
+```
+
+Equivalent entry points are `QueueTrigger()`, `BlobTrigger()`, `EventGridTrigger()`, and `EventHubsTrigger()`. Builders expose trigger-specific payload and metadata methods, including Event Hubs batches and Blob streams.
+
+For functions returning a multiple-output POCO, the invocation captures every public result property and recognizes worker output attributes such as `QueueOutput` and `BlobOutput`:
+
+```csharp
+var invocation = await host.InvokeAsync<RouteOrderFunction, RouteOrderOutput>(
+    context,
+    (function, testContext) => function.RunAsync(trigger.Value, testContext));
+
+invocation.Context.Bindings.Should()
+    .HaveCount(2)
+    .HaveValue("QueueMessage", expectedQueueMessage)
+    .HaveValue("BlobDocument", expectedBlobDocument)
+    .NotContain("UnexpectedOutput");
+```
+
+These tests exercise function code, dependency injection, serialization, binding metadata, middleware ordering, retry-aware behavior, and output behavior without Azure Functions Core Tools or live Azure services. They do not validate host indexing, binding expressions, broker connectivity, checkpoints, or deployment configuration; keep a smaller runtime-level test suite for those concerns.
 
 ## Built-in snapshots
 
@@ -423,11 +718,11 @@ dotnet build XBullet.EasyTesting.sln --configuration Release --no-restore
 dotnet test XBullet.EasyTesting.sln --configuration Release --no-build
 ```
 
-GitHub Actions runs restore, formatting validation, build, tests, and package creation for pushes and pull requests. To publish packages, add a scoped NuGet.org API key as the `NUGET_API_KEY` repository secret, update `CHANGELOG.md`, and publish a GitHub Release with a semantic-version tag such as `v0.1.0`. The release workflow publishes all `XBullet.EasyTesting.*` packages and their symbol packages.
+GitHub Actions runs restore, formatting validation, build, tests, and package creation for pushes and pull requests. To publish packages, add a scoped NuGet.org API key as the `NUGET_API_KEY` repository secret, update `CHANGELOG.md`, and publish a GitHub Release with a semantic-version tag such as `v0.2.0`. The release workflow publishes all `XBullet.EasyTesting.*` packages and their symbol packages.
 
 ### Preview flow
 
-Every CI run creates preview packages using the current `VersionPrefix` and the workflow run number, for example `0.1.0-preview.42`. Download the `nuget-preview-42` workflow artifact and use its directory as a local NuGet source to test the complete package set without publishing it.
+Every CI run creates preview packages using the current `VersionPrefix` and the workflow run number, for example `0.2.0-preview.42`. Download the `nuget-preview-42` workflow artifact and use its directory as a local NuGet source to test the complete package set without publishing it.
 
 To publish a public preview to NuGet.org, create a GitHub Release with a tag such as `v0.2.0-preview.1` and select **Set as a pre-release**. The release workflow verifies that the GitHub release type and semantic version agree before publishing. Install public previews with:
 

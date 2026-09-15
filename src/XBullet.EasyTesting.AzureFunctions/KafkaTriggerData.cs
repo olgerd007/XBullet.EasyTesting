@@ -19,4 +19,52 @@ public static class KafkaTriggerData
         ArgumentNullException.ThrowIfNull(values);
         return values.Select(value => Json(value, options)).ToArray();
     }
+
+    /// <summary>Creates one JSON message together with capturable Kafka trigger metadata.</summary>
+    public static TestTriggerData<string> JsonTrigger<T>(
+        T value,
+        string bindingName = "message",
+        string? topic = null,
+        string? partitionKey = null,
+        JsonSerializerOptions? options = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(bindingName);
+        var metadata = new Dictionary<string, object?>();
+        if (topic is not null)
+        {
+            metadata["Topic"] = topic;
+        }
+
+        if (partitionKey is not null)
+        {
+            metadata["PartitionKey"] = partitionKey;
+        }
+
+        return new TestTriggerData<string>(
+            Json(value, options),
+            bindingName,
+            "kafkaTrigger",
+            metadata);
+    }
+
+    /// <summary>Creates a JSON batch together with capturable Kafka trigger metadata.</summary>
+    public static TestTriggerData<string[]> JsonBatchTrigger<T>(
+        IEnumerable<T> values,
+        string bindingName = "messages",
+        string? topic = null,
+        JsonSerializerOptions? options = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(bindingName);
+        var metadata = new Dictionary<string, object?>();
+        if (topic is not null)
+        {
+            metadata["Topic"] = topic;
+        }
+
+        return new TestTriggerData<string[]>(
+            JsonBatch(values, options),
+            bindingName,
+            "kafkaTrigger",
+            metadata);
+    }
 }

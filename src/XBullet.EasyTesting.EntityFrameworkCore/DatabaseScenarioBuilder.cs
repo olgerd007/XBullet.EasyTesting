@@ -1,3 +1,4 @@
+using XBullet.EasyTesting.Hosting;
 using Microsoft.EntityFrameworkCore;
 
 namespace XBullet.EasyTesting.EntityFrameworkCore;
@@ -8,6 +9,7 @@ public sealed class DatabaseScenarioBuilder<TEntryPoint, TDbContext>
     where TDbContext : DbContext
 {
     private readonly EntityFrameworkWebApplicationFactory<TEntryPoint, TDbContext> _factory;
+    private readonly TestScenarioScope<TEntryPoint>? _scope;
     private readonly List<Func<TDbContext, CancellationToken, Task>> _actions = [];
     private bool _initialize;
     private bool _recreate;
@@ -15,9 +17,11 @@ public sealed class DatabaseScenarioBuilder<TEntryPoint, TDbContext>
     private bool _executed;
 
     internal DatabaseScenarioBuilder(
-        EntityFrameworkWebApplicationFactory<TEntryPoint, TDbContext> factory)
+        EntityFrameworkWebApplicationFactory<TEntryPoint, TDbContext> factory,
+        TestScenarioScope<TEntryPoint>? scope = null)
     {
         _factory = factory;
+        _scope = scope;
     }
 
     /// <summary>Ensures that the database schema exists before running subsequent actions.</summary>
@@ -84,7 +88,9 @@ public sealed class DatabaseScenarioBuilder<TEntryPoint, TDbContext>
         }
 
         _executed = true;
-        return _factory.WithDbContextAsync(ExecuteCoreAsync, cancellationToken);
+        return _scope is null
+            ? _factory.WithDbContextAsync(ExecuteCoreAsync, cancellationToken)
+            : _factory.WithScenarioDbContextAsync(_scope, ExecuteCoreAsync, cancellationToken);
     }
 
     private async Task ExecuteCoreAsync(TDbContext database, CancellationToken cancellationToken)
