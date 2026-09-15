@@ -117,9 +117,27 @@ public sealed class EndToEndAuthenticationTests : IClassFixture<EndToEndAuthenti
             using var rotatedResponse = await rotatedClient.GetAsync(
                 "/api/secure/admin",
                 cancellationToken);
+            var rotatedStatusCode = rotatedResponse.StatusCode;
+
+            // IdentityModel 8 refreshes signing-key metadata in the background by default,
+            // so the request that detects the rotated key can receive a 401. Once the
+            // refresh completes, the same token must succeed on the next request.
+            if (rotatedStatusCode == HttpStatusCode.Unauthorized)
+            {
+                var refreshDeadline = DateTimeOffset.UtcNow.AddSeconds(5);
+                while (authority.JwksRequestCount < 2 && DateTimeOffset.UtcNow < refreshDeadline)
+                {
+                    await Task.Delay(TimeSpan.FromMilliseconds(10), cancellationToken);
+                }
+
+                using var retryResponse = await rotatedClient.GetAsync(
+                    "/api/secure/admin",
+                    cancellationToken);
+                rotatedStatusCode = retryResponse.StatusCode;
+            }
 
             Assert.NotEqual(previousKeyId, currentKeyId);
-            Assert.Equal(HttpStatusCode.NoContent, rotatedResponse.StatusCode);
+            Assert.Equal(HttpStatusCode.NoContent, rotatedStatusCode);
             Assert.True(authority.DiscoveryRequestCount >= 1);
             Assert.True(authority.JwksRequestCount >= 2);
         });

@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageId>XBullet.EasyTesting.Http</PackageId>
     <Description>Fluent outbound HTTP stubs for integration-test hosts.</Description>
@@ -9,6 +9,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\XBullet.EasyTesting\XBullet.EasyTesting.csproj" />
-    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 </Project>

@@ -1,0 +1,183 @@
+#nullable enable
+override XBullet.EasyTesting.AzureFunctions.TestBindingContext.BindingData.get -> System.Collections.Generic.IReadOnlyDictionary<string!, object?>!
+override XBullet.EasyTesting.AzureFunctions.TestBindingMetadata.Direction.get -> Microsoft.Azure.Functions.Worker.BindingDirection
+override XBullet.EasyTesting.AzureFunctions.TestBindingMetadata.Name.get -> string!
+override XBullet.EasyTesting.AzureFunctions.TestBindingMetadata.Type.get -> string!
+override XBullet.EasyTesting.AzureFunctions.TestFunctionContext.BindingContext.get -> XBullet.EasyTesting.AzureFunctions.TestBindingContext!
+override XBullet.EasyTesting.AzureFunctions.TestFunctionContext.CancellationToken.get -> System.Threading.CancellationToken
+override XBullet.EasyTesting.AzureFunctions.TestFunctionContext.Features.get -> Microsoft.Azure.Functions.Worker.IInvocationFeatures!
+override XBullet.EasyTesting.AzureFunctions.TestFunctionContext.FunctionDefinition.get -> XBullet.EasyTesting.AzureFunctions.TestFunctionDefinition!
+override XBullet.EasyTesting.AzureFunctions.TestFunctionContext.FunctionId.get -> string!
+override XBullet.EasyTesting.AzureFunctions.TestFunctionContext.InstanceServices.get -> System.IServiceProvider!
+override XBullet.EasyTesting.AzureFunctions.TestFunctionContext.InstanceServices.set -> void
+override XBullet.EasyTesting.AzureFunctions.TestFunctionContext.InvocationId.get -> string!
+override XBullet.EasyTesting.AzureFunctions.TestFunctionContext.Items.get -> System.Collections.Generic.IDictionary<object!, object!>!
+override XBullet.EasyTesting.AzureFunctions.TestFunctionContext.Items.set -> void
+override XBullet.EasyTesting.AzureFunctions.TestFunctionContext.RetryContext.get -> Microsoft.Azure.Functions.Worker.RetryContext!
+override XBullet.EasyTesting.AzureFunctions.TestFunctionContext.TraceContext.get -> Microsoft.Azure.Functions.Worker.TraceContext!
+override XBullet.EasyTesting.AzureFunctions.TestFunctionDefinition.EntryPoint.get -> string!
+override XBullet.EasyTesting.AzureFunctions.TestFunctionDefinition.Id.get -> string!
+override XBullet.EasyTesting.AzureFunctions.TestFunctionDefinition.InputBindings.get -> System.Collections.Immutable.IImmutableDictionary<string!, Microsoft.Azure.Functions.Worker.BindingMetadata!>!
+override XBullet.EasyTesting.AzureFunctions.TestFunctionDefinition.Name.get -> string!
+override XBullet.EasyTesting.AzureFunctions.TestFunctionDefinition.OutputBindings.get -> System.Collections.Immutable.IImmutableDictionary<string!, Microsoft.Azure.Functions.Worker.BindingMetadata!>!
+override XBullet.EasyTesting.AzureFunctions.TestFunctionDefinition.Parameters.get -> System.Collections.Immutable.ImmutableArray<Microsoft.Azure.Functions.Worker.FunctionParameter!>
+override XBullet.EasyTesting.AzureFunctions.TestFunctionDefinition.PathToAssembly.get -> string!
+override XBullet.EasyTesting.AzureFunctions.TestHttpRequestData.Body.get -> System.IO.Stream!
+override XBullet.EasyTesting.AzureFunctions.TestHttpRequestData.Cookies.get -> System.Collections.Generic.IReadOnlyCollection<Microsoft.Azure.Functions.Worker.Http.IHttpCookie!>!
+override XBullet.EasyTesting.AzureFunctions.TestHttpRequestData.CreateResponse() -> Microsoft.Azure.Functions.Worker.Http.HttpResponseData!
+override XBullet.EasyTesting.AzureFunctions.TestHttpRequestData.Headers.get -> Microsoft.Azure.Functions.Worker.Http.HttpHeadersCollection!
+override XBullet.EasyTesting.AzureFunctions.TestHttpRequestData.Identities.get -> System.Collections.Generic.IEnumerable<System.Security.Claims.ClaimsIdentity!>!
+override XBullet.EasyTesting.AzureFunctions.TestHttpRequestData.Method.get -> string!
+override XBullet.EasyTesting.AzureFunctions.TestHttpRequestData.Url.get -> System.Uri!
+override XBullet.EasyTesting.AzureFunctions.TestHttpResponseData.Body.get -> System.IO.Stream!
+override XBullet.EasyTesting.AzureFunctions.TestHttpResponseData.Body.set -> void
+override XBullet.EasyTesting.AzureFunctions.TestHttpResponseData.Cookies.get -> Microsoft.Azure.Functions.Worker.Http.HttpCookies!
+override XBullet.EasyTesting.AzureFunctions.TestHttpResponseData.Headers.get -> Microsoft.Azure.Functions.Worker.Http.HttpHeadersCollection!
+override XBullet.EasyTesting.AzureFunctions.TestHttpResponseData.Headers.set -> void
+override XBullet.EasyTesting.AzureFunctions.TestHttpResponseData.StatusCode.get -> System.Net.HttpStatusCode
+override XBullet.EasyTesting.AzureFunctions.TestHttpResponseData.StatusCode.set -> void
+override XBullet.EasyTesting.AzureFunctions.TestRetryContext.MaxRetryCount.get -> int
+override XBullet.EasyTesting.AzureFunctions.TestRetryContext.RetryCount.get -> int
+override XBullet.EasyTesting.AzureFunctions.TestTraceContext.TraceParent.get -> string!
+override XBullet.EasyTesting.AzureFunctions.TestTraceContext.TraceState.get -> string!
+static XBullet.EasyTesting.AzureFunctions.AzureFunctionTestHost.BlobTrigger() -> XBullet.EasyTesting.AzureFunctions.BlobTriggerBuilder!
+static XBullet.EasyTesting.AzureFunctions.AzureFunctionTestHost.CreateBuilder() -> XBullet.EasyTesting.AzureFunctions.AzureFunctionTestHostBuilder!
+static XBullet.EasyTesting.AzureFunctions.AzureFunctionTestHost.EventGridTrigger() -> XBullet.EasyTesting.AzureFunctions.EventGridTriggerBuilder!
+static XBullet.EasyTesting.AzureFunctions.AzureFunctionTestHost.EventHubsTrigger() -> XBullet.EasyTesting.AzureFunctions.EventHubsTriggerBuilder!
+static XBullet.EasyTesting.AzureFunctions.AzureFunctionTestHost.QueueTrigger() -> XBullet.EasyTesting.AzureFunctions.QueueTriggerBuilder!
+static XBullet.EasyTesting.AzureFunctions.AzureFunctionTestHost.ServiceBusTrigger() -> XBullet.EasyTesting.AzureFunctions.ServiceBusTriggerBuilder!
+static XBullet.EasyTesting.AzureFunctions.AzureFunctionTestHost.Timer() -> XBullet.EasyTesting.AzureFunctions.TestTimerInfoBuilder!
+static XBullet.EasyTesting.AzureFunctions.HttpResponseDataTestExtensions.ReadBodyAsJsonAsync<T>(this Microsoft.Azure.Functions.Worker.Http.HttpResponseData! response, System.Text.Json.JsonSerializerOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<T?>!
+static XBullet.EasyTesting.AzureFunctions.HttpResponseDataTestExtensions.ReadBodyAsStringAsync(this Microsoft.Azure.Functions.Worker.Http.HttpResponseData! response, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string!>!
+static XBullet.EasyTesting.AzureFunctions.KafkaTriggerData.Json<T>(T value, System.Text.Json.JsonSerializerOptions? options = null) -> string!
+static XBullet.EasyTesting.AzureFunctions.KafkaTriggerData.JsonBatch<T>(System.Collections.Generic.IEnumerable<T>! values, System.Text.Json.JsonSerializerOptions? options = null) -> string![]!
+static XBullet.EasyTesting.AzureFunctions.KafkaTriggerData.JsonBatchTrigger<T>(System.Collections.Generic.IEnumerable<T>! values, string! bindingName = "messages", string? topic = null, System.Text.Json.JsonSerializerOptions? options = null) -> XBullet.EasyTesting.AzureFunctions.TestTriggerData<string![]!>!
+static XBullet.EasyTesting.AzureFunctions.KafkaTriggerData.JsonTrigger<T>(T value, string! bindingName = "message", string? topic = null, string? partitionKey = null, System.Text.Json.JsonSerializerOptions? options = null) -> XBullet.EasyTesting.AzureFunctions.TestTriggerData<string!>!
+XBullet.EasyTesting.AzureFunctions.AzureFunctionTestHost
+XBullet.EasyTesting.AzureFunctions.AzureFunctionTestHost.CreateContext(string! functionName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> XBullet.EasyTesting.AzureFunctions.TestFunctionContext!
+XBullet.EasyTesting.AzureFunctions.AzureFunctionTestHost.Dispose() -> void
+XBullet.EasyTesting.AzureFunctions.AzureFunctionTestHost.DisposeAsync() -> System.Threading.Tasks.ValueTask
+XBullet.EasyTesting.AzureFunctions.AzureFunctionTestHost.GetRequiredService<T>() -> T
+XBullet.EasyTesting.AzureFunctions.AzureFunctionTestHost.HttpRequest(string! functionName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> XBullet.EasyTesting.AzureFunctions.TestHttpRequestBuilder!
+XBullet.EasyTesting.AzureFunctions.AzureFunctionTestHost.InvokeAsync<TFunction, TResult>(XBullet.EasyTesting.AzureFunctions.TestFunctionContext! context, System.Func<TFunction, XBullet.EasyTesting.AzureFunctions.TestFunctionContext!, System.Threading.Tasks.Task<TResult>!>! invoke) -> System.Threading.Tasks.Task<XBullet.EasyTesting.AzureFunctions.TestFunctionInvocationResult<TResult>!>!
+XBullet.EasyTesting.AzureFunctions.AzureFunctionTestHost.InvokeAsync<TFunction, TTrigger, TResult>(string! functionName, XBullet.EasyTesting.AzureFunctions.TestTriggerData<TTrigger>! trigger, System.Func<TFunction, TTrigger, XBullet.EasyTesting.AzureFunctions.TestFunctionContext!, System.Threading.Tasks.Task<TResult>!>! invoke, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<XBullet.EasyTesting.AzureFunctions.TestFunctionInvocationResult<TResult>!>!
+XBullet.EasyTesting.AzureFunctions.AzureFunctionTestHost.InvokeAsync<TFunction, TTrigger>(string! functionName, XBullet.EasyTesting.AzureFunctions.TestTriggerData<TTrigger>! trigger, System.Func<TFunction, TTrigger, XBullet.EasyTesting.AzureFunctions.TestFunctionContext!, System.Threading.Tasks.Task!>! invoke, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<XBullet.EasyTesting.AzureFunctions.TestFunctionInvocationResult!>!
+XBullet.EasyTesting.AzureFunctions.AzureFunctionTestHost.InvokeAsync<TFunction>(XBullet.EasyTesting.AzureFunctions.TestFunctionContext! context, System.Func<TFunction, XBullet.EasyTesting.AzureFunctions.TestFunctionContext!, System.Threading.Tasks.Task!>! invoke) -> System.Threading.Tasks.Task<XBullet.EasyTesting.AzureFunctions.TestFunctionInvocationResult!>!
+XBullet.EasyTesting.AzureFunctions.AzureFunctionTestHostBuilder
+XBullet.EasyTesting.AzureFunctions.AzureFunctionTestHostBuilder.AddFunction<TFunction>() -> XBullet.EasyTesting.AzureFunctions.AzureFunctionTestHostBuilder!
+XBullet.EasyTesting.AzureFunctions.AzureFunctionTestHostBuilder.Build() -> XBullet.EasyTesting.AzureFunctions.AzureFunctionTestHost!
+XBullet.EasyTesting.AzureFunctions.AzureFunctionTestHostBuilder.ConfigureServices(System.Action<Microsoft.Extensions.DependencyInjection.IServiceCollection!>! configure) -> XBullet.EasyTesting.AzureFunctions.AzureFunctionTestHostBuilder!
+XBullet.EasyTesting.AzureFunctions.AzureFunctionTestHostBuilder.UseMiddleware(System.Func<Microsoft.Azure.Functions.Worker.FunctionContext!, Microsoft.Azure.Functions.Worker.Middleware.FunctionExecutionDelegate!, System.Threading.Tasks.Task!>! middleware) -> XBullet.EasyTesting.AzureFunctions.AzureFunctionTestHostBuilder!
+XBullet.EasyTesting.AzureFunctions.AzureFunctionTestHostBuilder.UseMiddleware<TMiddleware>() -> XBullet.EasyTesting.AzureFunctions.AzureFunctionTestHostBuilder!
+XBullet.EasyTesting.AzureFunctions.BlobTriggerBuilder
+XBullet.EasyTesting.AzureFunctions.BlobTriggerBuilder.BlobTriggerBuilder() -> void
+XBullet.EasyTesting.AzureFunctions.BlobTriggerBuilder.Build() -> XBullet.EasyTesting.AzureFunctions.TestTriggerData<System.IO.Stream!>!
+XBullet.EasyTesting.AzureFunctions.BlobTriggerBuilder.Named(string! bindingName) -> XBullet.EasyTesting.AzureFunctions.BlobTriggerBuilder!
+XBullet.EasyTesting.AzureFunctions.BlobTriggerBuilder.WithContent(byte[]! content) -> XBullet.EasyTesting.AzureFunctions.BlobTriggerBuilder!
+XBullet.EasyTesting.AzureFunctions.BlobTriggerBuilder.WithContent(string! content) -> XBullet.EasyTesting.AzureFunctions.BlobTriggerBuilder!
+XBullet.EasyTesting.AzureFunctions.BlobTriggerBuilder.WithJsonContent<T>(T value) -> XBullet.EasyTesting.AzureFunctions.BlobTriggerBuilder!
+XBullet.EasyTesting.AzureFunctions.BlobTriggerBuilder.WithMetadata(string! name, object? value) -> XBullet.EasyTesting.AzureFunctions.BlobTriggerBuilder!
+XBullet.EasyTesting.AzureFunctions.BlobTriggerBuilder.WithPath(string! path) -> XBullet.EasyTesting.AzureFunctions.BlobTriggerBuilder!
+XBullet.EasyTesting.AzureFunctions.EventGridTriggerBuilder
+XBullet.EasyTesting.AzureFunctions.EventGridTriggerBuilder.At(System.DateTimeOffset eventTime) -> XBullet.EasyTesting.AzureFunctions.EventGridTriggerBuilder!
+XBullet.EasyTesting.AzureFunctions.EventGridTriggerBuilder.Build() -> XBullet.EasyTesting.AzureFunctions.TestTriggerData<string!>!
+XBullet.EasyTesting.AzureFunctions.EventGridTriggerBuilder.EventGridTriggerBuilder() -> void
+XBullet.EasyTesting.AzureFunctions.EventGridTriggerBuilder.Named(string! bindingName) -> XBullet.EasyTesting.AzureFunctions.EventGridTriggerBuilder!
+XBullet.EasyTesting.AzureFunctions.EventGridTriggerBuilder.WithData<T>(T data) -> XBullet.EasyTesting.AzureFunctions.EventGridTriggerBuilder!
+XBullet.EasyTesting.AzureFunctions.EventGridTriggerBuilder.WithEventType(string! eventType) -> XBullet.EasyTesting.AzureFunctions.EventGridTriggerBuilder!
+XBullet.EasyTesting.AzureFunctions.EventGridTriggerBuilder.WithId(string! id) -> XBullet.EasyTesting.AzureFunctions.EventGridTriggerBuilder!
+XBullet.EasyTesting.AzureFunctions.EventGridTriggerBuilder.WithSubject(string! subject) -> XBullet.EasyTesting.AzureFunctions.EventGridTriggerBuilder!
+XBullet.EasyTesting.AzureFunctions.EventHubsTriggerBuilder
+XBullet.EasyTesting.AzureFunctions.EventHubsTriggerBuilder.AddEvent(string! body) -> XBullet.EasyTesting.AzureFunctions.EventHubsTriggerBuilder!
+XBullet.EasyTesting.AzureFunctions.EventHubsTriggerBuilder.AddJsonEvent<T>(T value) -> XBullet.EasyTesting.AzureFunctions.EventHubsTriggerBuilder!
+XBullet.EasyTesting.AzureFunctions.EventHubsTriggerBuilder.Build() -> XBullet.EasyTesting.AzureFunctions.TestTriggerData<string![]!>!
+XBullet.EasyTesting.AzureFunctions.EventHubsTriggerBuilder.EventHubsTriggerBuilder() -> void
+XBullet.EasyTesting.AzureFunctions.EventHubsTriggerBuilder.Named(string! bindingName) -> XBullet.EasyTesting.AzureFunctions.EventHubsTriggerBuilder!
+XBullet.EasyTesting.AzureFunctions.EventHubsTriggerBuilder.WithMetadata(string! name, object? value) -> XBullet.EasyTesting.AzureFunctions.EventHubsTriggerBuilder!
+XBullet.EasyTesting.AzureFunctions.EventHubsTriggerBuilder.WithPartitionId(string! partitionId) -> XBullet.EasyTesting.AzureFunctions.EventHubsTriggerBuilder!
+XBullet.EasyTesting.AzureFunctions.HttpResponseDataTestExtensions
+XBullet.EasyTesting.AzureFunctions.KafkaTriggerData
+XBullet.EasyTesting.AzureFunctions.QueueTriggerBuilder
+XBullet.EasyTesting.AzureFunctions.QueueTriggerBuilder.Build() -> XBullet.EasyTesting.AzureFunctions.TestTriggerData<string!>!
+XBullet.EasyTesting.AzureFunctions.QueueTriggerBuilder.Named(string! bindingName) -> XBullet.EasyTesting.AzureFunctions.QueueTriggerBuilder!
+XBullet.EasyTesting.AzureFunctions.QueueTriggerBuilder.QueueTriggerBuilder() -> void
+XBullet.EasyTesting.AzureFunctions.QueueTriggerBuilder.WithBody(string! body) -> XBullet.EasyTesting.AzureFunctions.QueueTriggerBuilder!
+XBullet.EasyTesting.AzureFunctions.QueueTriggerBuilder.WithDequeueCount(int dequeueCount) -> XBullet.EasyTesting.AzureFunctions.QueueTriggerBuilder!
+XBullet.EasyTesting.AzureFunctions.QueueTriggerBuilder.WithJsonBody<T>(T value) -> XBullet.EasyTesting.AzureFunctions.QueueTriggerBuilder!
+XBullet.EasyTesting.AzureFunctions.QueueTriggerBuilder.WithMessageId(string! messageId) -> XBullet.EasyTesting.AzureFunctions.QueueTriggerBuilder!
+XBullet.EasyTesting.AzureFunctions.QueueTriggerBuilder.WithMetadata(string! name, object? value) -> XBullet.EasyTesting.AzureFunctions.QueueTriggerBuilder!
+XBullet.EasyTesting.AzureFunctions.ServiceBusTriggerBuilder
+XBullet.EasyTesting.AzureFunctions.ServiceBusTriggerBuilder.Build() -> XBullet.EasyTesting.AzureFunctions.TestTriggerData<string!>!
+XBullet.EasyTesting.AzureFunctions.ServiceBusTriggerBuilder.Named(string! bindingName) -> XBullet.EasyTesting.AzureFunctions.ServiceBusTriggerBuilder!
+XBullet.EasyTesting.AzureFunctions.ServiceBusTriggerBuilder.ServiceBusTriggerBuilder() -> void
+XBullet.EasyTesting.AzureFunctions.ServiceBusTriggerBuilder.WithBody(string! body) -> XBullet.EasyTesting.AzureFunctions.ServiceBusTriggerBuilder!
+XBullet.EasyTesting.AzureFunctions.ServiceBusTriggerBuilder.WithCorrelationId(string! correlationId) -> XBullet.EasyTesting.AzureFunctions.ServiceBusTriggerBuilder!
+XBullet.EasyTesting.AzureFunctions.ServiceBusTriggerBuilder.WithJsonBody<T>(T value) -> XBullet.EasyTesting.AzureFunctions.ServiceBusTriggerBuilder!
+XBullet.EasyTesting.AzureFunctions.ServiceBusTriggerBuilder.WithMessageId(string! messageId) -> XBullet.EasyTesting.AzureFunctions.ServiceBusTriggerBuilder!
+XBullet.EasyTesting.AzureFunctions.ServiceBusTriggerBuilder.WithProperty(string! name, object? value) -> XBullet.EasyTesting.AzureFunctions.ServiceBusTriggerBuilder!
+XBullet.EasyTesting.AzureFunctions.TestBindingContext
+XBullet.EasyTesting.AzureFunctions.TestBindingContext.TestBindingContext() -> void
+XBullet.EasyTesting.AzureFunctions.TestBindingMetadata
+XBullet.EasyTesting.AzureFunctions.TestBindingMetadata.TestBindingMetadata(string! name, string! type, Microsoft.Azure.Functions.Worker.BindingDirection direction) -> void
+XBullet.EasyTesting.AzureFunctions.TestFunctionBindings
+XBullet.EasyTesting.AzureFunctions.TestFunctionBindings.GetInput<T>(string! name) -> T?
+XBullet.EasyTesting.AzureFunctions.TestFunctionBindings.GetOutput<T>(string! name) -> T?
+XBullet.EasyTesting.AzureFunctions.TestFunctionBindings.Inputs.get -> System.Collections.Generic.IReadOnlyDictionary<string!, object?>!
+XBullet.EasyTesting.AzureFunctions.TestFunctionBindings.InvocationResult.get -> object?
+XBullet.EasyTesting.AzureFunctions.TestFunctionBindings.Outputs.get -> System.Collections.Generic.IReadOnlyDictionary<string!, object?>!
+XBullet.EasyTesting.AzureFunctions.TestFunctionBindings.OutputTypes.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+XBullet.EasyTesting.AzureFunctions.TestFunctionBindings.Should() -> XBullet.EasyTesting.AzureFunctions.TestOutputBindingAssertions!
+XBullet.EasyTesting.AzureFunctions.TestFunctionBindings.TestFunctionBindings() -> void
+XBullet.EasyTesting.AzureFunctions.TestFunctionContext
+XBullet.EasyTesting.AzureFunctions.TestFunctionContext.Bindings.get -> XBullet.EasyTesting.AzureFunctions.TestFunctionBindings!
+XBullet.EasyTesting.AzureFunctions.TestFunctionContext.FunctionName.get -> string!
+XBullet.EasyTesting.AzureFunctions.TestFunctionContext.TestRetryContext.get -> XBullet.EasyTesting.AzureFunctions.TestRetryContext!
+XBullet.EasyTesting.AzureFunctions.TestFunctionContext.TestTraceContext.get -> XBullet.EasyTesting.AzureFunctions.TestTraceContext!
+XBullet.EasyTesting.AzureFunctions.TestFunctionContext.WithBindingData(string! name, object! value) -> XBullet.EasyTesting.AzureFunctions.TestFunctionContext!
+XBullet.EasyTesting.AzureFunctions.TestFunctionContext.WithFeature<T>(T feature) -> XBullet.EasyTesting.AzureFunctions.TestFunctionContext!
+XBullet.EasyTesting.AzureFunctions.TestFunctionContext.WithInputBinding(string! name, object? value, string! bindingType = "input") -> XBullet.EasyTesting.AzureFunctions.TestFunctionContext!
+XBullet.EasyTesting.AzureFunctions.TestFunctionContext.WithItem(object! key, object! value) -> XBullet.EasyTesting.AzureFunctions.TestFunctionContext!
+XBullet.EasyTesting.AzureFunctions.TestFunctionContext.WithOutputBinding(string! name, object? value, string! bindingType = "output") -> XBullet.EasyTesting.AzureFunctions.TestFunctionContext!
+XBullet.EasyTesting.AzureFunctions.TestFunctionContext.WithRetry(int retryCount, int maxRetryCount) -> XBullet.EasyTesting.AzureFunctions.TestFunctionContext!
+XBullet.EasyTesting.AzureFunctions.TestFunctionContext.WithTrace(string! traceParent, string! traceState = "") -> XBullet.EasyTesting.AzureFunctions.TestFunctionContext!
+XBullet.EasyTesting.AzureFunctions.TestFunctionDefinition
+XBullet.EasyTesting.AzureFunctions.TestFunctionInvocationResult
+XBullet.EasyTesting.AzureFunctions.TestFunctionInvocationResult.Context.get -> XBullet.EasyTesting.AzureFunctions.TestFunctionContext!
+XBullet.EasyTesting.AzureFunctions.TestFunctionInvocationResult.FunctionExecuted.get -> bool
+XBullet.EasyTesting.AzureFunctions.TestFunctionInvocationResult<T>
+XBullet.EasyTesting.AzureFunctions.TestFunctionInvocationResult<T>.Result.get -> T?
+XBullet.EasyTesting.AzureFunctions.TestHttpRequestBuilder
+XBullet.EasyTesting.AzureFunctions.TestHttpRequestBuilder.Build() -> Microsoft.Azure.Functions.Worker.Http.HttpRequestData!
+XBullet.EasyTesting.AzureFunctions.TestHttpRequestBuilder.WithHeader(string! name, string! value) -> XBullet.EasyTesting.AzureFunctions.TestHttpRequestBuilder!
+XBullet.EasyTesting.AzureFunctions.TestHttpRequestBuilder.WithIdentity(System.Security.Claims.ClaimsIdentity! identity) -> XBullet.EasyTesting.AzureFunctions.TestHttpRequestBuilder!
+XBullet.EasyTesting.AzureFunctions.TestHttpRequestBuilder.WithJsonBody<T>(T value, System.Text.Json.JsonSerializerOptions? options = null) -> XBullet.EasyTesting.AzureFunctions.TestHttpRequestBuilder!
+XBullet.EasyTesting.AzureFunctions.TestHttpRequestBuilder.WithMethod(string! method) -> XBullet.EasyTesting.AzureFunctions.TestHttpRequestBuilder!
+XBullet.EasyTesting.AzureFunctions.TestHttpRequestBuilder.WithMethod(System.Net.Http.HttpMethod! method) -> XBullet.EasyTesting.AzureFunctions.TestHttpRequestBuilder!
+XBullet.EasyTesting.AzureFunctions.TestHttpRequestBuilder.WithTextBody(string! value, string! contentType = "text/plain; charset=utf-8") -> XBullet.EasyTesting.AzureFunctions.TestHttpRequestBuilder!
+XBullet.EasyTesting.AzureFunctions.TestHttpRequestBuilder.WithUrl(string! url) -> XBullet.EasyTesting.AzureFunctions.TestHttpRequestBuilder!
+XBullet.EasyTesting.AzureFunctions.TestHttpRequestBuilder.WithUrl(System.Uri! url) -> XBullet.EasyTesting.AzureFunctions.TestHttpRequestBuilder!
+XBullet.EasyTesting.AzureFunctions.TestHttpRequestData
+XBullet.EasyTesting.AzureFunctions.TestHttpResponseData
+XBullet.EasyTesting.AzureFunctions.TestHttpResponseData.AppendedCookies.get -> System.Collections.Generic.IReadOnlyList<Microsoft.Azure.Functions.Worker.Http.IHttpCookie!>!
+XBullet.EasyTesting.AzureFunctions.TestOutputBindingAssertions
+XBullet.EasyTesting.AzureFunctions.TestOutputBindingAssertions.Contain(string! name) -> XBullet.EasyTesting.AzureFunctions.TestOutputBindingAssertions!
+XBullet.EasyTesting.AzureFunctions.TestOutputBindingAssertions.HaveCount(int expected) -> XBullet.EasyTesting.AzureFunctions.TestOutputBindingAssertions!
+XBullet.EasyTesting.AzureFunctions.TestOutputBindingAssertions.HaveValue<T>(string! name, T expected) -> XBullet.EasyTesting.AzureFunctions.TestOutputBindingAssertions!
+XBullet.EasyTesting.AzureFunctions.TestOutputBindingAssertions.NotContain(string! name) -> XBullet.EasyTesting.AzureFunctions.TestOutputBindingAssertions!
+XBullet.EasyTesting.AzureFunctions.TestOutputBindingVerificationException
+XBullet.EasyTesting.AzureFunctions.TestOutputBindingVerificationException.TestOutputBindingVerificationException(string! message) -> void
+XBullet.EasyTesting.AzureFunctions.TestRetryContext
+XBullet.EasyTesting.AzureFunctions.TestRetryContext.TestRetryContext(int retryCount = 0, int maxRetryCount = 0) -> void
+XBullet.EasyTesting.AzureFunctions.TestTimerInfoBuilder
+XBullet.EasyTesting.AzureFunctions.TestTimerInfoBuilder.Build() -> Microsoft.Azure.Functions.Worker.TimerInfo!
+XBullet.EasyTesting.AzureFunctions.TestTimerInfoBuilder.BuildTrigger(string! bindingName = "timer") -> XBullet.EasyTesting.AzureFunctions.TestTriggerData<Microsoft.Azure.Functions.Worker.TimerInfo!>!
+XBullet.EasyTesting.AzureFunctions.TestTimerInfoBuilder.PastDue(bool isPastDue = true) -> XBullet.EasyTesting.AzureFunctions.TestTimerInfoBuilder!
+XBullet.EasyTesting.AzureFunctions.TestTimerInfoBuilder.TestTimerInfoBuilder() -> void
+XBullet.EasyTesting.AzureFunctions.TestTimerInfoBuilder.WithSchedule(System.DateTime last, System.DateTime next, System.DateTime? lastUpdated = null) -> XBullet.EasyTesting.AzureFunctions.TestTimerInfoBuilder!
+XBullet.EasyTesting.AzureFunctions.TestTraceContext
+XBullet.EasyTesting.AzureFunctions.TestTriggerData<T>
+XBullet.EasyTesting.AzureFunctions.TestTriggerData<T>.ApplyTo(XBullet.EasyTesting.AzureFunctions.TestFunctionContext! context) -> XBullet.EasyTesting.AzureFunctions.TestFunctionContext!
+XBullet.EasyTesting.AzureFunctions.TestTriggerData<T>.BindingData.get -> System.Collections.Generic.IReadOnlyDictionary<string!, object?>!
+XBullet.EasyTesting.AzureFunctions.TestTriggerData<T>.BindingName.get -> string!
+XBullet.EasyTesting.AzureFunctions.TestTriggerData<T>.BindingType.get -> string!
+XBullet.EasyTesting.AzureFunctions.TestTriggerData<T>.Value.get -> T

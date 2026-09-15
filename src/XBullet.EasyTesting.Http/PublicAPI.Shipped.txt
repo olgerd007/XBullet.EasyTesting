@@ -1,0 +1,74 @@
+#nullable enable
+override XBullet.EasyTesting.Http.StubHttpRequest.Equals(object? obj) -> bool
+override XBullet.EasyTesting.Http.StubHttpRequest.GetHashCode() -> int
+override XBullet.EasyTesting.Http.StubHttpRequest.ToString() -> string!
+static XBullet.EasyTesting.Http.StubHttpRequest.operator !=(XBullet.EasyTesting.Http.StubHttpRequest? left, XBullet.EasyTesting.Http.StubHttpRequest? right) -> bool
+static XBullet.EasyTesting.Http.StubHttpRequest.operator ==(XBullet.EasyTesting.Http.StubHttpRequest? left, XBullet.EasyTesting.Http.StubHttpRequest? right) -> bool
+XBullet.EasyTesting.Http.StubHttpMessageHandler
+XBullet.EasyTesting.Http.StubHttpMessageHandler.CallCount.get -> int
+XBullet.EasyTesting.Http.StubHttpMessageHandler.CaptureDiagnosticsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<object?>
+XBullet.EasyTesting.Http.StubHttpMessageHandler.Requests.get -> System.Collections.Generic.IReadOnlyList<XBullet.EasyTesting.Http.StubHttpRequest!>!
+XBullet.EasyTesting.Http.StubHttpMessageHandler.Reset() -> XBullet.EasyTesting.Http.StubHttpMessageHandler!
+XBullet.EasyTesting.Http.StubHttpMessageHandler.ResetAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+XBullet.EasyTesting.Http.StubHttpMessageHandler.StubHttpMessageHandler() -> void
+XBullet.EasyTesting.Http.StubHttpMessageHandler.Verify(System.Func<XBullet.EasyTesting.Http.StubHttpRequest!, bool>! predicate, int expectedCount, string? description = null) -> XBullet.EasyTesting.Http.StubHttpMessageHandler!
+XBullet.EasyTesting.Http.StubHttpMessageHandler.VerifyCalled(System.Net.Http.HttpMethod! method, string! requestUri, int expectedCount = 1) -> XBullet.EasyTesting.Http.StubHttpMessageHandler!
+XBullet.EasyTesting.Http.StubHttpMessageHandler.VerifyNotCalled(System.Net.Http.HttpMethod! method, string! requestUri) -> XBullet.EasyTesting.Http.StubHttpMessageHandler!
+XBullet.EasyTesting.Http.StubHttpMessageHandler.When(System.Net.Http.HttpMethod! method, string! requestUri) -> XBullet.EasyTesting.Http.StubHttpResponseBuilder!
+XBullet.EasyTesting.Http.StubHttpRequest
+XBullet.EasyTesting.Http.StubHttpRequest.<Clone>$() -> XBullet.EasyTesting.Http.StubHttpRequest!
+XBullet.EasyTesting.Http.StubHttpRequest.Body.get -> string?
+XBullet.EasyTesting.Http.StubHttpRequest.Body.init -> void
+XBullet.EasyTesting.Http.StubHttpRequest.Deconstruct(out System.Net.Http.HttpMethod! Method, out System.Uri? RequestUri, out System.Collections.Generic.IReadOnlyDictionary<string!, string![]!>! Headers, out string? Body) -> void
+XBullet.EasyTesting.Http.StubHttpRequest.Equals(XBullet.EasyTesting.Http.StubHttpRequest? other) -> bool
+XBullet.EasyTesting.Http.StubHttpRequest.Headers.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string![]!>!
+XBullet.EasyTesting.Http.StubHttpRequest.Headers.init -> void
+XBullet.EasyTesting.Http.StubHttpRequest.Method.get -> System.Net.Http.HttpMethod!
+XBullet.EasyTesting.Http.StubHttpRequest.Method.init -> void
+XBullet.EasyTesting.Http.StubHttpRequest.RequestUri.get -> System.Uri?
+XBullet.EasyTesting.Http.StubHttpRequest.RequestUri.init -> void
+XBullet.EasyTesting.Http.StubHttpRequest.StubHttpRequest(System.Net.Http.HttpMethod! Method, System.Uri? RequestUri, System.Collections.Generic.IReadOnlyDictionary<string!, string![]!>! Headers, string? Body) -> void
+XBullet.EasyTesting.Http.StubHttpResponseBuilder
+XBullet.EasyTesting.Http.StubHttpResponseBuilder.Cancel() -> XBullet.EasyTesting.Http.StubHttpMessageHandler!
+XBullet.EasyTesting.Http.StubHttpResponseBuilder.CancelAfter(System.TimeSpan delay) -> XBullet.EasyTesting.Http.StubHttpMessageHandler!
+XBullet.EasyTesting.Http.StubHttpResponseBuilder.Respond(System.Func<XBullet.EasyTesting.Http.StubHttpRequest!, System.Net.Http.HttpResponseMessage!>! responseFactory) -> XBullet.EasyTesting.Http.StubHttpMessageHandler!
+XBullet.EasyTesting.Http.StubHttpResponseBuilder.Respond(System.Net.HttpStatusCode statusCode) -> XBullet.EasyTesting.Http.StubHttpMessageHandler!
+XBullet.EasyTesting.Http.StubHttpResponseBuilder.RespondAsync(System.Func<XBullet.EasyTesting.Http.StubHttpRequest!, System.Threading.CancellationToken, System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage!>!>! responseFactory) -> XBullet.EasyTesting.Http.StubHttpMessageHandler!
+XBullet.EasyTesting.Http.StubHttpResponseBuilder.RespondJson<T>(T value, System.Net.HttpStatusCode statusCode = System.Net.HttpStatusCode.OK, System.Text.Json.JsonSerializerOptions? serializerOptions = null) -> XBullet.EasyTesting.Http.StubHttpMessageHandler!
+XBullet.EasyTesting.Http.StubHttpResponseBuilder.RespondMalformedJson(string! content = "{\"incomplete\":", System.Net.HttpStatusCode statusCode = System.Net.HttpStatusCode.OK) -> XBullet.EasyTesting.Http.StubHttpMessageHandler!
+XBullet.EasyTesting.Http.StubHttpResponseBuilder.RespondSequence(System.Action<XBullet.EasyTesting.Http.StubHttpResponseSequenceBuilder!>! configure) -> XBullet.EasyTesting.Http.StubHttpMessageHandler!
+XBullet.EasyTesting.Http.StubHttpResponseBuilder.RespondText(string! value, System.Net.HttpStatusCode statusCode = System.Net.HttpStatusCode.OK, string! mediaType = "text/plain") -> XBullet.EasyTesting.Http.StubHttpMessageHandler!
+XBullet.EasyTesting.Http.StubHttpResponseBuilder.RespondTruncated(string! partialContent, System.Net.HttpStatusCode statusCode = System.Net.HttpStatusCode.OK, string! mediaType = "application/octet-stream") -> XBullet.EasyTesting.Http.StubHttpMessageHandler!
+XBullet.EasyTesting.Http.StubHttpResponseBuilder.Throw(System.Func<XBullet.EasyTesting.Http.StubHttpRequest!, System.Exception!>! exceptionFactory) -> XBullet.EasyTesting.Http.StubHttpMessageHandler!
+XBullet.EasyTesting.Http.StubHttpResponseBuilder.Timeout() -> XBullet.EasyTesting.Http.StubHttpMessageHandler!
+XBullet.EasyTesting.Http.StubHttpResponseBuilder.TimeoutAfter(System.TimeSpan delay) -> XBullet.EasyTesting.Http.StubHttpMessageHandler!
+XBullet.EasyTesting.Http.StubHttpResponseBuilder.WithDelay(System.TimeSpan delay) -> XBullet.EasyTesting.Http.StubHttpResponseBuilder!
+XBullet.EasyTesting.Http.StubHttpResponseBuilder.WithJsonPath(string! path, System.Func<System.Text.Json.JsonElement, bool>! predicate) -> XBullet.EasyTesting.Http.StubHttpResponseBuilder!
+XBullet.EasyTesting.Http.StubHttpResponseBuilder.WithJsonPath<T>(string! path, T expectedValue, System.Text.Json.JsonSerializerOptions? serializerOptions = null) -> XBullet.EasyTesting.Http.StubHttpResponseBuilder!
+XBullet.EasyTesting.Http.StubHttpResponseBuilder.WithJsonProperty(string! propertyName, System.Func<System.Text.Json.JsonElement, bool>! predicate) -> XBullet.EasyTesting.Http.StubHttpResponseBuilder!
+XBullet.EasyTesting.Http.StubHttpResponseBuilder.WithJsonProperty<T>(string! propertyName, T expectedValue, System.Text.Json.JsonSerializerOptions? serializerOptions = null) -> XBullet.EasyTesting.Http.StubHttpResponseBuilder!
+XBullet.EasyTesting.Http.StubHttpResponseBuilder.WithJsonRequestBody<T>(T value, System.Text.Json.JsonSerializerOptions? serializerOptions = null) -> XBullet.EasyTesting.Http.StubHttpResponseBuilder!
+XBullet.EasyTesting.Http.StubHttpResponseBuilder.WithQueryParameter(string! name, string! value) -> XBullet.EasyTesting.Http.StubHttpResponseBuilder!
+XBullet.EasyTesting.Http.StubHttpResponseBuilder.WithQueryParameter(string! name, System.Func<System.Collections.Generic.IReadOnlyList<string!>!, bool>! predicate) -> XBullet.EasyTesting.Http.StubHttpResponseBuilder!
+XBullet.EasyTesting.Http.StubHttpResponseBuilder.WithRequest(System.Func<XBullet.EasyTesting.Http.StubHttpRequest!, bool>! predicate, string? description = null) -> XBullet.EasyTesting.Http.StubHttpResponseBuilder!
+XBullet.EasyTesting.Http.StubHttpResponseBuilder.WithRequestBody(string! body) -> XBullet.EasyTesting.Http.StubHttpResponseBuilder!
+XBullet.EasyTesting.Http.StubHttpResponseBuilder.WithRequestHeader(string! name, string! value) -> XBullet.EasyTesting.Http.StubHttpResponseBuilder!
+XBullet.EasyTesting.Http.StubHttpResponseSequenceBuilder
+XBullet.EasyTesting.Http.StubHttpResponseSequenceBuilder.Cancel() -> XBullet.EasyTesting.Http.StubHttpResponseSequenceBuilder!
+XBullet.EasyTesting.Http.StubHttpResponseSequenceBuilder.CancelAfter(System.TimeSpan delay) -> XBullet.EasyTesting.Http.StubHttpResponseSequenceBuilder!
+XBullet.EasyTesting.Http.StubHttpResponseSequenceBuilder.Respond(System.Func<XBullet.EasyTesting.Http.StubHttpRequest!, System.Net.Http.HttpResponseMessage!>! responseFactory) -> XBullet.EasyTesting.Http.StubHttpResponseSequenceBuilder!
+XBullet.EasyTesting.Http.StubHttpResponseSequenceBuilder.Respond(System.Net.HttpStatusCode statusCode) -> XBullet.EasyTesting.Http.StubHttpResponseSequenceBuilder!
+XBullet.EasyTesting.Http.StubHttpResponseSequenceBuilder.RespondAsync(System.Func<XBullet.EasyTesting.Http.StubHttpRequest!, System.Threading.CancellationToken, System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage!>!>! responseFactory) -> XBullet.EasyTesting.Http.StubHttpResponseSequenceBuilder!
+XBullet.EasyTesting.Http.StubHttpResponseSequenceBuilder.RespondJson<T>(T value, System.Net.HttpStatusCode statusCode = System.Net.HttpStatusCode.OK, System.Text.Json.JsonSerializerOptions? serializerOptions = null) -> XBullet.EasyTesting.Http.StubHttpResponseSequenceBuilder!
+XBullet.EasyTesting.Http.StubHttpResponseSequenceBuilder.RespondMalformedJson(string! content = "{\"incomplete\":", System.Net.HttpStatusCode statusCode = System.Net.HttpStatusCode.OK) -> XBullet.EasyTesting.Http.StubHttpResponseSequenceBuilder!
+XBullet.EasyTesting.Http.StubHttpResponseSequenceBuilder.RespondText(string! value, System.Net.HttpStatusCode statusCode = System.Net.HttpStatusCode.OK, string! mediaType = "text/plain") -> XBullet.EasyTesting.Http.StubHttpResponseSequenceBuilder!
+XBullet.EasyTesting.Http.StubHttpResponseSequenceBuilder.RespondTruncated(string! partialContent, System.Net.HttpStatusCode statusCode = System.Net.HttpStatusCode.OK, string! mediaType = "application/octet-stream") -> XBullet.EasyTesting.Http.StubHttpResponseSequenceBuilder!
+XBullet.EasyTesting.Http.StubHttpResponseSequenceBuilder.StubHttpResponseSequenceBuilder() -> void
+XBullet.EasyTesting.Http.StubHttpResponseSequenceBuilder.Throw(System.Func<XBullet.EasyTesting.Http.StubHttpRequest!, System.Exception!>! exceptionFactory) -> XBullet.EasyTesting.Http.StubHttpResponseSequenceBuilder!
+XBullet.EasyTesting.Http.StubHttpResponseSequenceBuilder.Timeout() -> XBullet.EasyTesting.Http.StubHttpResponseSequenceBuilder!
+XBullet.EasyTesting.Http.StubHttpResponseSequenceBuilder.TimeoutAfter(System.TimeSpan delay) -> XBullet.EasyTesting.Http.StubHttpResponseSequenceBuilder!
+XBullet.EasyTesting.Http.StubHttpResponseSequenceBuilder.WithDelay(System.TimeSpan delay) -> XBullet.EasyTesting.Http.StubHttpResponseSequenceBuilder!
+XBullet.EasyTesting.Http.StubHttpSequenceExhaustedException
+XBullet.EasyTesting.Http.StubHttpSequenceExhaustedException.StubHttpSequenceExhaustedException(string! message) -> void
+XBullet.EasyTesting.Http.StubHttpVerificationException
+XBullet.EasyTesting.Http.StubHttpVerificationException.StubHttpVerificationException(string! message) -> void

@@ -6,6 +6,14 @@ The project follows Semantic Versioning. Package versions are produced from GitH
 
 ## [Unreleased]
 
+### Added
+
+- Multi-targeted packages and test coverage for .NET 8 and .NET 10.
+- Package validation against the latest stable release to detect binary compatibility breaks.
+- Public API approval baselines for every package.
+- Windows and Ubuntu CI test coverage with Cobertura coverage artifacts.
+- Focused NuGet README content for each package.
+
 ## [0.2.0] - 2026-09-15
 
 ### Added

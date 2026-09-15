@@ -20,8 +20,13 @@ env:
   PACKAGE_VERSION_SUFFIX: preview.${{ github.run_number }}
 
 jobs:
-  build-test-pack:
-    runs-on: ubuntu-latest
+  build-test:
+    name: Build and test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Check out repository
@@ -32,6 +37,7 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@v6
         with:
+          dotnet-version: 8.0.x
           global-json-file: global.json
 
       - name: Restore
@@ -45,15 +51,54 @@ jobs:
           dotnet build XBullet.EasyTesting.sln
           --configuration Release
           --no-restore
-          -p:VersionSuffix=$PACKAGE_VERSION_SUFFIX
 
       - name: Test
         run: >-
           dotnet test XBullet.EasyTesting.sln
           --configuration Release
           --no-build
-          --logger "trx;LogFilePrefix=test-results"
           --results-directory TestResults
+          --report-xunit-trx
+          --coverage
+          --coverage-output-format cobertura
+
+      - name: Upload test results and coverage
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results-${{ matrix.os }}
+          path: |
+            **/TestResults/**/*.trx
+            **/TestResults/**/*.log
+            **/TestResults/**/*.cobertura.xml
+          if-no-files-found: warn
+
+  pack:
+    name: Validate and pack NuGet packages
+    needs: build-test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 8.0.x
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore XBullet.EasyTesting.sln
+
+      - name: Build
+        run: >-
+          dotnet build XBullet.EasyTesting.sln
+          --configuration Release
+          --no-restore
+          -p:VersionSuffix=$PACKAGE_VERSION_SUFFIX
 
       - name: Pack
         shell: bash
@@ -74,13 +119,3 @@ jobs:
             artifacts/packages/*.nupkg
             artifacts/packages/*.snupkg
           if-no-files-found: error
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: test-results
-          path: |
-            **/TestResults/**/*.trx
-            **/TestResults/**/*.log
-          if-no-files-found: warn

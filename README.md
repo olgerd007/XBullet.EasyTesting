@@ -6,6 +6,8 @@
 
 Reusable infrastructure for integration-testing authenticated ASP.NET Core controllers through an in-memory `TestServer`.
 
+All packages target both .NET 8 and .NET 10.
+
 ## Installation
 
 Install only the packages required by a test project. For example:
@@ -718,7 +720,11 @@ dotnet build XBullet.EasyTesting.sln --configuration Release --no-restore
 dotnet test XBullet.EasyTesting.sln --configuration Release --no-build
 ```
 
-GitHub Actions runs restore, formatting validation, build, tests, and package creation for pushes and pull requests. To publish packages, add a scoped NuGet.org API key as the `NUGET_API_KEY` repository secret, update `CHANGELOG.md`, and publish a GitHub Release with a semantic-version tag such as `v0.2.0`. The release workflow publishes all `XBullet.EasyTesting.*` packages and their symbol packages.
+GitHub Actions builds and tests on Windows and Ubuntu, records Cobertura code coverage, validates public API approvals, checks package compatibility against the latest stable release, and creates packages for pushes and pull requests.
+
+Publishing uses NuGet.org trusted publishing instead of a long-lived API key. Configure a GitHub trusted publisher for the `olgerd007/XBullet.EasyTesting` repository and `.github/workflows/publish-nuget.yml`, update `CHANGELOG.md`, and publish a GitHub Release with a semantic-version tag such as `v1.2.3`. The release workflow exchanges its GitHub OIDC token for a short-lived NuGet API key, then publishes all `XBullet.EasyTesting.*` packages and their symbol packages.
+
+Public API approval files live beside each package project. New intentional APIs belong in `PublicAPI.Unshipped.txt`; move them to `PublicAPI.Shipped.txt` when preparing a stable release. Unapproved public changes and binary compatibility breaks fail the build or package step.
 
 ### Preview flow
 

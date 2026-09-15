@@ -1,0 +1,36 @@
+#nullable enable
+const XBullet.EasyTesting.Messaging.MessageTransportNames.AzureNotificationHubs = "AzureNotificationHubs" -> string!
+const XBullet.EasyTesting.Messaging.MessageTransportNames.AzureServiceBus = "AzureServiceBus" -> string!
+const XBullet.EasyTesting.Messaging.MessageTransportNames.Kafka = "Kafka" -> string!
+override XBullet.EasyTesting.Messaging.RecordedMessage.Equals(object? obj) -> bool
+override XBullet.EasyTesting.Messaging.RecordedMessage.GetHashCode() -> int
+override XBullet.EasyTesting.Messaging.RecordedMessage.ToString() -> string!
+static XBullet.EasyTesting.Messaging.RecordedMessage.operator !=(XBullet.EasyTesting.Messaging.RecordedMessage? left, XBullet.EasyTesting.Messaging.RecordedMessage? right) -> bool
+static XBullet.EasyTesting.Messaging.RecordedMessage.operator ==(XBullet.EasyTesting.Messaging.RecordedMessage? left, XBullet.EasyTesting.Messaging.RecordedMessage? right) -> bool
+XBullet.EasyTesting.Messaging.MessageTransportNames
+XBullet.EasyTesting.Messaging.RecordedMessage
+XBullet.EasyTesting.Messaging.RecordedMessage.<Clone>$() -> XBullet.EasyTesting.Messaging.RecordedMessage!
+XBullet.EasyTesting.Messaging.RecordedMessage.Deconstruct(out string! Transport, out string! Destination, out string! MessageType, out System.Text.Json.JsonElement Payload, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>! Headers) -> void
+XBullet.EasyTesting.Messaging.RecordedMessage.Destination.get -> string!
+XBullet.EasyTesting.Messaging.RecordedMessage.Destination.init -> void
+XBullet.EasyTesting.Messaging.RecordedMessage.Equals(XBullet.EasyTesting.Messaging.RecordedMessage? other) -> bool
+XBullet.EasyTesting.Messaging.RecordedMessage.GetPayload<T>(System.Text.Json.JsonSerializerOptions? serializerOptions = null) -> T?
+XBullet.EasyTesting.Messaging.RecordedMessage.Headers.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+XBullet.EasyTesting.Messaging.RecordedMessage.Headers.init -> void
+XBullet.EasyTesting.Messaging.RecordedMessage.MessageType.get -> string!
+XBullet.EasyTesting.Messaging.RecordedMessage.MessageType.init -> void
+XBullet.EasyTesting.Messaging.RecordedMessage.Payload.get -> System.Text.Json.JsonElement
+XBullet.EasyTesting.Messaging.RecordedMessage.Payload.init -> void
+XBullet.EasyTesting.Messaging.RecordedMessage.RecordedMessage(string! Transport, string! Destination, string! MessageType, System.Text.Json.JsonElement Payload, System.Collections.Generic.IReadOnlyDictionary<string!, string!>! Headers) -> void
+XBullet.EasyTesting.Messaging.RecordedMessage.Transport.get -> string!
+XBullet.EasyTesting.Messaging.RecordedMessage.Transport.init -> void
+XBullet.EasyTesting.Messaging.RecordedMessageBus
+XBullet.EasyTesting.Messaging.RecordedMessageBus.CaptureDiagnosticsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<object?>
+XBullet.EasyTesting.Messaging.RecordedMessageBus.Count.get -> int
+XBullet.EasyTesting.Messaging.RecordedMessageBus.For(string! transport, string! destination) -> System.Collections.Generic.IReadOnlyList<XBullet.EasyTesting.Messaging.RecordedMessage!>!
+XBullet.EasyTesting.Messaging.RecordedMessageBus.Messages.get -> System.Collections.Generic.IReadOnlyList<XBullet.EasyTesting.Messaging.RecordedMessage!>!
+XBullet.EasyTesting.Messaging.RecordedMessageBus.Record<T>(string! transport, string! destination, T payload, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? headers = null) -> void
+XBullet.EasyTesting.Messaging.RecordedMessageBus.RecordAsync<T>(string! transport, string! destination, T payload, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? headers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+XBullet.EasyTesting.Messaging.RecordedMessageBus.RecordedMessageBus(System.Text.Json.JsonSerializerOptions? serializerOptions = null) -> void
+XBullet.EasyTesting.Messaging.RecordedMessageBus.Reset() -> XBullet.EasyTesting.Messaging.RecordedMessageBus!
+XBullet.EasyTesting.Messaging.RecordedMessageBus.ResetAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
