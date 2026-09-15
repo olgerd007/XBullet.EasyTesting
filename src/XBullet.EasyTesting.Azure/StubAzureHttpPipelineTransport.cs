@@ -243,7 +243,10 @@ public sealed class StubAzureHttpPipelineTransport : HttpPipelineTransport, ITes
 
     private static bool MatchesUri(Uri actual, string expected)
     {
-        if (Uri.TryCreate(expected, UriKind.Absolute, out var absolute))
+        // A root-relative HTTP path is parsed as an absolute file URI on Unix,
+        // so classify it as a path before attempting absolute URI parsing.
+        if (!expected.StartsWith("/", StringComparison.Ordinal) &&
+            Uri.TryCreate(expected, UriKind.Absolute, out var absolute))
         {
             return actual == absolute;
         }
