@@ -31,6 +31,6 @@ using var response = await client.GetAsync("/api/orders");
 response.EnsureSuccessStatusCode();
 ```
 
-The fluent host also supports configuration overrides, authentication profiles, per-test scenario isolation, and arrange-and-request workflows.
+The fluent host also supports configuration overrides, authentication profiles, per-test scenario isolation, and arrange-and-request workflows. Scenario results provide test-framework-agnostic status, header, success, and generic structural JSON body assertions through `result.Should()`.
 
 See the [repository documentation](https://github.com/olgerd007/XBullet.EasyTesting) for complete examples.

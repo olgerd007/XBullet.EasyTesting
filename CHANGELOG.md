@@ -8,11 +8,13 @@ The project follows Semantic Versioning. Package versions are produced from GitH
 
 ### Added
 
+- A first-class EF Core in-memory test factory with automatic per-scenario database isolation.
 - Multi-targeted packages and test coverage for .NET 8 and .NET 10.
 - Package validation against the latest stable release to detect binary compatibility breaks.
 - Public API approval baselines for every package.
 - Windows and Ubuntu CI test coverage with Cobertura coverage artifacts.
 - Focused NuGet README content for each package.
+- Test-framework-agnostic fluent assertions for scenario responses and recorded messages.
 
 ## [0.2.0] - 2026-09-15
 

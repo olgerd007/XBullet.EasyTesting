@@ -408,6 +408,135 @@ public sealed class StubHttpMessageHandlerTests
     }
 
     [Fact]
+    public async Task Response_sequence_supports_delayed_text_and_dynamic_responses()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var handler = new StubHttpMessageHandler();
+        handler
+            .When(HttpMethod.Get, "/sequence")
+            .RespondSequence(sequence => sequence
+                .WithDelay(TimeSpan.FromMilliseconds(25))
+                .RespondText("delayed")
+                .Respond(request => new HttpResponseMessage(HttpStatusCode.Accepted)
+                {
+                    Content = new StringContent(request.RequestUri!.AbsolutePath)
+                })
+                .RespondAsync((request, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.Created)
+                {
+                    Content = new StringContent(request.Method.Method)
+                })));
+        using var client = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("https://external.example.test/")
+        };
+        var stopwatch = Stopwatch.StartNew();
+
+        using var first = await client.GetAsync("/sequence", cancellationToken);
+        var firstBody = await first.Content.ReadAsStringAsync(cancellationToken);
+        var elapsed = stopwatch.Elapsed;
+        using var second = await client.GetAsync("/sequence", cancellationToken);
+        var secondBody = await second.Content.ReadAsStringAsync(cancellationToken);
+        using var third = await client.GetAsync("/sequence", cancellationToken);
+        var thirdBody = await third.Content.ReadAsStringAsync(cancellationToken);
+
+        Assert.True(elapsed >= TimeSpan.FromMilliseconds(15));
+        Assert.Equal("delayed", firstBody);
+        Assert.Equal(HttpStatusCode.Accepted, second.StatusCode);
+        Assert.Equal("/sequence", secondBody);
+        Assert.Equal(HttpStatusCode.Created, third.StatusCode);
+        Assert.Equal("GET", thirdBody);
+    }
+
+    [Fact]
+    public async Task Response_sequence_supports_exceptions_cancellation_and_timeouts()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var handler = new StubHttpMessageHandler();
+        handler
+            .When(HttpMethod.Get, "/sequence")
+            .RespondSequence(sequence => sequence
+                .Throw(_ => new InvalidOperationException("sequence failure"))
+                .Cancel()
+                .CancelAfter(TimeSpan.FromMilliseconds(5))
+                .TimeoutAfter(TimeSpan.FromMilliseconds(5))
+                .Timeout());
+        using var client = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("https://external.example.test/")
+        };
+
+        var failure = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => client.GetAsync("/sequence", cancellationToken));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => client.GetAsync("/sequence", cancellationToken));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => client.GetAsync("/sequence", cancellationToken));
+        var timeout = await Assert.ThrowsAsync<TimeoutException>(
+            () => client.GetAsync("/sequence", cancellationToken));
+        using var timeoutCancellation =
+            CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutCancellation.CancelAfter(TimeSpan.FromMilliseconds(25));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => client.GetAsync("/sequence", timeoutCancellation.Token));
+
+        Assert.Equal("sequence failure", failure.Message);
+        Assert.Contains("timed out after", timeout.Message);
+    }
+
+    [Fact]
+    public async Task Response_sequence_supports_malformed_and_truncated_content()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var handler = new StubHttpMessageHandler();
+        handler
+            .When(HttpMethod.Get, "/sequence")
+            .RespondSequence(sequence => sequence
+                .RespondMalformedJson("{\"ready\":")
+                .RespondTruncated("partial", mediaType: "text/plain"));
+        using var client = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("https://external.example.test/")
+        };
+
+        using var malformed = await client.GetAsync("/sequence", cancellationToken);
+
+        Assert.Equal("application/json", malformed.Content.Headers.ContentType!.MediaType);
+        await Assert.ThrowsAsync<System.Text.Json.JsonException>(
+            () => malformed.Content.ReadFromJsonAsync<Response>(cancellationToken));
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/sequence");
+        using var truncated = await client.SendAsync(
+            request,
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken);
+
+        await Assert.ThrowsAsync<HttpRequestException>(
+            () => truncated.Content.ReadAsStringAsync(cancellationToken));
+    }
+
+    [Fact]
+    public void Response_sequence_rejects_invalid_configuration()
+    {
+        using var handler = new StubHttpMessageHandler();
+
+        Assert.Throws<InvalidOperationException>(() => handler
+            .When(HttpMethod.Get, "/empty")
+            .RespondSequence(_ => { }));
+        Assert.Throws<InvalidOperationException>(() => handler
+            .When(HttpMethod.Get, "/dangling-delay")
+            .RespondSequence(sequence => sequence.WithDelay(TimeSpan.FromMilliseconds(1))));
+        Assert.Throws<ArgumentOutOfRangeException>(() => handler
+            .When(HttpMethod.Get, "/negative-delay")
+            .RespondSequence(sequence => sequence.WithDelay(TimeSpan.FromMilliseconds(-1))));
+        Assert.Throws<ArgumentOutOfRangeException>(() => handler
+            .When(HttpMethod.Get, "/infinite-delay")
+            .RespondSequence(sequence => sequence.TimeoutAfter(Timeout.InfiniteTimeSpan)));
+        Assert.Throws<ArgumentException>(() => handler
+            .When(HttpMethod.Get, "/valid-json")
+            .RespondSequence(sequence => sequence.RespondMalformedJson("{}")));
+    }
+
+    [Fact]
     public async Task Delayed_response_observes_the_configured_delay()
     {
         var cancellationToken = TestContext.Current.CancellationToken;

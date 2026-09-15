@@ -96,8 +96,15 @@ using var result = await factory.Scenario()
     .Get("/api/orders")
     .ExecuteAsync(cancellationToken);
 
-Assert.Equal(HttpStatusCode.OK, result.Response.StatusCode);
+await result.Should()
+    .HaveStatusCode(HttpStatusCode.OK)
+    .HaveJsonBodyAsync(
+        new OrderResponse(42, "Ready"),
+        cancellationToken: cancellationToken);
 ```
+
+Response assertions are test-framework agnostic. In addition to status and structural JSON body
+checks, a scenario result can assert successful responses and response or content headers.
 
 ## Per-test isolation
 
@@ -129,6 +136,20 @@ public sealed class TestApiFactory
     }
 }
 ```
+
+If a test does not depend on relational behavior, the EF Core in-memory provider can be selected
+without any database registration boilerplate:
+
+```csharp
+public sealed class TestApiFactory
+    : InMemoryEntityFrameworkWebApplicationFactory<Program, TestApiDbContext>
+{
+}
+```
+
+Each scenario gets its own in-memory database. Because this provider does not enforce relational
+constraints or support transactions, prefer SQLite or the production relational provider for tests
+that exercise those behaviors.
 
 Run the test body through `RunInTestScenarioScopeAsync` to guarantee failure diagnostics are captured before cleanup. The original exception is preserved, and `TestScenarioDiagnostics` is attached through `exception.Data[TestScenarioDiagnostics.ExceptionDataKey]`:
 
@@ -509,13 +530,11 @@ using var response = await client.PostAsJsonAsync(
     "/api/publishing/kafka/orders",
     new { OrderId = 42, CustomerId = "customer-7", Total = 125.50m });
 
-var published = Assert.Single(
-    factory.PublishedMessages.For(MessageTransportNames.Kafka, "orders.created"));
-var message = published.GetPayload<OrderCreatedMessage>();
-
 Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-Assert.Equal("customer-7", published.Headers["partition-key"]);
-Assert.Equal(42, message!.OrderId);
+factory.PublishedMessages.Should()
+    .ContainSingle(MessageTransportNames.Kafka, "orders.created")
+    .HaveHeader("partition-key", "customer-7")
+    .HavePayload(new OrderCreatedMessage(42));
 ```
 
 Well-known names are included for Kafka, Azure Service Bus, and Azure Notification Hubs. `RecordAsync` also accepts any custom transport or destination, so the same pattern covers RabbitMQ, Event Hubs, SNS/SQS, email, webhooks, or application-specific notification providers. Payloads and headers are copied at publication time to prevent later mutation from changing assertions.

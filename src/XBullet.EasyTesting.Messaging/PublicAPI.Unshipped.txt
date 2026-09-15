@@ -1,1 +1,11 @@
 #nullable enable
+XBullet.EasyTesting.Messaging.RecordedMessageAssertions
+XBullet.EasyTesting.Messaging.RecordedMessageAssertions.HaveHeader(string! name) -> XBullet.EasyTesting.Messaging.RecordedMessageAssertions!
+XBullet.EasyTesting.Messaging.RecordedMessageAssertions.HaveHeader(string! name, string! expectedValue) -> XBullet.EasyTesting.Messaging.RecordedMessageAssertions!
+XBullet.EasyTesting.Messaging.RecordedMessageAssertions.HavePayload<T>(T expected, System.Text.Json.JsonSerializerOptions? options = null) -> XBullet.EasyTesting.Messaging.RecordedMessageAssertions!
+XBullet.EasyTesting.Messaging.RecordedMessageBus.Should() -> XBullet.EasyTesting.Messaging.RecordedMessageBusAssertions!
+XBullet.EasyTesting.Messaging.RecordedMessageBusAssertions
+XBullet.EasyTesting.Messaging.RecordedMessageBusAssertions.ContainSingle(string! transport, string! destination) -> XBullet.EasyTesting.Messaging.RecordedMessageAssertions!
+XBullet.EasyTesting.Messaging.RecordedMessageBusAssertions.HaveCount(int expected) -> XBullet.EasyTesting.Messaging.RecordedMessageBusAssertions!
+XBullet.EasyTesting.Messaging.RecordedMessageVerificationException
+XBullet.EasyTesting.Messaging.RecordedMessageVerificationException.RecordedMessageVerificationException(string! message) -> void

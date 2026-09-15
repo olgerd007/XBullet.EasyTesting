@@ -20,9 +20,10 @@ await messages.RecordAsync(
     headers,
     cancellationToken);
 
-var published = Assert.Single(
-    messages.For(MessageTransportNames.Kafka, "orders.created"));
-var payload = published.GetPayload<OrderCreated>();
+messages.Should()
+    .ContainSingle(MessageTransportNames.Kafka, "orders.created")
+    .HaveHeader("partition-key", "customer-7")
+    .HavePayload(new OrderCreated(42));
 ```
 
 Well-known transport names are included for Kafka, Azure Service Bus, and Azure Notification Hubs, while custom transports remain supported.
