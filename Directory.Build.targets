@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup Condition="'$(IsPackable)' == 'true'">
     <EnablePackageValidation>true</EnablePackageValidation>
-    <PackageValidationBaselineVersion>0.2.0</PackageValidationBaselineVersion>
+    <PackageValidationBaselineVersion>1.0.3</PackageValidationBaselineVersion>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(IsPackable)' == 'true'">
