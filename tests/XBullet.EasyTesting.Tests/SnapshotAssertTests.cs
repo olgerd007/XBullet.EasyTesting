@@ -40,6 +40,34 @@ public sealed class SnapshotAssertTests
     }
 
     [Fact]
+    public async Task Fully_qualified_snapshot_directory_works_with_sourcelink_caller_path()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var settings = new SnapshotSettings()
+            .InDirectory(snapshotDirectory)
+            .Named("sourcelink-path")
+            .Updating(SnapshotUpdateMode.Missing)
+            .WithoutDiffTool();
+
+        try
+        {
+            await SnapshotAssert.MatchAsync(
+                new { Value = 42 },
+                settings,
+                cancellationToken,
+                sourceFile: "/_/tests/SnapshotAssertTests.cs",
+                testName: nameof(Fully_qualified_snapshot_directory_works_with_sourcelink_caller_path));
+
+            Assert.Single(Directory.EnumerateFiles(snapshotDirectory, "*.verified.json"));
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
     public void Controller_snapshot_options_support_fluent_capture_configuration()
     {
         var options = new ControllerSnapshotOptions()
