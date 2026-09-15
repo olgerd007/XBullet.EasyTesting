@@ -1,5 +1,6 @@
 using XBullet.EasyTesting.Authentication;
 using XBullet.EasyTesting.EntityFrameworkCore;
+using XBullet.EasyTesting.Hosting;
 using XBullet.EasyTesting.Http;
 using XBullet.EasyTesting.Messaging;
 using Microsoft.Data.Sqlite;
@@ -12,7 +13,7 @@ using TestApi.Messaging;
 
 namespace TestApi.IntegrationTests;
 
-public sealed class TestApiFactory : EntityFrameworkWebApplicationFactory<Program, TestApiDbContext>
+public class TestApiFactory : EntityFrameworkWebApplicationFactory<Program, TestApiDbContext>
 {
     private readonly SqliteConnection _connection;
 
@@ -20,6 +21,13 @@ public sealed class TestApiFactory : EntityFrameworkWebApplicationFactory<Progra
     {
         _connection = new SqliteConnection("Data Source=:memory:");
         _connection.Open();
+
+        RegisterScenarioResource(
+            "External HTTP",
+            ExternalCatalog);
+        RegisterScenarioResource(
+            "Published messages",
+            PublishedMessages);
     }
 
     public StubHttpMessageHandler ExternalCatalog { get; } = new();
@@ -29,6 +37,16 @@ public sealed class TestApiFactory : EntityFrameworkWebApplicationFactory<Progra
     protected override void ConfigureDatabaseServices(IServiceCollection services)
     {
         services.AddDbContext<TestApiDbContext>(options => options.UseSqlite(_connection));
+    }
+
+    protected override void ConfigureScenarioDatabaseServices(
+        IServiceCollection services,
+        TestScenarioContext context)
+    {
+        var connection = new SqliteConnection("Data Source=:memory:");
+        connection.Open();
+        context.DisposeWithScenario((IAsyncDisposable)connection);
+        services.AddDbContext<TestApiDbContext>(options => options.UseSqlite(connection));
     }
 
     protected override void ConfigureTestAuthentication(TestAuthenticationSchemeBuilder authentication)

@@ -37,8 +37,31 @@ public abstract class EntityFrameworkWebApplicationFactory<TEntryPoint, TDbConte
     {
     }
 
+    /// <summary>
+    /// Registers the database used by one scenario. Override this to allocate a distinct database,
+    /// schema, or connection and register its cleanup through <paramref name="context"/>.
+    /// </summary>
+    protected virtual void ConfigureScenarioDatabaseServices(
+        IServiceCollection services,
+        TestScenarioContext context) => ConfigureDatabaseServices(services);
+
+    /// <summary>Allows derived factories to add services that exist only in scenario hosts.</summary>
+    protected virtual void ConfigureAdditionalServicesForScenario(
+        IServiceCollection services,
+        TestScenarioContext context)
+    {
+    }
+
     /// <summary>Starts a fluent database scenario definition.</summary>
     public DatabaseScenarioBuilder<TEntryPoint, TDbContext> Database() => new(this);
+
+    /// <summary>Starts a fluent database scenario against a test scenario's isolated database.</summary>
+    public DatabaseScenarioBuilder<TEntryPoint, TDbContext> Database(
+        TestScenarioScope<TEntryPoint> scope)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        return new DatabaseScenarioBuilder<TEntryPoint, TDbContext>(this, scope);
+    }
 
     /// <summary>Creates the test database schema if it does not already exist.</summary>
     public Task InitializeDatabaseAsync(CancellationToken cancellationToken = default) =>
@@ -84,6 +107,59 @@ public abstract class EntityFrameworkWebApplicationFactory<TEntryPoint, TDbConte
     {
         ArgumentNullException.ThrowIfNull(query);
         return WithDbContextAsync(query, cancellationToken);
+    }
+
+    /// <summary>Executes an action and saves changes in a scenario's isolated database.</summary>
+    public Task ExecuteDatabaseAsync(
+        TestScenarioScope<TEntryPoint> scope,
+        Func<TDbContext, CancellationToken, Task> action,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        return WithScenarioDbContextAsync(
+            scope,
+            async (database, token) =>
+            {
+                await action(database, token);
+                await database.SaveChangesAsync(token);
+            },
+            cancellationToken);
+    }
+
+    /// <summary>Executes a query in a scenario's isolated database.</summary>
+    public Task<TResult> QueryDatabaseAsync<TResult>(
+        TestScenarioScope<TEntryPoint> scope,
+        Func<TDbContext, CancellationToken, Task<TResult>> query,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        return WithScenarioDbContextAsync(scope, query, cancellationToken);
+    }
+
+    /// <summary>Executes a scoped database action against a scenario's isolated context.</summary>
+    public async Task WithScenarioDbContextAsync(
+        TestScenarioScope<TEntryPoint> scope,
+        Func<TDbContext, CancellationToken, Task> action,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        ArgumentNullException.ThrowIfNull(action);
+        await using var serviceScope = scope.Services.CreateAsyncScope();
+        var database = serviceScope.ServiceProvider.GetRequiredService<TDbContext>();
+        await action(database, cancellationToken);
+    }
+
+    /// <summary>Executes a scoped database query against a scenario's isolated context.</summary>
+    public async Task<TResult> WithScenarioDbContextAsync<TResult>(
+        TestScenarioScope<TEntryPoint> scope,
+        Func<TDbContext, CancellationToken, Task<TResult>> action,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        ArgumentNullException.ThrowIfNull(action);
+        await using var serviceScope = scope.Services.CreateAsyncScope();
+        var database = serviceScope.ServiceProvider.GetRequiredService<TDbContext>();
+        return await action(database, cancellationToken);
     }
 
     /// <summary>Adds entities to the test database and persists them.</summary>
@@ -166,6 +242,58 @@ public abstract class EntityFrameworkWebApplicationFactory<TEntryPoint, TDbConte
             _databaseGate.Release();
         }
     }
+
+    /// <inheritdoc />
+    protected sealed override void ConfigureServicesForScenario(
+        IServiceCollection services,
+        TestScenarioContext context)
+    {
+        services.RemoveAll<TDbContext>();
+        services.RemoveAll<DbContextOptions<TDbContext>>();
+        ConfigureScenarioDatabaseServices(services, context);
+        ConfigureAdditionalServicesForScenario(services, context);
+    }
+
+    /// <inheritdoc />
+    protected override Task InitializeScenarioAsync(
+        TestScenarioScope<TEntryPoint> scope,
+        CancellationToken cancellationToken) =>
+        WithScenarioDbContextAsync(
+            scope,
+            async (database, token) =>
+            {
+                await database.Database.EnsureDeletedAsync(token);
+                await database.Database.EnsureCreatedAsync(token);
+            },
+            cancellationToken);
+
+    /// <inheritdoc />
+    protected override async ValueTask<object?> CaptureScenarioDiagnosticsAsync(
+        TestScenarioScope<TEntryPoint> scope,
+        CancellationToken cancellationToken) =>
+        await WithScenarioDbContextAsync<object?>(
+            scope,
+            (database, _) => Task.FromResult<object?>(new
+            {
+                database.Database.ProviderName,
+                Entities = database.Model.GetEntityTypes()
+                    .Select(entity => entity.ClrType.FullName ?? entity.Name)
+                    .OrderBy(name => name, StringComparer.Ordinal)
+                    .ToArray()
+            }),
+            cancellationToken);
+
+    /// <inheritdoc />
+    protected override Task CleanupScenarioAsync(
+        TestScenarioScope<TEntryPoint> scope,
+        CancellationToken cancellationToken) =>
+        WithScenarioDbContextAsync(
+            scope,
+            async (database, token) =>
+            {
+                await database.Database.EnsureDeletedAsync(token);
+            },
+            cancellationToken);
 
     /// <inheritdoc />
     protected override void Dispose(bool disposing)

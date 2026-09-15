@@ -1,5 +1,6 @@
 using Azure.Core.Serialization;
 using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker.Middleware;
 using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
 
@@ -9,6 +10,7 @@ namespace XBullet.EasyTesting.AzureFunctions;
 public sealed class AzureFunctionTestHostBuilder
 {
     private readonly IServiceCollection _services = new ServiceCollection();
+    private readonly List<Func<IServiceProvider, IFunctionsWorkerMiddleware>> _middleware = [];
 
     internal AzureFunctionTestHostBuilder()
     {
@@ -34,6 +36,25 @@ public sealed class AzureFunctionTestHostBuilder
         return this;
     }
 
+    /// <summary>Adds isolated-worker middleware to the test invocation pipeline.</summary>
+    public AzureFunctionTestHostBuilder UseMiddleware<TMiddleware>()
+        where TMiddleware : class, IFunctionsWorkerMiddleware
+    {
+        _services.AddTransient<TMiddleware>();
+        _middleware.Add(provider => provider.GetRequiredService<TMiddleware>());
+        return this;
+    }
+
+    /// <summary>Adds inline middleware to the test invocation pipeline.</summary>
+    public AzureFunctionTestHostBuilder UseMiddleware(
+        Func<FunctionContext, FunctionExecutionDelegate, Task> middleware)
+    {
+        ArgumentNullException.ThrowIfNull(middleware);
+        _middleware.Add(_ => new DelegateFunctionsWorkerMiddleware(middleware));
+        return this;
+    }
+
     /// <summary>Creates the configured function test host.</summary>
-    public AzureFunctionTestHost Build() => new(_services.BuildServiceProvider());
+    public AzureFunctionTestHost Build() =>
+        new(_services.BuildServiceProvider(), _middleware);
 }

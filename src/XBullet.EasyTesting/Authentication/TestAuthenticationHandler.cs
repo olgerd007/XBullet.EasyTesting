@@ -55,8 +55,12 @@ public sealed class TestAuthenticationHandler : AuthenticationHandler<TestAuthen
                 System.Security.Claims.ClaimTypes.Name,
                 System.Security.Claims.ClaimTypes.Role);
 
-            var principal = new System.Security.Claims.ClaimsPrincipal(identity);
-            var ticket = new AuthenticationTicket(principal, Scheme.Name);
+            var identities = new List<System.Security.Claims.ClaimsIdentity> { identity };
+            identities.AddRange(user.AdditionalIdentities.Select(additional => additional.ToClaimsIdentity()));
+            var principal = new System.Security.Claims.ClaimsPrincipal(identities);
+            var properties = new AuthenticationProperties(
+                new Dictionary<string, string?>(user.AuthenticationProperties));
+            var ticket = new AuthenticationTicket(principal, properties, Scheme.Name);
 
             return Task.FromResult(AuthenticateResult.Success(ticket));
         }

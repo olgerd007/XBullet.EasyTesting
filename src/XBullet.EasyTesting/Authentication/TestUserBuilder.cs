@@ -5,6 +5,8 @@ public sealed class TestUserBuilder
 {
     private readonly List<string> _roles = [];
     private readonly List<TestClaim> _claims = [];
+    private readonly List<TestIdentity> _additionalIdentities = [];
+    private readonly Dictionary<string, string?> _authenticationProperties = new(StringComparer.Ordinal);
     private string _nameIdentifier = Guid.NewGuid().ToString("N");
     private string _name = "integration-test-user";
     private string _authenticationScheme = TestAuthenticationDefaults.AuthenticationScheme;
@@ -71,6 +73,24 @@ public sealed class TestUserBuilder
         return this;
     }
 
+    /// <summary>Adds another claims identity to the resulting principal.</summary>
+    public TestUserBuilder WithIdentity(Action<TestIdentityBuilder> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        var builder = new TestIdentityBuilder();
+        configure(builder);
+        _additionalIdentities.Add(builder.Build());
+        return this;
+    }
+
+    /// <summary>Adds or replaces an authentication-ticket property.</summary>
+    public TestUserBuilder WithAuthenticationProperty(string key, string? value)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        _authenticationProperties[key] = value;
+        return this;
+    }
+
     /// <summary>Creates the immutable user definition.</summary>
     public TestUser Build() => new()
     {
@@ -79,6 +99,8 @@ public sealed class TestUserBuilder
         NameIdentifier = _nameIdentifier,
         Name = _name,
         Roles = _roles.ToArray(),
-        Claims = _claims.ToArray()
+        Claims = _claims.ToArray(),
+        AdditionalIdentities = _additionalIdentities.ToArray(),
+        AuthenticationProperties = new Dictionary<string, string?>(_authenticationProperties)
     };
 }

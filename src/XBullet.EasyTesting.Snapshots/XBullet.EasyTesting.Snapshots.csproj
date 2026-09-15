@@ -10,4 +10,8 @@
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\XBullet.EasyTesting.Http\XBullet.EasyTesting.Http.csproj" />
+  </ItemGroup>
 </Project>

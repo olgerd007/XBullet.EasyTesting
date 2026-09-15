@@ -94,14 +94,18 @@ public sealed class TestHttpRequestBuilder
     }
 
     /// <summary>Creates the HTTP request data instance.</summary>
-    public HttpRequestData Build() =>
-        new TestHttpRequestData(
+    public HttpRequestData Build()
+    {
+        var request = new TestHttpRequestData(
             _context,
             _method,
             _url,
             _headers,
             _identities,
             _body);
+        _context.WithInputBinding("request", request, "httpTrigger");
+        return request;
+    }
 
     private void SetContentType(string value)
     {

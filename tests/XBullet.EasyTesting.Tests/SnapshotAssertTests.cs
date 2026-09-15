@@ -1,3 +1,6 @@
+using System.Net;
+using System.Net.Http.Json;
+using XBullet.EasyTesting.Http;
 using XBullet.EasyTesting.Snapshots;
 using Xunit;
 
@@ -140,6 +143,54 @@ public sealed class SnapshotAssertTests
             Assert.Contains("\"ExpiresAt\": \"{DateTime}\"", verified);
             Assert.DoesNotContain("AccessToken", verified);
             Assert.DoesNotContain("secret-one", verified);
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task Captured_http_requests_have_a_dedicated_snapshot_assertion()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var settings = new SnapshotSettings()
+            .InDirectory(snapshotDirectory)
+            .Named("outbound-requests")
+            .Updating(SnapshotUpdateMode.Missing)
+            .WithoutDiffTool();
+        using var handler = new StubHttpMessageHandler();
+        handler
+            .When(HttpMethod.Post, "/orders?notify=true")
+            .Respond(HttpStatusCode.Created);
+        using var client = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("https://external.example.test/")
+        };
+        client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", "secret-token");
+        client.DefaultRequestHeaders.Add("X-Tenant", "tenant-42");
+
+        try
+        {
+            using var response = await client.PostAsJsonAsync(
+                "/orders?notify=true",
+                new { OrderId = 42 },
+                cancellationToken);
+
+            await handler.ShouldMatchRequestsSnapshot(
+                snapshotSettings: settings,
+                cancellationToken: cancellationToken);
+
+            var verifiedPath = Directory.EnumerateFiles(snapshotDirectory, "*.verified.json").Single();
+            var verified = await File.ReadAllTextAsync(verifiedPath, cancellationToken);
+            Assert.Contains("\"Method\": \"POST\"", verified);
+            Assert.Contains("\"Url\": \"/orders?notify=true\"", verified);
+            Assert.Contains("\"orderId\": 42", verified);
+            Assert.Contains("\"X-Tenant\"", verified);
+            Assert.DoesNotContain("Authorization", verified);
+            Assert.DoesNotContain("secret-token", verified);
         }
         finally
         {

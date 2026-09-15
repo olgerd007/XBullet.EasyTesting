@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 
 namespace TestApi.Controllers;
@@ -30,4 +31,29 @@ public sealed class SecureController : ControllerBase
     [Authorize(Policy = "ApiKeyOnly")]
     [HttpGet("api-key")]
     public IActionResult ApiKey() => NoContent();
+
+    [Authorize(Policy = "PartnerOnly")]
+    [HttpGet("partner")]
+    public IActionResult Partner() => NoContent();
+
+    [Authorize(Policy = "CertificateOnly")]
+    [HttpGet("certificate")]
+    public IActionResult Certificate() => NoContent();
+
+    [Authorize]
+    [HttpGet("authentication-details")]
+    public async Task<IActionResult> AuthenticationDetails()
+    {
+        var authentication = await HttpContext.AuthenticateAsync();
+        return Ok(new
+        {
+            Identities = User.Identities.Select(identity => new
+            {
+                identity.AuthenticationType,
+                identity.Name,
+                Claims = identity.Claims.Select(claim => new { claim.Type, claim.Value })
+            }),
+            Properties = authentication.Properties?.Items
+        });
+    }
 }

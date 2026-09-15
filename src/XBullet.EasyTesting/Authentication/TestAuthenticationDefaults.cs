@@ -23,4 +23,7 @@ public static class TestAuthenticationDefaults
 
     /// <summary>Authentication type exposed by API-key test identities.</summary>
     public const string ApiKeyAuthenticationType = "ApiKey";
+
+    /// <summary>Internal transport header used to place a client certificate on TestServer connections.</summary>
+    public const string ClientCertificateHeaderName = "X-XBullet-Test-Client-Certificate";
 }

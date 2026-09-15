@@ -23,6 +23,13 @@ public sealed record TestUser
     /// <summary>Gets additional claims used by policy-based authorization.</summary>
     public IReadOnlyCollection<TestClaim> Claims { get; init; } = Array.Empty<TestClaim>();
 
+    /// <summary>Gets additional identities attached to the resulting principal.</summary>
+    public IReadOnlyCollection<TestIdentity> AdditionalIdentities { get; init; } = Array.Empty<TestIdentity>();
+
+    /// <summary>Gets authentication-ticket properties exposed by the simulated handler.</summary>
+    public IReadOnlyDictionary<string, string?> AuthenticationProperties { get; init; } =
+        new Dictionary<string, string?>();
+
     /// <summary>Creates a test user with optional roles and claims.</summary>
     public static TestUser Create(
         string name = "integration-test-user",
@@ -63,3 +70,26 @@ public sealed record TestUser
 
 /// <summary>A serializable claim used to construct a <see cref="TestUser"/>.</summary>
 public sealed record TestClaim(string Type, string Value);
+
+/// <summary>Describes an additional identity attached to a simulated test principal.</summary>
+public sealed record TestIdentity
+{
+    /// <summary>Gets the identity authentication type.</summary>
+    public string AuthenticationType { get; init; } = TestAuthenticationDefaults.AuthenticationScheme;
+
+    /// <summary>Gets the claim type used for <see cref="System.Security.Principal.IIdentity.Name"/>.</summary>
+    public string NameClaimType { get; init; } = ClaimTypes.Name;
+
+    /// <summary>Gets the claim type used for role checks.</summary>
+    public string RoleClaimType { get; init; } = ClaimTypes.Role;
+
+    /// <summary>Gets claims belonging to this identity.</summary>
+    public IReadOnlyCollection<TestClaim> Claims { get; init; } = Array.Empty<TestClaim>();
+
+    internal ClaimsIdentity ToClaimsIdentity() =>
+        new(
+            Claims.Select(claim => new Claim(claim.Type, claim.Value)),
+            AuthenticationType,
+            NameClaimType,
+            RoleClaimType);
+}

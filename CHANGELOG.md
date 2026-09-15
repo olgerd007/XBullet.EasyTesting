@@ -6,11 +6,17 @@ The project follows Semantic Versioning. Package versions are produced from GitH
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-15
+
 ### Added
 
 - Authenticated ASP.NET Core controller test hosting with fluent user profiles.
+- Optional end-to-end JWT, API-key, and client-certificate authentication using locally signed tokens, OIDC backchannel validation, JWKS rotation, named authorities, negative token scenarios, redacted event assertions and diagnostics, saved access tokens, real credential injection, composite identities, and authentication properties.
 - Entity Framework Core database scenarios.
-- Outbound HTTP stubs and transport-neutral message recording.
+- A composable `EasyTestHost` builder and arrange/client/request scenario API.
+- Per-test `TestScenarioScope` isolation for databases, mutable test resources, service/configuration overrides, and pre-cleanup failure diagnostics.
+- Outbound HTTP stubs with query, header, structural JSON body/property/path, and custom request predicates, response sequences, delays, timeouts, cancellation and malformed-response faults, per-rule mismatch diagnostics, dynamic responses, call verification, and request snapshots.
+- Transport-neutral message recording.
 - Built-in snapshots and an optional Verify.Xunit adapter.
-- Isolated Azure Functions HTTP, timer, and Kafka trigger test helpers.
+- Isolated Azure Functions test host with complete function contexts, captured input/output bindings, retry construction, middleware execution, multiple-output assertions, and fluent HTTP, timer, Kafka, Service Bus, Queue Storage, Blob, Event Grid, and Event Hubs trigger data.
 - CI preview packages and guarded stable/pre-release NuGet publishing flows.
