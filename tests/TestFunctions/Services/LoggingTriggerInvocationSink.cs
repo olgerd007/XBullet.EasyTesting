@@ -11,9 +11,12 @@ public sealed class LoggingTriggerInvocationSink(
         CancellationToken cancellationToken = default)
     {
         logger.LogInformation(
-            "Handled {Trigger} invocation for {Subject}",
+            "Handled {Trigger} invocation for {Subject}: quantity {Quantity}, detail {Detail}, amount {Amount}",
             invocation.Trigger,
-            invocation.Subject);
+            invocation.Subject,
+            invocation.Quantity,
+            invocation.Detail,
+            invocation.Amount);
         return Task.CompletedTask;
     }
 }

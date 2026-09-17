@@ -17,6 +17,7 @@ builder.Services.AddDbContext<TestApiDbContext>(options =>
 builder.Services.AddHttpClient<IExternalCatalogClient, ExternalCatalogClient>(client =>
     client.BaseAddress = new Uri(
         builder.Configuration["ExternalCatalog:BaseUrl"] ?? "https://catalog.example.test/"));
+builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IApplicationMessagePublisher, LoggingApplicationMessagePublisher>();
 builder.Services
     .AddAuthentication()

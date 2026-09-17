@@ -150,5 +150,11 @@ public sealed class TestScenarioScopeTests : IClassFixture<TestApiFactory>
             int productId,
             CancellationToken cancellationToken = default) =>
             Task.FromResult<ExternalCatalogProduct?>(null);
+
+        public Task<IReadOnlyList<ExternalCatalogProduct>> GetProductsAsync(
+            string category,
+            int limit,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<ExternalCatalogProduct>>([]);
     }
 }

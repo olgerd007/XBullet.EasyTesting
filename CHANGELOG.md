@@ -6,6 +6,14 @@ The project follows Semantic Versioning. Package versions are produced from GitH
 
 ## [Unreleased]
 
+### Added
+
+- A bulk external-catalog synchronization workflow in the sample test API that upserts products
+  and persists success or failure audit records, with integration coverage for outbound HTTP,
+  database state, validation, and upstream failures.
+- A Kafka-triggered order-pricing function sample that calls an external HTTP API, records the
+  enriched total, and preserves upstream exceptions for broker retry behavior.
+
 ## [1.0.4] - 2026-09-16
 
 ### Added

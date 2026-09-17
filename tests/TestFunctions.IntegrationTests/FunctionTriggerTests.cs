@@ -2,9 +2,11 @@ using System.Net;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.DependencyInjection;
 using TestFunctions.Functions;
+using TestFunctions.External;
 using TestFunctions.Models;
 using TestFunctions.Services;
 using XBullet.EasyTesting.AzureFunctions;
+using XBullet.EasyTesting.Http;
 using Xunit;
 
 namespace TestFunctions.IntegrationTests;
@@ -114,6 +116,63 @@ public sealed class FunctionTriggerTests
         Assert.Equal(
             new TriggerInvocation("kafka", "order-kafka", 7),
             Assert.Single(recorder.Invocations));
+    }
+
+    [Fact]
+    public async Task Kafka_pricing_function_calls_external_api_and_records_the_enriched_order()
+    {
+        var recorder = new RecordingTriggerInvocationSink();
+        var pricingApi = new StubHttpMessageHandler();
+        pricingApi
+            .When(HttpMethod.Get, "/products/42/price")
+            .RespondJson(new { ProductId = 42, UnitPrice = 19.95m, Currency = "USD" });
+        await using var host = CreatePricingHost(recorder, pricingApi);
+        var trigger = KafkaTriggerData.JsonTrigger(
+            new OrderPricingRequestedMessage("order-priced", 42, 3),
+            topic: "order-pricing",
+            partitionKey: "order-priced");
+
+        var invocation = await host.InvokeAsync<PriceOrderKafkaFunction, string>(
+            nameof(PriceOrderKafkaFunction),
+            trigger,
+            (function, message, context) => function.RunAsync(message, context),
+            TestContext.Current.CancellationToken);
+
+        Assert.True(invocation.FunctionExecuted);
+        Assert.Equal("order-pricing", invocation.Context.BindingContext.BindingData["Topic"]);
+        pricingApi.VerifyCalled(HttpMethod.Get, "/products/42/price");
+        Assert.Equal(
+            new TriggerInvocation(
+                "kafka-pricing",
+                "order-priced",
+                3,
+                Detail: "USD",
+                Amount: 59.85m),
+            Assert.Single(recorder.Invocations));
+    }
+
+    [Fact]
+    public async Task Kafka_pricing_function_propagates_external_failure_for_retry()
+    {
+        var recorder = new RecordingTriggerInvocationSink();
+        var pricingApi = new StubHttpMessageHandler();
+        pricingApi
+            .When(HttpMethod.Get, "/products/43/price")
+            .Respond(HttpStatusCode.ServiceUnavailable);
+        await using var host = CreatePricingHost(recorder, pricingApi);
+        var trigger = KafkaTriggerData.JsonTrigger(
+            new OrderPricingRequestedMessage("order-retry", 43, 2),
+            topic: "order-pricing");
+
+        await Assert.ThrowsAsync<HttpRequestException>(() =>
+            host.InvokeAsync<PriceOrderKafkaFunction, string>(
+                nameof(PriceOrderKafkaFunction),
+                trigger,
+                (function, message, context) => function.RunAsync(message, context),
+                TestContext.Current.CancellationToken));
+
+        pricingApi.VerifyCalled(HttpMethod.Get, "/products/43/price");
+        Assert.Empty(recorder.Invocations);
     }
 
     [Fact]
@@ -306,6 +365,22 @@ public sealed class FunctionTriggerTests
             .AddFunction<AdditionalTriggerFunctions>()
             .ConfigureServices(services =>
                 services.AddSingleton<ITriggerInvocationSink>(recorder));
+
+    private static AzureFunctionTestHost CreatePricingHost(
+        RecordingTriggerInvocationSink recorder,
+        StubHttpMessageHandler pricingApi) =>
+        AzureFunctionTestHost.CreateBuilder()
+            .AddFunction<PriceOrderKafkaFunction>()
+            .ConfigureServices(services =>
+            {
+                services.AddSingleton<ITriggerInvocationSink>(recorder);
+                services
+                    .AddHttpClient<IOrderPricingClient, OrderPricingClient>(client =>
+                        client.BaseAddress = new Uri("https://pricing.example.test/"))
+                    .ConfigurePrimaryHttpMessageHandler(() => pricingApi)
+                    .SetHandlerLifetime(Timeout.InfiniteTimeSpan);
+            })
+            .Build();
 
     private sealed record InvocationMarker(string Value);
 }

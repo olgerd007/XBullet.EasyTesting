@@ -497,6 +497,30 @@ Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 factory.ExternalCatalog.VerifyCalled(HttpMethod.Get, "/products/701");
 ```
 
+The test API also has a bulk synchronization workflow at `POST /api/products/sync`.
+It requests a category and limit from the external catalog, updates existing products,
+inserts new products, and stores a `CatalogSyncRun` audit record. Upstream failures
+return `502 Bad Gateway` and are retained as failed sync runs without changing products.
+
+```csharp
+factory.ExternalCatalog
+    .When(HttpMethod.Get, "/products")
+    .WithQueryParameter("category", "computer accessories")
+    .WithQueryParameter("limit", "10")
+    .RespondJson(externalProducts);
+
+using var response = await client.PostAsJsonAsync(
+    "/api/products/sync",
+    new { Category = "computer accessories", Limit = 10 });
+
+var syncRun = await factory.QueryDatabaseAsync(
+    (database, cancellationToken) => database.CatalogSyncRuns
+        .SingleAsync(cancellationToken));
+
+Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+Assert.Equal(CatalogSyncStatus.Completed, syncRun.Status);
+```
+
 Rules can match query parameters, headers, exact text bodies, structural JSON bodies, or a custom `StubHttpRequest` predicate. Query matching is independent of parameter order and supports decoded and repeated values:
 
 ```csharp
@@ -672,6 +696,43 @@ var timer = AzureFunctionTestHost.Timer()
 var kafkaMessage = KafkaTriggerData.Json(
     new KafkaOrderMessage("order-42", 3));
 ```
+
+Kafka-triggered functions can be composed with outbound HTTP stubs. The sample
+`PriceOrderKafkaFunction` consumes an order-pricing event, fetches the product price from an
+external API, and records the calculated total:
+
+```csharp
+var pricingApi = new StubHttpMessageHandler();
+pricingApi
+    .When(HttpMethod.Get, "/products/42/price")
+    .RespondJson(new { ProductId = 42, UnitPrice = 19.95m, Currency = "USD" });
+
+await using var host = AzureFunctionTestHost.CreateBuilder()
+    .AddFunction<PriceOrderKafkaFunction>()
+    .ConfigureServices(services =>
+    {
+        services.AddSingleton<ITriggerInvocationSink>(recorder);
+        services
+            .AddHttpClient<IOrderPricingClient, OrderPricingClient>(client =>
+                client.BaseAddress = new Uri("https://pricing.example.test/"))
+            .ConfigurePrimaryHttpMessageHandler(() => pricingApi);
+    })
+    .Build();
+
+var trigger = KafkaTriggerData.JsonTrigger(
+    new OrderPricingRequestedMessage("order-42", ProductId: 42, Quantity: 3),
+    topic: "order-pricing");
+
+await host.InvokeAsync<PriceOrderKafkaFunction, string>(
+    nameof(PriceOrderKafkaFunction),
+    trigger,
+    (function, message, context) => function.RunAsync(message, context));
+
+pricingApi.VerifyCalled(HttpMethod.Get, "/products/42/price");
+```
+
+The function lets HTTP failures propagate so the deployed Kafka trigger can retry the event;
+the integration test also verifies that a failed pricing call produces no recorded result.
 
 Service Bus, Queue Storage, Blob, Event Grid, and Event Hubs builders return `TestTriggerData<T>`. Passing it to `InvokeAsync` captures the input and binding metadata, runs configured worker middleware in order, and invokes the function:
 

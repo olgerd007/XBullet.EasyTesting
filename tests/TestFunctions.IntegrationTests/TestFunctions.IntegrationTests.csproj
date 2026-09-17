@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\XBullet.EasyTesting.AzureFunctions\XBullet.EasyTesting.AzureFunctions.csproj" />
+    <ProjectReference Include="..\..\src\XBullet.EasyTesting.Http\XBullet.EasyTesting.Http.csproj" />
     <ProjectReference Include="..\TestFunctions\TestFunctions.csproj" />
   </ItemGroup>
 </Project>

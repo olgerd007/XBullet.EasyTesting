@@ -12,7 +12,8 @@ namespace TestApi.Controllers;
 [Route("api/products")]
 public sealed class ProductsController(
     TestApiDbContext database,
-    IExternalCatalogClient externalCatalog) : ControllerBase
+    IExternalCatalogClient externalCatalog,
+    TimeProvider timeProvider) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<ProductResponse>>> List(
@@ -131,6 +132,76 @@ public sealed class ProductsController(
         return CreatedAtAction(nameof(Get), new { id = product.Id }, response);
     }
 
+    [HttpPost("sync")]
+    public async Task<ActionResult<CatalogSyncResponse>> Sync(
+        SyncCatalogRequest request,
+        CancellationToken cancellationToken)
+    {
+        var syncRun = new Models.CatalogSyncRun
+        {
+            Category = request.Category,
+            StartedAt = timeProvider.GetUtcNow(),
+            Status = Models.CatalogSyncStatus.Running
+        };
+        database.CatalogSyncRuns.Add(syncRun);
+        await database.SaveChangesAsync(cancellationToken);
+
+        IReadOnlyList<ExternalCatalogProduct> externalProducts;
+        try
+        {
+            externalProducts = await externalCatalog.GetProductsAsync(
+                request.Category,
+                request.Limit,
+                cancellationToken);
+        }
+        catch (HttpRequestException)
+        {
+            syncRun.Status = Models.CatalogSyncStatus.Failed;
+            syncRun.CompletedAt = timeProvider.GetUtcNow();
+            syncRun.FailureReason = "The external catalog request failed.";
+            await database.SaveChangesAsync(cancellationToken);
+            return StatusCode(StatusCodes.Status502BadGateway);
+        }
+
+        var productsById = externalProducts
+            .Where(product => product.Id > 0)
+            .GroupBy(product => product.Id)
+            .ToDictionary(group => group.Key, group => group.Last());
+        var externalIds = productsById.Keys.ToArray();
+        var existingProducts = await database.Products
+            .Where(product => externalIds.Contains(product.Id))
+            .ToDictionaryAsync(product => product.Id, cancellationToken);
+
+        foreach (var externalProduct in productsById.Values)
+        {
+            if (existingProducts.TryGetValue(externalProduct.Id, out var existingProduct))
+            {
+                existingProduct.Name = externalProduct.Name;
+                existingProduct.Price = externalProduct.Price;
+                syncRun.UpdatedCount++;
+                continue;
+            }
+
+            database.Products.Add(new Models.Product
+            {
+                Id = externalProduct.Id,
+                Name = externalProduct.Name,
+                Price = externalProduct.Price
+            });
+            syncRun.CreatedCount++;
+        }
+
+        syncRun.Status = Models.CatalogSyncStatus.Completed;
+        syncRun.CompletedAt = timeProvider.GetUtcNow();
+        await database.SaveChangesAsync(cancellationToken);
+
+        return Ok(new CatalogSyncResponse(
+            syncRun.Id,
+            syncRun.Status.ToString(),
+            syncRun.CreatedCount,
+            syncRun.UpdatedCount));
+    }
+
     public sealed record ProductResponse(int Id, string Name, decimal Price);
 
     public sealed record CreateProductRequest(
@@ -140,4 +211,14 @@ public sealed class ProductsController(
     public sealed record UpdateProductRequest(
         [Required, StringLength(200)] string Name,
         [Range(0.01, 1_000_000)] decimal Price);
+
+    public sealed record SyncCatalogRequest(
+        [Required, StringLength(100)] string Category,
+        [Range(1, 100)] int Limit = 25);
+
+    public sealed record CatalogSyncResponse(
+        long SyncRunId,
+        string Status,
+        int CreatedCount,
+        int UpdatedCount);
 }
