@@ -24,6 +24,12 @@ public static class TestAuthenticationDefaults
     /// <summary>Authentication type exposed by API-key test identities.</summary>
     public const string ApiKeyAuthenticationType = "ApiKey";
 
+    /// <summary>Default authentication type for a Federation test identity.</summary>
+    public const string FederationAuthenticationType = "Federation";
+
+    /// <summary>Default authentication type for the additional API-user identity.</summary>
+    public const string ApiUserIdentityAuthenticationType = "ApiUserIdentity";
+
     /// <summary>Internal transport header used to place a client certificate on TestServer connections.</summary>
     public const string ClientCertificateHeaderName = "X-XBullet-Test-Client-Certificate";
 }

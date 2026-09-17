@@ -8,10 +8,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.29.2" />
     <PackageReference Include="xunit.v3" Version="4.0.1" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\XBullet.EasyTesting.Azure\XBullet.EasyTesting.Azure.csproj" />
     <ProjectReference Include="..\..\src\XBullet.EasyTesting.Http\XBullet.EasyTesting.Http.csproj" />
     <ProjectReference Include="..\..\src\XBullet.EasyTesting.Messaging\XBullet.EasyTesting.Messaging.csproj" />
     <ProjectReference Include="..\..\src\XBullet.EasyTesting.Snapshots\XBullet.EasyTesting.Snapshots.csproj" />

@@ -20,6 +20,7 @@ public class AuthenticatedWebApplicationFactory<TEntryPoint> : WebApplicationFac
     private readonly Action<IServiceCollection>? _configureServices;
     private readonly Action<IConfigurationBuilder>? _configureConfiguration;
     private readonly Action<TestAuthenticationSchemeBuilder>? _configureAuthentication;
+    private readonly Action<TestScenarioEnvironmentBuilder>? _configureEnvironment;
     private readonly object _authenticationConfigurationLock = new();
     private readonly object _scenarioResourcesLock = new();
     private readonly SemaphoreSlim _scenarioGate = new(1, 1);
@@ -34,11 +35,13 @@ public class AuthenticatedWebApplicationFactory<TEntryPoint> : WebApplicationFac
     private AuthenticatedWebApplicationFactory(
         Action<IServiceCollection>? configureServices,
         Action<IConfigurationBuilder>? configureConfiguration,
-        Action<TestAuthenticationSchemeBuilder>? configureAuthentication)
+        Action<TestAuthenticationSchemeBuilder>? configureAuthentication,
+        Action<TestScenarioEnvironmentBuilder>? configureEnvironment)
     {
         _configureServices = configureServices;
         _configureConfiguration = configureConfiguration;
         _configureAuthentication = configureAuthentication;
+        _configureEnvironment = configureEnvironment;
     }
 
     /// <summary>Creates a factory with test service, configuration, and authentication callbacks.</summary>
@@ -46,7 +49,18 @@ public class AuthenticatedWebApplicationFactory<TEntryPoint> : WebApplicationFac
         Action<IServiceCollection>? configureServices = null,
         Action<IConfigurationBuilder>? configureConfiguration = null,
         Action<TestAuthenticationSchemeBuilder>? configureAuthentication = null) =>
-        new(configureServices, configureConfiguration, configureAuthentication);
+        new(configureServices, configureConfiguration, configureAuthentication, null);
+
+    internal static AuthenticatedWebApplicationFactory<TEntryPoint> CreateWithEnvironment(
+        Action<IServiceCollection>? configureServices,
+        Action<IConfigurationBuilder>? configureConfiguration,
+        Action<TestAuthenticationSchemeBuilder>? configureAuthentication,
+        Action<TestScenarioEnvironmentBuilder>? configureEnvironment) =>
+        new(
+            configureServices,
+            configureConfiguration,
+            configureAuthentication,
+            configureEnvironment);
 
     /// <inheritdoc />
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -75,6 +89,7 @@ public class AuthenticatedWebApplicationFactory<TEntryPoint> : WebApplicationFac
                 .AddScheme<TestAuthenticationOptions, TestAuthenticationHandler>(
                     TestAuthenticationDefaults.AuthenticationScheme,
                     _ => { });
+            services.TryAddSingleton<ITestClaimsPrincipalFactory, TestClaimsPrincipalFactory>();
 
             foreach (var authenticationScheme in testAuthentication.AdditionalSchemes)
             {
@@ -175,14 +190,37 @@ public class AuthenticatedWebApplicationFactory<TEntryPoint> : WebApplicationFac
 
         await _scenarioGate.WaitAsync(cancellationToken);
         TestScenarioScope<TEntryPoint>? scope = null;
+        TestScenarioContext? context = null;
         try
         {
             await ResetScenarioResourcesInternalAsync(cancellationToken);
-            var context = new TestScenarioContext(Guid.NewGuid().ToString("N"));
+            context = new TestScenarioContext(Guid.NewGuid().ToString("N"));
+            var environment = new TestScenarioEnvironmentBuilder();
+            ConfigureScenarioEnvironment(environment);
+            _configureEnvironment?.Invoke(environment);
+            foreach (var definition in scopeBuilder.Environment.Resources)
+            {
+                environment.AddResource(definition.Name, definition.CreateResource);
+            }
+
+            foreach (var definition in environment.Resources)
+            {
+                var resource = definition.CreateResource(context)
+                    ?? throw new InvalidOperationException(
+                        $"The test scenario environment resource factory '{definition.Name}' returned null.");
+                context.AddEnvironmentResource(definition.Name, resource);
+                await resource.StartAsync(cancellationToken);
+            }
+
             var host = WithWebHostBuilder(builder =>
             {
                 builder.ConfigureAppConfiguration((_, configuration) =>
                 {
+                    foreach (var resource in context.EnvironmentResources)
+                    {
+                        resource.Resource.ConfigureConfiguration(configuration);
+                    }
+
                     foreach (var action in scopeBuilder.ConfigurationActions)
                     {
                         action(configuration);
@@ -190,6 +228,11 @@ public class AuthenticatedWebApplicationFactory<TEntryPoint> : WebApplicationFac
                 });
                 builder.ConfigureTestServices(services =>
                 {
+                    foreach (var resource in context.EnvironmentResources)
+                    {
+                        resource.Resource.ConfigureServices(services);
+                    }
+
                     ConfigureServicesForScenario(services, context);
                     foreach (var action in scopeBuilder.ServiceActions)
                     {
@@ -217,6 +260,18 @@ public class AuthenticatedWebApplicationFactory<TEntryPoint> : WebApplicationFac
             }
             else
             {
+                if (context is not null)
+                {
+                    try
+                    {
+                        await context.CleanupAsync();
+                    }
+                    catch
+                    {
+                        // Preserve the environment startup or host creation failure.
+                    }
+                }
+
                 _scenarioGate.Release();
             }
 
@@ -332,6 +387,11 @@ public class AuthenticatedWebApplicationFactory<TEntryPoint> : WebApplicationFac
     {
     }
 
+    /// <summary>Override to add external dependencies that are created for every scenario.</summary>
+    protected virtual void ConfigureScenarioEnvironment(TestScenarioEnvironmentBuilder environment)
+    {
+    }
+
     /// <summary>Initializes state after the isolated scenario host has started.</summary>
     protected virtual Task InitializeScenarioAsync(
         TestScenarioScope<TEntryPoint> scope,
@@ -366,6 +426,21 @@ public class AuthenticatedWebApplicationFactory<TEntryPoint> : WebApplicationFac
         if (hostDiagnostics is not null)
         {
             resources["Host"] = hostDiagnostics;
+        }
+
+        if (scope.EnvironmentResources.Count > 0)
+        {
+            var environmentDiagnostics = new Dictionary<string, object?>(
+                StringComparer.OrdinalIgnoreCase);
+            foreach (var resource in scope.EnvironmentResources)
+            {
+                environmentDiagnostics[resource.Name] = await CaptureDiagnosticSafelyAsync(
+                    resource.Name,
+                    resource.Resource.CaptureDiagnosticsAsync,
+                    cancellationToken);
+            }
+
+            resources["Environment"] = environmentDiagnostics;
         }
 
         foreach (var resource in GetScenarioResources())

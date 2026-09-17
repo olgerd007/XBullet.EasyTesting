@@ -15,17 +15,27 @@ Install only the packages required by a test project. For example:
 ```shell
 dotnet add package XBullet.EasyTesting
 dotnet add package XBullet.EasyTesting.EntityFrameworkCore
+dotnet add package XBullet.EasyTesting.Aspire
+dotnet add package XBullet.EasyTesting.Azure
+dotnet add package XBullet.EasyTesting.Observability
+dotnet add package XBullet.EasyTesting.Testcontainers
 dotnet add package XBullet.EasyTesting.Snapshots
 ```
 
-Optional packages provide outbound HTTP stubs, message recording, Verify.Xunit integration, and isolated Azure Functions helpers.
+Optional packages provide distributed Aspire testing, real containerized dependencies, Azure SDK
+test doubles, observability capture, outbound HTTP stubs, message recording, Verify.Xunit
+integration, and isolated Azure Functions helpers.
 
 ## Packages
 
 - `XBullet.EasyTesting` provides the authenticated ASP.NET Core test host and test-user clients.
 - `XBullet.EasyTesting.EntityFrameworkCore` provides generic scoped database actions and an EF-backed test factory.
+- `XBullet.EasyTesting.Aspire` runs closed-box distributed tests with resource readiness and failure diagnostics.
+- `XBullet.EasyTesting.Azure` provides deterministic Azure SDK responses, credentials, paging, and pipeline transport.
 - `XBullet.EasyTesting.Http` provides fluent outbound HTTP stubs and request recording.
 - `XBullet.EasyTesting.Messaging` provides transport-neutral published-message recording.
+- `XBullet.EasyTesting.Observability` captures structured logs, distributed traces, and metrics, with deterministic time support.
+- `XBullet.EasyTesting.Testcontainers` provides scenario-scoped real PostgreSQL, SQL Server, Kafka, Redis, RabbitMQ, Azurite, and Service Bus emulator dependencies.
 - `XBullet.EasyTesting.AzureFunctions` provides isolated-worker contexts and fluent HTTP, timer, and Kafka trigger data.
 - `XBullet.EasyTesting.Snapshots` provides framework-independent JSON snapshot assertions.
 - `XBullet.EasyTesting.Verify.Xunit` provides the optional Verify.Xunit v3 adapter and depends on the snapshots package.
@@ -181,6 +191,27 @@ await factory.RunInTestScenarioScopeAsync(
 
 For manual lifetime control, use `await using var scope = await factory.CreateTestScenarioScopeAsync(...)`. Override `ConfigureScenarioDatabaseServices` to create a database or schema named from `context.ScenarioId`; scenario-owned connections and containers can be registered with `DisposeWithScenario` or `OnCleanup`.
 
+External dependencies that must start before the application reads its configuration can implement
+`ITestScenarioEnvironmentResource`. Configure a fresh resource for each scenario; after startup it
+can contribute dynamic configuration and service registrations, and the scope makes the typed
+resource available to test code:
+
+```csharp
+using var factory = EasyTestHost.Create<Program>()
+    .ConfigureEnvironment(environment => environment
+        .AddResource("database", context =>
+            new CustomDatabaseResource(context.ScenarioId)))
+    .Build();
+
+await using var scope = await factory.CreateTestScenarioScopeAsync(cancellationToken: cancellationToken);
+var database = scope.GetEnvironmentResource<CustomDatabaseResource>("database");
+```
+
+The lifecycle is startup and readiness, configuration and service registration, host startup,
+failure diagnostics, host shutdown, and reverse-order resource disposal. Derived factories can
+override `ConfigureScenarioEnvironment`. The upcoming optional container packages build on this
+lifecycle without adding container dependencies to the core package.
+
 For application-specific dependency replacement, derive from the factory and override `ConfigureServicesForTests`:
 
 ```csharp
@@ -193,6 +224,50 @@ public sealed class ApiFactory : AuthenticatedWebApplicationFactory<Program>
     }
 }
 ```
+
+### Startup-based hosts
+
+Applications that already expose an `IntegrationTestStartup` can keep that host and avoid invoking
+`Program.Main`. Derive from `StartupAuthenticatedWebApplicationFactory<TStartup>`; it builds the
+startup pipeline directly on `TestServer`, uses the startup assembly output as its content root, and
+retains all configuration, authentication, and scenario hooks:
+
+```csharp
+public sealed class StartupTestHost
+    : StartupAuthenticatedWebApplicationFactory<IntegrationTestStartup>
+{
+    protected override void ConfigureTestConfiguration(IConfigurationBuilder configuration) =>
+        configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Authentication:Authority"] = "https://identity.example.test"
+        });
+
+    protected override void ConfigureTestAuthentication(
+        TestAuthenticationSchemeBuilder authentication) =>
+        authentication.MapFederation("Federation");
+}
+```
+
+Use `StartupEntityFrameworkWebApplicationFactory<TStartup, TDbContext>` when the same host also
+needs the framework database helpers and per-scenario database isolation.
+
+The Federation profile creates a primary identity whose authentication type defaults to
+`Federation` and an additional identity whose authentication type defaults to `ApiUserIdentity`:
+
+```csharp
+using var client = scope.Client()
+    .AsFederatedUser(user => user
+        .WithNameIdentifier("user-42")
+        .WithFederationClaim("tenant", "tenant-42")
+        .WithApiUserClaim("portfolio", "portfolio-17"))
+    .Build();
+```
+
+If an application requires the additional identity to be a concrete `ApiUserIdentity` subclass, derive from
+`TestClaimsPrincipalFactory`, override `CreateAdditionalIdentity`, and replace
+`ITestClaimsPrincipalFactory` in `ConfigureServicesForTests` (or
+`ConfigureAdditionalServicesForTests` on the EF host). The transported user profile remains
+serializable while the application controls the server-side identity type.
 
 The test authentication handler is installed only in the test host. It is never registered by the application itself.
 
@@ -209,6 +284,7 @@ public sealed class ApiFactory : AuthenticatedWebApplicationFactory<Program>
         authentication
             .MapAzureAd("Bearer")
             .MapApiKey("ApiKey")
+            .MapFederation("Federation")
             .MapScheme("PartnerScheme");
     }
 }
@@ -739,6 +815,17 @@ dotnet build XBullet.EasyTesting.sln --configuration Release --no-restore
 dotnet test XBullet.EasyTesting.sln --configuration Release --no-build
 ```
 
+Tests that start Aspire processes or Docker containers are explicit. Run the real dependency suite
+separately when validating infrastructure changes:
+
+```shell
+dotnet test tests/XBullet.EasyTesting.ContainerTests/XBullet.EasyTesting.ContainerTests.csproj \
+  --configuration Release --explicit only
+```
+
+The regular CI matrix compiles these projects but skips their explicit runtime tests to keep feedback
+fast; run them locally or from a manually provisioned environment when changing infrastructure support.
+
 GitHub Actions builds and tests on Windows and Ubuntu, records Cobertura code coverage, validates public API approvals, checks package compatibility against the latest stable release, and creates packages for pushes and pull requests.
 
 Publishing uses NuGet.org trusted publishing instead of a long-lived API key. Configure a GitHub trusted publisher for the `olgerd007/XBullet.EasyTesting` repository and `.github/workflows/publish-nuget.yml`, update `CHANGELOG.md`, and publish a GitHub Release with a semantic-version tag such as `v1.2.3`. The release workflow exchanges its GitHub OIDC token for a short-lived NuGet API key, then publishes all `XBullet.EasyTesting.*` packages and their symbol packages.
@@ -747,14 +834,14 @@ Public API approval files live beside each package project. New intentional APIs
 
 ### Preview flow
 
-Every CI run creates preview packages using the current `VersionPrefix` and the workflow run number, for example `0.2.0-preview.42`. Download the `nuget-preview-42` workflow artifact and use its directory as a local NuGet source to test the complete package set without publishing it.
+Every CI run creates preview packages using the current `VersionPrefix` and the workflow run number, for example `1.0.4-preview.42`. Download the `nuget-preview-42` workflow artifact and use its directory as a local NuGet source to test the complete package set without publishing it.
 
-To publish a public preview to NuGet.org, create a GitHub Release with a tag such as `v0.2.0-preview.1` and select **Set as a pre-release**. The release workflow verifies that the GitHub release type and semantic version agree before publishing. Install public previews with:
+To publish a public preview to NuGet.org, create a GitHub Release with a tag such as `v1.0.4-preview.1` and select **Set as a pre-release**. The release workflow verifies that the GitHub release type and semantic version agree before publishing. Install public previews with:
 
 ```shell
 dotnet add package XBullet.EasyTesting --prerelease
 ```
 
-For a stable release, use a tag without a suffix, such as `v0.2.0`, and do not mark the GitHub Release as a pre-release.
+For a stable release, use a tag without a suffix, such as `v1.0.4`, and do not mark the GitHub Release as a pre-release.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines and [SECURITY.md](SECURITY.md) for private vulnerability reporting.

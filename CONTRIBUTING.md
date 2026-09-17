@@ -18,6 +18,14 @@ Before opening a pull request, also verify formatting:
 dotnet format XBullet.EasyTesting.sln --verify-no-changes --no-restore
 ```
 
+Check all direct and transitive NuGet dependencies for known vulnerabilities:
+
+```shell
+dotnet list XBullet.EasyTesting.sln package --vulnerable --include-transitive
+```
+
+Restore fails when NuGet reports a moderate, high, or critical vulnerability. Builds also run all enabled-by-default .NET security analyzers.
+
 ## Pull requests
 
 - Keep changes focused and include tests for externally observable behavior.

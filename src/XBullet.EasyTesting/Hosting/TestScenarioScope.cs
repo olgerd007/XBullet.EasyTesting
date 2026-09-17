@@ -64,6 +64,14 @@ public sealed class TestScenarioScope<TEntryPoint> : IAsyncDisposable
     /// <summary>Gets authentication events captured from real handlers in this scenario.</summary>
     public TestAuthenticationEventRecorder AuthenticationEvents => _owner.AuthenticationEvents;
 
+    /// <summary>Gets a named external dependency created for this scenario.</summary>
+    public TResource GetEnvironmentResource<TResource>(string name)
+        where TResource : class, ITestScenarioEnvironmentResource =>
+        _context.GetEnvironmentResource<TResource>(name);
+
+    internal IReadOnlyList<TestScenarioEnvironmentResourceRegistration> EnvironmentResources =>
+        _context.EnvironmentResources;
+
     internal async Task CaptureFailureAsync(
         Exception exception,
         CancellationToken cancellationToken)

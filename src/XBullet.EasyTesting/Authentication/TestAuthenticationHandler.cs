@@ -2,6 +2,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -49,15 +50,10 @@ public sealed class TestAuthenticationHandler : AuthenticationHandler<TestAuthen
                 return Task.FromResult(AuthenticateResult.NoResult());
             }
 
-            var identity = new System.Security.Claims.ClaimsIdentity(
-                user.ToClaims(),
-                user.AuthenticationType,
-                System.Security.Claims.ClaimTypes.Name,
-                System.Security.Claims.ClaimTypes.Role);
-
-            var identities = new List<System.Security.Claims.ClaimsIdentity> { identity };
-            identities.AddRange(user.AdditionalIdentities.Select(additional => additional.ToClaimsIdentity()));
-            var principal = new System.Security.Claims.ClaimsPrincipal(identities);
+            var principalFactory = Context.RequestServices
+                .GetService<ITestClaimsPrincipalFactory>()
+                ?? new TestClaimsPrincipalFactory();
+            var principal = principalFactory.CreatePrincipal(user);
             var properties = new AuthenticationProperties(
                 new Dictionary<string, string?>(user.AuthenticationProperties));
             var ticket = new AuthenticationTicket(principal, properties, Scheme.Name);

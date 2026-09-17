@@ -6,6 +6,38 @@ The project follows Semantic Versioning. Package versions are produced from GitH
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-09-16
+
+### Added
+
+- Startup-based authenticated and EF Core test hosts that run `IntegrationTestStartup`-style
+  pipelines on `TestServer` without invoking `Program.Main`, while preserving injected
+  configuration and per-scenario database support.
+- A Federation authentication profile with an additional API-user identity and replaceable claims
+  principal materialization for applications that require concrete identity subclasses.
+- A pre-host asynchronous scenario-environment lifecycle for external dependencies, including
+  dynamic configuration and service registration, typed resource lookup, failure diagnostics,
+  reverse-order cleanup, and fluent or factory-derived registration.
+- An initial `XBullet.EasyTesting.Observability` package with bounded structured `ILogger`,
+  `Activity`, and metric capture; fluent assertions; scenario failure diagnostics; source and meter
+  filtering; and optional deterministic `FakeTimeProvider` registration.
+- An initial `XBullet.EasyTesting.Testcontainers` package with generic scenario-owned containers,
+  native readiness checks, dynamic endpoint injection, bounded failure diagnostics, and convenient
+  PostgreSQL, SQL Server, Kafka, Redis, RabbitMQ, Azurite, and Service Bus emulator registrations,
+  backed by explicit real-service smoke tests that can be run on demand.
+- An initial `XBullet.EasyTesting.Aspire` package for closed-box distributed tests with AppHost
+  customization, resource health waits, endpoint and connection-string access, bounded resource
+  logs, state-aware failure diagnostics, and deterministic asynchronous cleanup.
+- An initial `XBullet.EasyTesting.Azure` package with concrete Azure SDK responses, response and
+  pageable factories, a deterministic recording token credential, direct client replacement, and a
+  scripted HTTP pipeline transport with request verification and redacted scenario diagnostics.
+
+### Security
+
+- Enforced NuGet auditing for moderate, high, and critical vulnerabilities.
+- Enabled all built-in .NET security analyzers and added CodeQL and dependency-review workflows.
+- Pinned every GitHub Action to an immutable commit SHA.
+
 ## [1.0.3] - 2026-09-15
 
 ### Added

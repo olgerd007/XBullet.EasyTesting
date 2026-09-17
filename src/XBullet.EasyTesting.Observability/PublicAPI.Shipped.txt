@@ -1,0 +1,125 @@
+#nullable enable
+XBullet.EasyTesting.Observability.TestActivityCollector
+XBullet.EasyTesting.Observability.TestActivityCollector.CaptureDiagnosticsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<object?>
+XBullet.EasyTesting.Observability.TestActivityCollector.Count.get -> int
+XBullet.EasyTesting.Observability.TestActivityCollector.Dispose() -> void
+XBullet.EasyTesting.Observability.TestActivityCollector.Entries.get -> System.Collections.Generic.IReadOnlyList<XBullet.EasyTesting.Observability.TestActivityEntry!>!
+XBullet.EasyTesting.Observability.TestActivityCollector.Reset() -> XBullet.EasyTesting.Observability.TestActivityCollector!
+XBullet.EasyTesting.Observability.TestActivityCollector.ResetAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+XBullet.EasyTesting.Observability.TestActivityCollector.Should() -> XBullet.EasyTesting.Observability.TestActivityCollectorAssertions!
+XBullet.EasyTesting.Observability.TestActivityCollector.TestActivityCollector(System.Collections.Generic.IEnumerable<string!>? sourceNames = null, int maximumEntries = 1000) -> void
+XBullet.EasyTesting.Observability.TestActivityCollectorAssertions
+XBullet.EasyTesting.Observability.TestActivityCollectorAssertions.ContainActivity(string! operationName, System.Diagnostics.ActivityStatusCode? status = null, string? sourceName = null) -> XBullet.EasyTesting.Observability.TestActivityCollectorAssertions!
+XBullet.EasyTesting.Observability.TestActivityCollectorAssertions.HaveCount(int expected) -> XBullet.EasyTesting.Observability.TestActivityCollectorAssertions!
+XBullet.EasyTesting.Observability.TestActivityCollectorAssertions.NotContainActivity(string! operationName, string? sourceName = null) -> XBullet.EasyTesting.Observability.TestActivityCollectorAssertions!
+XBullet.EasyTesting.Observability.TestActivityEntry
+XBullet.EasyTesting.Observability.TestActivityEntry.Baggage.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string?>!
+XBullet.EasyTesting.Observability.TestActivityEntry.DisplayName.get -> string!
+XBullet.EasyTesting.Observability.TestActivityEntry.Duration.get -> System.TimeSpan
+XBullet.EasyTesting.Observability.TestActivityEntry.Events.get -> System.Collections.Generic.IReadOnlyList<XBullet.EasyTesting.Observability.TestActivityEvent!>!
+XBullet.EasyTesting.Observability.TestActivityEntry.Kind.get -> System.Diagnostics.ActivityKind
+XBullet.EasyTesting.Observability.TestActivityEntry.OperationName.get -> string!
+XBullet.EasyTesting.Observability.TestActivityEntry.ParentSpanId.get -> System.Diagnostics.ActivitySpanId
+XBullet.EasyTesting.Observability.TestActivityEntry.SourceName.get -> string!
+XBullet.EasyTesting.Observability.TestActivityEntry.SpanId.get -> System.Diagnostics.ActivitySpanId
+XBullet.EasyTesting.Observability.TestActivityEntry.StartTime.get -> System.DateTimeOffset
+XBullet.EasyTesting.Observability.TestActivityEntry.Status.get -> System.Diagnostics.ActivityStatusCode
+XBullet.EasyTesting.Observability.TestActivityEntry.StatusDescription.get -> string?
+XBullet.EasyTesting.Observability.TestActivityEntry.Tags.get -> System.Collections.Generic.IReadOnlyDictionary<string!, object?>!
+XBullet.EasyTesting.Observability.TestActivityEntry.TestActivityEntry(string! sourceName, string! operationName, string! displayName, System.Diagnostics.ActivityKind kind, System.Diagnostics.ActivityStatusCode status, string? statusDescription, System.Diagnostics.ActivityTraceId traceId, System.Diagnostics.ActivitySpanId spanId, System.Diagnostics.ActivitySpanId parentSpanId, System.DateTimeOffset startTime, System.TimeSpan duration, System.Collections.Generic.IReadOnlyDictionary<string!, object?>! tags, System.Collections.Generic.IReadOnlyDictionary<string!, string?>! baggage, System.Collections.Generic.IReadOnlyList<XBullet.EasyTesting.Observability.TestActivityEvent!>! events) -> void
+XBullet.EasyTesting.Observability.TestActivityEntry.TraceId.get -> System.Diagnostics.ActivityTraceId
+XBullet.EasyTesting.Observability.TestActivityEvent
+XBullet.EasyTesting.Observability.TestActivityEvent.Name.get -> string!
+XBullet.EasyTesting.Observability.TestActivityEvent.Tags.get -> System.Collections.Generic.IReadOnlyDictionary<string!, object?>!
+XBullet.EasyTesting.Observability.TestActivityEvent.TestActivityEvent(string! name, System.DateTimeOffset timestamp, System.Collections.Generic.IReadOnlyDictionary<string!, object?>! tags) -> void
+XBullet.EasyTesting.Observability.TestActivityEvent.Timestamp.get -> System.DateTimeOffset
+XBullet.EasyTesting.Observability.TestActivityVerificationException
+XBullet.EasyTesting.Observability.TestActivityVerificationException.TestActivityVerificationException(string! message) -> void
+XBullet.EasyTesting.Observability.TestMetricCollector
+XBullet.EasyTesting.Observability.TestMetricCollector.CaptureDiagnosticsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<object?>
+XBullet.EasyTesting.Observability.TestMetricCollector.CollectObservableMeasurements() -> void
+XBullet.EasyTesting.Observability.TestMetricCollector.Count.get -> int
+XBullet.EasyTesting.Observability.TestMetricCollector.Dispose() -> void
+XBullet.EasyTesting.Observability.TestMetricCollector.Measurements.get -> System.Collections.Generic.IReadOnlyList<XBullet.EasyTesting.Observability.TestMetricMeasurement!>!
+XBullet.EasyTesting.Observability.TestMetricCollector.Reset() -> XBullet.EasyTesting.Observability.TestMetricCollector!
+XBullet.EasyTesting.Observability.TestMetricCollector.ResetAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+XBullet.EasyTesting.Observability.TestMetricCollector.Should() -> XBullet.EasyTesting.Observability.TestMetricCollectorAssertions!
+XBullet.EasyTesting.Observability.TestMetricCollector.TestMetricCollector(System.TimeProvider? timeProvider = null, System.Collections.Generic.IEnumerable<string!>? meterNames = null, int maximumMeasurements = 1000) -> void
+XBullet.EasyTesting.Observability.TestMetricCollectorAssertions
+XBullet.EasyTesting.Observability.TestMetricCollectorAssertions.ContainMeasurement<T>(string! instrumentName, T expectedValue, string? meterName = null) -> XBullet.EasyTesting.Observability.TestMetricCollectorAssertions!
+XBullet.EasyTesting.Observability.TestMetricCollectorAssertions.HaveCount(int expected) -> XBullet.EasyTesting.Observability.TestMetricCollectorAssertions!
+XBullet.EasyTesting.Observability.TestMetricCollectorAssertions.NotContainMeasurement(string! instrumentName, string? meterName = null) -> XBullet.EasyTesting.Observability.TestMetricCollectorAssertions!
+XBullet.EasyTesting.Observability.TestMetricMeasurement
+XBullet.EasyTesting.Observability.TestMetricMeasurement.Description.get -> string?
+XBullet.EasyTesting.Observability.TestMetricMeasurement.InstrumentName.get -> string!
+XBullet.EasyTesting.Observability.TestMetricMeasurement.InstrumentType.get -> string!
+XBullet.EasyTesting.Observability.TestMetricMeasurement.MeterName.get -> string!
+XBullet.EasyTesting.Observability.TestMetricMeasurement.Tags.get -> System.Collections.Generic.IReadOnlyDictionary<string!, object?>!
+XBullet.EasyTesting.Observability.TestMetricMeasurement.TestMetricMeasurement(System.DateTimeOffset timestamp, string! meterName, string! instrumentName, string! instrumentType, string? unit, string? description, object! value, System.Collections.Generic.IReadOnlyDictionary<string!, object?>! tags) -> void
+XBullet.EasyTesting.Observability.TestMetricMeasurement.Timestamp.get -> System.DateTimeOffset
+XBullet.EasyTesting.Observability.TestMetricMeasurement.Unit.get -> string?
+XBullet.EasyTesting.Observability.TestMetricMeasurement.Value.get -> object!
+XBullet.EasyTesting.Observability.TestMetricVerificationException
+XBullet.EasyTesting.Observability.TestMetricVerificationException.TestMetricVerificationException(string! message) -> void
+static XBullet.EasyTesting.Observability.TestObservabilityExtensions.GetObservability<TEntryPoint>(this XBullet.EasyTesting.Hosting.TestScenarioScope<TEntryPoint!>! scope, string! resourceName = "Observability") -> XBullet.EasyTesting.Observability.TestObservability!
+static XBullet.EasyTesting.Observability.TestObservabilityExtensions.UseObservability(this XBullet.EasyTesting.Hosting.TestScenarioScopeBuilder! builder, string! resourceName, System.Action<XBullet.EasyTesting.Observability.TestObservabilityOptions!>? configure) -> XBullet.EasyTesting.Hosting.TestScenarioScopeBuilder!
+static XBullet.EasyTesting.Observability.TestObservabilityExtensions.UseObservability(this XBullet.EasyTesting.Hosting.TestScenarioScopeBuilder! builder, System.Action<XBullet.EasyTesting.Observability.TestObservabilityOptions!>! configure) -> XBullet.EasyTesting.Hosting.TestScenarioScopeBuilder!
+static XBullet.EasyTesting.Observability.TestObservabilityExtensions.UseObservability(this XBullet.EasyTesting.Hosting.TestScenarioScopeBuilder! builder) -> XBullet.EasyTesting.Hosting.TestScenarioScopeBuilder!
+static XBullet.EasyTesting.Observability.TestObservabilityExtensions.UseObservability<TEntryPoint>(this XBullet.EasyTesting.Hosting.EasyTestHostBuilder<TEntryPoint!>! builder, string! resourceName, System.Action<XBullet.EasyTesting.Observability.TestObservabilityOptions!>? configure) -> XBullet.EasyTesting.Hosting.EasyTestHostBuilder<TEntryPoint!>!
+static XBullet.EasyTesting.Observability.TestObservabilityExtensions.UseObservability<TEntryPoint>(this XBullet.EasyTesting.Hosting.EasyTestHostBuilder<TEntryPoint!>! builder, System.Action<XBullet.EasyTesting.Observability.TestObservabilityOptions!>! configure) -> XBullet.EasyTesting.Hosting.EasyTestHostBuilder<TEntryPoint!>!
+static XBullet.EasyTesting.Observability.TestObservabilityExtensions.UseObservability<TEntryPoint>(this XBullet.EasyTesting.Hosting.EasyTestHostBuilder<TEntryPoint!>! builder) -> XBullet.EasyTesting.Hosting.EasyTestHostBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Observability.TestLogCollector
+XBullet.EasyTesting.Observability.TestLogCollector.CaptureDiagnosticsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<object?>
+XBullet.EasyTesting.Observability.TestLogCollector.Count.get -> int
+XBullet.EasyTesting.Observability.TestLogCollector.CreateLogger(string! categoryName) -> Microsoft.Extensions.Logging.ILogger!
+XBullet.EasyTesting.Observability.TestLogCollector.Dispose() -> void
+XBullet.EasyTesting.Observability.TestLogCollector.Entries.get -> System.Collections.Generic.IReadOnlyList<XBullet.EasyTesting.Observability.TestLogEntry!>!
+XBullet.EasyTesting.Observability.TestLogCollector.Reset() -> XBullet.EasyTesting.Observability.TestLogCollector!
+XBullet.EasyTesting.Observability.TestLogCollector.ResetAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+XBullet.EasyTesting.Observability.TestLogCollector.SetScopeProvider(Microsoft.Extensions.Logging.IExternalScopeProvider! scopeProvider) -> void
+XBullet.EasyTesting.Observability.TestLogCollector.Should() -> XBullet.EasyTesting.Observability.TestLogCollectorAssertions!
+XBullet.EasyTesting.Observability.TestLogCollector.TestLogCollector(System.TimeProvider? timeProvider = null, int maximumEntries = 1000) -> void
+XBullet.EasyTesting.Observability.TestLogCollectorAssertions
+XBullet.EasyTesting.Observability.TestLogCollectorAssertions.ContainMessage(string! expectedText, Microsoft.Extensions.Logging.LogLevel? level = null, string? category = null) -> XBullet.EasyTesting.Observability.TestLogCollectorAssertions!
+XBullet.EasyTesting.Observability.TestLogCollectorAssertions.HaveCount(int expected) -> XBullet.EasyTesting.Observability.TestLogCollectorAssertions!
+XBullet.EasyTesting.Observability.TestLogCollectorAssertions.NotContainMessage(string! unexpectedText, Microsoft.Extensions.Logging.LogLevel? level = null, string? category = null) -> XBullet.EasyTesting.Observability.TestLogCollectorAssertions!
+XBullet.EasyTesting.Observability.TestLogEntry
+XBullet.EasyTesting.Observability.TestLogEntry.Category.get -> string!
+XBullet.EasyTesting.Observability.TestLogEntry.EventId.get -> Microsoft.Extensions.Logging.EventId
+XBullet.EasyTesting.Observability.TestLogEntry.Exception.get -> System.Exception?
+XBullet.EasyTesting.Observability.TestLogEntry.Level.get -> Microsoft.Extensions.Logging.LogLevel
+XBullet.EasyTesting.Observability.TestLogEntry.Message.get -> string!
+XBullet.EasyTesting.Observability.TestLogEntry.MessageTemplate.get -> string?
+XBullet.EasyTesting.Observability.TestLogEntry.Scopes.get -> System.Collections.Generic.IReadOnlyList<object?>!
+XBullet.EasyTesting.Observability.TestLogEntry.State.get -> System.Collections.Generic.IReadOnlyDictionary<string!, object?>!
+XBullet.EasyTesting.Observability.TestLogEntry.TestLogEntry(System.DateTimeOffset timestamp, string! category, Microsoft.Extensions.Logging.LogLevel level, Microsoft.Extensions.Logging.EventId eventId, string! message, string? messageTemplate, System.Collections.Generic.IReadOnlyDictionary<string!, object?>! state, System.Collections.Generic.IReadOnlyList<object?>! scopes, System.Exception? exception) -> void
+XBullet.EasyTesting.Observability.TestLogEntry.Timestamp.get -> System.DateTimeOffset
+XBullet.EasyTesting.Observability.TestLogVerificationException
+XBullet.EasyTesting.Observability.TestLogVerificationException.TestLogVerificationException(string! message) -> void
+XBullet.EasyTesting.Observability.TestObservability
+XBullet.EasyTesting.Observability.TestObservability.CaptureDiagnosticsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<object?>
+XBullet.EasyTesting.Observability.TestObservability.ConfigureConfiguration(Microsoft.Extensions.Configuration.IConfigurationBuilder! configuration) -> void
+XBullet.EasyTesting.Observability.TestObservability.ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> void
+XBullet.EasyTesting.Observability.TestObservability.DisposeAsync() -> System.Threading.Tasks.ValueTask
+XBullet.EasyTesting.Observability.TestObservability.Activities.get -> XBullet.EasyTesting.Observability.TestActivityCollector!
+XBullet.EasyTesting.Observability.TestObservability.Logs.get -> XBullet.EasyTesting.Observability.TestLogCollector!
+XBullet.EasyTesting.Observability.TestObservability.Metrics.get -> XBullet.EasyTesting.Observability.TestMetricCollector!
+XBullet.EasyTesting.Observability.TestObservability.StartAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+XBullet.EasyTesting.Observability.TestObservability.TestObservability(XBullet.EasyTesting.Observability.TestObservabilityOptions? options = null) -> void
+XBullet.EasyTesting.Observability.TestObservability.Time.get -> Microsoft.Extensions.Time.Testing.FakeTimeProvider?
+XBullet.EasyTesting.Observability.TestObservabilityExtensions
+XBullet.EasyTesting.Observability.TestObservabilityOptions
+XBullet.EasyTesting.Observability.TestObservabilityOptions.ActivitySourceNames.get -> System.Collections.Generic.IReadOnlyList<string!>!
+XBullet.EasyTesting.Observability.TestObservabilityOptions.CaptureActivitySource(string! sourceName) -> XBullet.EasyTesting.Observability.TestObservabilityOptions!
+XBullet.EasyTesting.Observability.TestObservabilityOptions.CaptureMeter(string! meterName) -> XBullet.EasyTesting.Observability.TestObservabilityOptions!
+XBullet.EasyTesting.Observability.TestObservabilityOptions.FakeTimeStart.get -> System.DateTimeOffset?
+XBullet.EasyTesting.Observability.TestObservabilityOptions.MaximumActivityEntries.get -> int
+XBullet.EasyTesting.Observability.TestObservabilityOptions.MaximumActivityEntries.set -> void
+XBullet.EasyTesting.Observability.TestObservabilityOptions.MaximumLogEntries.get -> int
+XBullet.EasyTesting.Observability.TestObservabilityOptions.MaximumLogEntries.set -> void
+XBullet.EasyTesting.Observability.TestObservabilityOptions.MaximumMetricMeasurements.get -> int
+XBullet.EasyTesting.Observability.TestObservabilityOptions.MaximumMetricMeasurements.set -> void
+XBullet.EasyTesting.Observability.TestObservabilityOptions.MeterNames.get -> System.Collections.Generic.IReadOnlyList<string!>!
+XBullet.EasyTesting.Observability.TestObservabilityOptions.TestObservabilityOptions() -> void
+XBullet.EasyTesting.Observability.TestObservabilityOptions.UseFakeTime(System.DateTimeOffset? start = null) -> XBullet.EasyTesting.Observability.TestObservabilityOptions!
+XBullet.EasyTesting.Observability.TestObservabilityOptions.UsesFakeTime.get -> bool

@@ -13,6 +13,7 @@ public sealed class TestClientBuilder<TEntryPoint>
     private readonly TestAuthenticationSchemeBuilder _authentication;
     private readonly string _azureAdAuthenticationScheme;
     private readonly string _apiKeyAuthenticationScheme;
+    private readonly string _federationAuthenticationScheme;
     private readonly WebApplicationFactoryClientOptions _options = new();
     private readonly Dictionary<string, string> _headers = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<DelegatingHandler> _handlers = [];
@@ -34,6 +35,7 @@ public sealed class TestClientBuilder<TEntryPoint>
         _authentication = authentication;
         _azureAdAuthenticationScheme = authentication.AzureAdScheme;
         _apiKeyAuthenticationScheme = authentication.ApiKeyScheme;
+        _federationAuthenticationScheme = authentication.FederationScheme;
     }
 
     /// <summary>Configures the client to send the supplied test identity.</summary>
@@ -68,6 +70,16 @@ public sealed class TestClientBuilder<TEntryPoint>
     {
         ArgumentNullException.ThrowIfNull(configure);
         var builder = new TestApiKeyBuilder(_apiKeyAuthenticationScheme);
+        configure(builder);
+        return AsUser(builder.Build());
+    }
+
+    /// <summary>Builds a Federation identity with an additional API-user identity.</summary>
+    public TestClientBuilder<TEntryPoint> AsFederatedUser(
+        Action<TestFederatedUserBuilder> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        var builder = new TestFederatedUserBuilder(_federationAuthenticationScheme);
         configure(builder);
         return AsUser(builder.Build());
     }

@@ -13,11 +13,18 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\XBullet.EasyTesting\XBullet.EasyTesting.csproj" />
+    <ProjectReference Include="..\..\src\XBullet.EasyTesting.Aspire\XBullet.EasyTesting.Aspire.csproj" />
     <ProjectReference Include="..\..\src\XBullet.EasyTesting.EntityFrameworkCore\XBullet.EasyTesting.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\..\src\XBullet.EasyTesting.Http\XBullet.EasyTesting.Http.csproj" />
     <ProjectReference Include="..\..\src\XBullet.EasyTesting.Messaging\XBullet.EasyTesting.Messaging.csproj" />
+    <ProjectReference Include="..\..\src\XBullet.EasyTesting.Observability\XBullet.EasyTesting.Observability.csproj" />
+    <ProjectReference Include="..\..\src\XBullet.EasyTesting.Testcontainers\XBullet.EasyTesting.Testcontainers.csproj" />
     <ProjectReference Include="..\..\src\XBullet.EasyTesting.Snapshots\XBullet.EasyTesting.Snapshots.csproj" />
     <ProjectReference Include="..\..\src\XBullet.EasyTesting.Verify.Xunit\XBullet.EasyTesting.Verify.Xunit.csproj" />
     <ProjectReference Include="..\TestApi\TestApi.csproj" />
+    <ProjectReference Include="..\TestAppHost\TestAppHost.csproj"
+                      Condition="'$(TargetFramework)' == 'net10.0'"
+                      IsAspireProjectResource="false"
+                      Aliases="testapphost" />
   </ItemGroup>
 </Project>
