@@ -41,6 +41,12 @@ internal sealed record SnapshotJsonDifference(
         }
     }
 
+    public static SnapshotJsonDifference FindText(string expected, string actual) =>
+        new("$text", Describe(expected), Describe(actual));
+
+    public static SnapshotJsonDifference MissingExpectedText(string actual) =>
+        new("$text", Missing, Describe(actual));
+
     private static SnapshotJsonDifference? Compare(
         JsonElement expected,
         JsonElement actual,

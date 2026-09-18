@@ -11,6 +11,7 @@ using XBullet.EasyTesting.Snapshots;
 [assembly: TypeForwardedTo(typeof(SnapshotDiffTool))]
 [assembly: TypeForwardedTo(typeof(SnapshotMaintenance))]
 [assembly: TypeForwardedTo(typeof(SnapshotMismatchException))]
+[assembly: TypeForwardedTo(typeof(SnapshotLocationContext))]
 [assembly: TypeForwardedTo(typeof(SnapshotSettings))]
 [assembly: TypeForwardedTo(typeof(SnapshotSettingsDefaults))]
 [assembly: TypeForwardedTo(typeof(SnapshotUpdateMode))]

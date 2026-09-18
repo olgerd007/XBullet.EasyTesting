@@ -1,1 +1,18 @@
 #nullable enable
+static XBullet.EasyTesting.Snapshots.SnapshotAssert.MatchTextAsync(string! actualText, XBullet.EasyTesting.Snapshots.SnapshotSettings? settings = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken), string! sourceFile = "", string! testName = "") -> System.Threading.Tasks.Task!
+XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions.IncludingQueryParameter(string! parameterName) -> XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions!
+XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions.RedactedQueryParameters.get -> System.Collections.Generic.ISet<string!>!
+XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions.RedactingQueryParameter(string! parameterName) -> XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions!
+XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions.RedactingQueryParameters(params string![]! parameterNames) -> XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions!
+XBullet.EasyTesting.Snapshots.SnapshotLocationContext
+XBullet.EasyTesting.Snapshots.SnapshotLocationContext.SnapshotName.get -> string!
+XBullet.EasyTesting.Snapshots.SnapshotLocationContext.SourceDirectory.get -> string!
+XBullet.EasyTesting.Snapshots.SnapshotLocationContext.SourceFile.get -> string!
+XBullet.EasyTesting.Snapshots.SnapshotLocationContext.SourceFileName.get -> string!
+XBullet.EasyTesting.Snapshots.SnapshotLocationContext.TestName.get -> string!
+XBullet.EasyTesting.Snapshots.SnapshotLocationContext.Variant.get -> string?
+XBullet.EasyTesting.Snapshots.SnapshotSettings.BesideSourceFile() -> XBullet.EasyTesting.Snapshots.SnapshotSettings!
+XBullet.EasyTesting.Snapshots.SnapshotSettings.DirectoryResolver.get -> System.Func<XBullet.EasyTesting.Snapshots.SnapshotLocationContext!, string!>?
+XBullet.EasyTesting.Snapshots.SnapshotSettings.DirectoryResolver.set -> void
+XBullet.EasyTesting.Snapshots.SnapshotSettings.ForHashedVariant(params object?[]! values) -> XBullet.EasyTesting.Snapshots.SnapshotSettings!
+XBullet.EasyTesting.Snapshots.SnapshotSettings.InDirectory(System.Func<XBullet.EasyTesting.Snapshots.SnapshotLocationContext!, string!>! directoryResolver) -> XBullet.EasyTesting.Snapshots.SnapshotSettings!

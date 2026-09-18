@@ -580,12 +580,17 @@ When `XBullet.EasyTesting.Snapshots.Http` is referenced, snapshot one request or
 ```csharp
 await stub.ShouldMatchRequestsSnapshot(
     new StubHttpRequestSnapshotOptions()
-        .IgnoringHeaders("X-Request-Nonce"),
+        .IgnoringHeaders("X-Request-Nonce")
+        .RedactingHeader("X-Session")
+        .RedactingQueryParameter("tenant_secret"),
     new SnapshotSettings()
         .ScrubMembers("timestamp", "requestId"));
 ```
 
-JSON request bodies are captured structurally. Authorization, cookies, API keys, correlation IDs, and tracing headers are excluded by default; use `IncludingHeader` to opt one back in. Use `ShouldMatchRequestSnapshot` on an individual `StubHttpRequest`.
+JSON request bodies are captured structurally. Authorization, cookies, API keys, correlation IDs,
+and tracing headers are excluded by default. Common secret-bearing query parameters are redacted,
+and additional headers or query parameters can be explicitly redacted. Use
+`ShouldMatchRequestSnapshot` on an individual `StubHttpRequest`.
 
 ## Kafka, Azure Service Bus, and notifications
 
@@ -800,7 +805,11 @@ public async Task Get_order_matches_snapshot()
 }
 ```
 
-The first run writes `__snapshots__/TestFile.TestMethod.received.json` and fails with a `SnapshotMismatchException`. Review the file and rename it to `.verified.json` to approve it. Later mismatches write a new received file while preserving the approved snapshot.
+The first run writes a runtime-qualified file such as
+`__snapshots__/TestFile.TestMethod.received.net8.0.json` and fails with a
+`SnapshotMismatchException`. Accept `exception.ReceivedPath` to promote it to the shared
+`.verified.json` file. Runtime qualification prevents parallel target frameworks from overwriting
+each other's received output.
 
 The lower-level assertion works with any serializable value:
 
@@ -808,9 +817,17 @@ The lower-level assertion works with any serializable value:
 await SnapshotAssert.MatchAsync(result);
 ```
 
+Use `InDirectory(path)` to choose another snapshot directory. Relative paths are resolved from the
+calling source file. To store snapshots directly beside that source file, use
+`new SnapshotSettings().BesideSourceFile()`. The `InDirectory(context => ...)` overload supports
+centralized layouts based on the source file, test name, snapshot name, and variant.
+
+Use `SnapshotAssert.MatchTextAsync(text)` for plain text. It produces `.verified.txt` and
+runtime-qualified `.received.*.txt` files without applying JSON parsing.
+
 Raw JSON content has a dedicated assertion so it is parsed and normalized rather than captured as
-an escaped JSON string. Serialization uses `System.Text.Json`, and the generated snapshots retain
-the `.received.json` and `.verified.json` extensions:
+an escaped JSON string. Serialization uses `System.Text.Json`; verified files use `.verified.json`
+and received files include the target framework:
 
 ```csharp
 var settings = new SnapshotSettings()
@@ -835,15 +852,18 @@ header's presence without exposing its value, or omit all headers:
 
 ```csharp
 var redacted = new ControllerSnapshotOptions()
-    .RedactingHeaders("Set-Cookie", "X-Session-Token");
+    .RedactingHeaders("Set-Cookie", "X-Session-Token")
+    .RedactingQueryParameter("tenant_secret");
 
 var bodyOnly = new ControllerSnapshotOptions()
     .WithoutRequest()
     .WithoutHeaders();
 ```
 
-Redacted values appear as `{Redacted}`. `IncludingHeader(name)` explicitly restores a default
-exclusion when its real value is safe and stable.
+Redacted values appear as `{Redacted}`. Common secret-bearing query parameters such as
+`access_token`, `api_key`, `client_secret`, `sig`, and `token` are redacted by default.
+`IncludingHeader(name)` or `IncludingQueryParameter(name)` explicitly restores a value when it is
+safe and stable.
 
 For multiple snapshots or parameterized cases in one test method, append a stable variant:
 
@@ -852,6 +872,9 @@ await SnapshotAssert.MatchAsync(
     result,
     new SnapshotSettings().ForVariant($"case-{caseId}"));
 ```
+
+Long names are shortened with a deterministic hash. Use `ForHashedVariant(parameters)` when raw
+parameter text should never be included in the filename.
 
 The remaining work is tracked in the [snapshot package roadmap](docs/snapshots-roadmap.md).
 

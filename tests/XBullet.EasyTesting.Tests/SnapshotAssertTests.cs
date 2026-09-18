@@ -20,6 +20,7 @@ public sealed class SnapshotAssertTests
         var forwardedTypes = facade.GetForwardedTypes();
 
         Assert.Contains(typeof(SnapshotAssert), forwardedTypes);
+        Assert.Contains(typeof(SnapshotLocationContext), forwardedTypes);
         Assert.Contains(typeof(StubHttpRequestSnapshot), forwardedTypes);
         Assert.Equal(
             "XBullet.EasyTesting.Snapshots.Core",
@@ -77,6 +78,27 @@ public sealed class SnapshotAssertTests
     }
 
     [Fact]
+    public void Captured_request_snapshot_redacts_headers_and_sensitive_query_values()
+    {
+        var request = new StubHttpRequest(
+            HttpMethod.Get,
+            new Uri("https://example.test/orders?api_key=secret&view=full"),
+            new Dictionary<string, string[]>
+            {
+                ["X-Session"] = ["session-secret"]
+            },
+            Body: null);
+        var options = new StubHttpRequestSnapshotOptions()
+            .RedactingHeader("X-Session");
+
+        var snapshot = StubHttpRequestSnapshot.FromRequest(request, options);
+
+        Assert.Equal("/orders?api_key={Redacted}&view=full", snapshot.Url);
+        Assert.NotNull(snapshot.Headers);
+        Assert.Equal(["{Redacted}"], snapshot.Headers["X-Session"]);
+    }
+
+    [Fact]
     public async Task Controller_json_detection_does_not_match_arbitrary_json_suffixes()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
@@ -125,6 +147,53 @@ public sealed class SnapshotAssertTests
         Assert.DoesNotContain(
             snapshot.Headers.SelectMany(header => header.Value),
             value => value.Contains("secret", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Controller_snapshot_redacts_sensitive_query_values_and_merges_duplicate_headers()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var response = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            RequestMessage = new HttpRequestMessage(
+                HttpMethod.Get,
+                "https://example.test/orders?access_token=secret&view=full"),
+            Content = new StringContent("{}", Encoding.UTF8, "application/json")
+        };
+        response.Headers.TryAddWithoutValidation("X-Combined", "response-value");
+        response.Content.Headers.TryAddWithoutValidation("X-Combined", "content-value");
+
+        var snapshot = await ControllerResponseSnapshot.FromResponseAsync(
+            response,
+            cancellationToken: cancellationToken);
+
+        Assert.Equal("/orders?access_token={Redacted}&view=full", snapshot.Request?.Url);
+        Assert.Equal(["response-value", "content-value"], snapshot.Headers["X-Combined"]);
+    }
+
+    [Fact]
+    public async Task Controller_query_redaction_supports_custom_names_inclusion_and_relative_fragments()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var response = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            RequestMessage = new HttpRequestMessage(
+                HttpMethod.Get,
+                new Uri("/orders?API%5FKEY=visible&custom=one&custom#section", UriKind.Relative)),
+            Content = new StringContent("{}", Encoding.UTF8, "application/json")
+        };
+        var options = new ControllerSnapshotOptions()
+            .IncludingQueryParameter("API_KEY")
+            .RedactingQueryParameter("CUSTOM");
+
+        var snapshot = await ControllerResponseSnapshot.FromResponseAsync(
+            response,
+            options,
+            cancellationToken);
+
+        Assert.Equal(
+            "/orders?API%5FKEY=visible&custom={Redacted}&custom={Redacted}#section",
+            snapshot.Request?.Url);
     }
 
     [Fact]
@@ -713,6 +782,102 @@ public sealed class SnapshotAssertTests
     }
 
     [Fact]
+    public async Task Http_json_content_supports_non_seekable_streams()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var settings = CreateUpdatingSettings(snapshotDirectory).Named("non-seekable-json");
+        using var stream = new NonSeekableReadStream(Encoding.UTF8.GetBytes("""{"value":42}"""));
+        using var content = new StreamContent(stream);
+        content.Headers.ContentType = new("application/json");
+
+        try
+        {
+            await content.ShouldMatchJsonSnapshot(settings, cancellationToken);
+
+            var verified = await ReadSingleVerifiedSnapshotAsync(
+                snapshotDirectory,
+                cancellationToken);
+            Assert.Contains("\"value\": 42", verified);
+            Assert.Equal(stream.Length, stream.BytesRead);
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task Controller_response_extension_forwards_capture_and_snapshot_options()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var sourceFile = Path.Combine(snapshotDirectory, "ControllerExtensionTests.cs");
+        var settings = CreateUpdatingSettings(snapshotDirectory).Named("controller-extension");
+        using var response = new HttpResponseMessage(HttpStatusCode.Accepted)
+        {
+            RequestMessage = new HttpRequestMessage(HttpMethod.Post, "https://example.test/orders"),
+            Content = new StringContent("ignored", Encoding.UTF8, "text/plain")
+        };
+
+        try
+        {
+            await response.ShouldMatchControllerSnapshot(
+                new ControllerSnapshotOptions().WithoutBody(),
+                settings,
+                cancellationToken,
+                sourceFile,
+                "Controller_extension");
+
+            var verifiedPath = Directory.EnumerateFiles(snapshotDirectory, "*.verified.json").Single();
+            var verified = await File.ReadAllTextAsync(verifiedPath, cancellationToken);
+            Assert.Equal("ControllerExtensionTests.controller-extension.verified.json", Path.GetFileName(verifiedPath));
+            Assert.Contains("\"StatusCode\": 202", verified);
+            Assert.Contains("\"Method\": \"POST\"", verified);
+            Assert.DoesNotContain("ignored", verified);
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task Captured_request_extension_matches_one_request()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var sourceFile = Path.Combine(snapshotDirectory, "RequestExtensionTests.cs");
+        var settings = CreateUpdatingSettings(snapshotDirectory).Named("single-request");
+        var request = new StubHttpRequest(
+            HttpMethod.Put,
+            new Uri("https://example.test/orders/42"),
+            new Dictionary<string, string[]>(),
+            "updated");
+
+        try
+        {
+            await request.ShouldMatchRequestSnapshot(
+                new StubHttpRequestSnapshotOptions().WithoutHeaders(),
+                settings,
+                cancellationToken,
+                sourceFile,
+                "Request_extension");
+
+            var verifiedPath = Directory.EnumerateFiles(snapshotDirectory, "*.verified.json").Single();
+            var verified = await File.ReadAllTextAsync(verifiedPath, cancellationToken);
+            Assert.Equal("RequestExtensionTests.single-request.verified.json", Path.GetFileName(verifiedPath));
+            Assert.Contains("\"Method\": \"PUT\"", verified);
+            Assert.Contains("\"Body\": \"updated\"", verified);
+            Assert.Contains("\"Headers\": null", verified);
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
     public async Task New_snapshot_writes_a_received_file()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
@@ -730,12 +895,41 @@ public sealed class SnapshotAssertTests
 
             Assert.True(File.Exists(exception.ReceivedPath));
             Assert.False(File.Exists(exception.VerifiedPath));
+            Assert.Matches(@"\.received\.net(8|10)\.0\.json$", exception.ReceivedPath);
 
             var verifiedPath = SnapshotAssert.AcceptReceived(exception.ReceivedPath);
 
             Assert.Equal(exception.VerifiedPath, verifiedPath);
             Assert.True(File.Exists(verifiedPath));
             await SnapshotAssert.MatchAsync(new { Value = 42 }, settings, cancellationToken);
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task Passing_target_does_not_delete_another_runtime_received_file()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var settings = CreateUpdatingSettings(snapshotDirectory).Named("runtime-received");
+
+        try
+        {
+            await SnapshotAssert.MatchAsync(new { Value = 42 }, settings, cancellationToken);
+            var verifiedPath = Directory.EnumerateFiles(snapshotDirectory, "*.verified.json").Single();
+            var otherRuntimeReceivedPath = verifiedPath.Replace(
+                ".verified.json",
+                ".received.net99.0.json",
+                StringComparison.Ordinal);
+            await File.WriteAllTextAsync(otherRuntimeReceivedPath, "different", cancellationToken);
+
+            settings.Updating(SnapshotUpdateMode.None);
+            await SnapshotAssert.MatchAsync(new { Value = 42 }, settings, cancellationToken);
+
+            Assert.True(File.Exists(otherRuntimeReceivedPath));
         }
         finally
         {
@@ -773,6 +967,152 @@ public sealed class SnapshotAssertTests
     }
 
     [Fact]
+    public async Task Snapshot_can_be_stored_beside_the_calling_source_file()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var sourceDirectory = CreateTemporarySnapshotDirectory();
+        var sourceFile = Path.Combine(sourceDirectory, "LocationTests.cs");
+        var settings = new SnapshotSettings()
+            .BesideSourceFile()
+            .Named("beside-source")
+            .Updating(SnapshotUpdateMode.Missing)
+            .AllowingUpdatesInContinuousIntegration()
+            .WithoutDiffTool();
+
+        try
+        {
+            await SnapshotAssert.MatchAsync(
+                new { Value = 42 },
+                settings,
+                cancellationToken,
+                sourceFile,
+                nameof(Snapshot_can_be_stored_beside_the_calling_source_file));
+
+            Assert.True(File.Exists(Path.Combine(
+                sourceDirectory,
+                "LocationTests.beside-source.verified.json")));
+            Assert.False(Directory.Exists(Path.Combine(sourceDirectory, "__snapshots__")));
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(sourceDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task Snapshot_directory_can_be_resolved_from_call_context()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var sourceDirectory = CreateTemporarySnapshotDirectory();
+        var sourceFile = Path.Combine(sourceDirectory, "LocationTests.cs");
+        SnapshotLocationContext? observedContext = null;
+        var settings = new SnapshotSettings()
+            .InDirectory(context =>
+            {
+                observedContext = context;
+                return Path.Combine(context.SourceDirectory, "central", context.SnapshotName);
+            })
+            .Named("resolved")
+            .ForVariant("case-one")
+            .Updating(SnapshotUpdateMode.Missing)
+            .AllowingUpdatesInContinuousIntegration()
+            .WithoutDiffTool();
+
+        try
+        {
+            await SnapshotAssert.MatchAsync(
+                new { Value = 42 },
+                settings,
+                cancellationToken,
+                sourceFile,
+                "Resolver_test");
+
+            Assert.NotNull(observedContext);
+            Assert.Equal(sourceFile, observedContext.SourceFile);
+            Assert.Equal("LocationTests.cs", observedContext.SourceFileName);
+            Assert.Equal("Resolver_test", observedContext.TestName);
+            Assert.Equal("resolved", observedContext.SnapshotName);
+            Assert.Equal("case-one", observedContext.Variant);
+            Assert.Single(Directory.EnumerateFiles(
+                Path.Combine(sourceDirectory, "central", "resolved"),
+                "*.verified.json"));
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(sourceDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task Long_snapshot_names_are_shortened_with_a_stable_hash()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var settings = CreateUpdatingSettings(snapshotDirectory)
+            .Named(new string('N', 180))
+            .ForVariant(new string('\u00e9', 180));
+
+        try
+        {
+            await SnapshotAssert.MatchAsync(new { Value = 42 }, settings, cancellationToken);
+
+            var fileName = Path.GetFileName(
+                Directory.EnumerateFiles(snapshotDirectory, "*.verified.json").Single());
+            Assert.Contains('~', fileName);
+            Assert.True(Encoding.UTF8.GetByteCount(fileName) < 220);
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
+    public void Snapshot_variant_can_be_hashed_from_parameter_values()
+    {
+        var first = new SnapshotSettings().ForHashedVariant("customer", 42).Variant;
+        var second = new SnapshotSettings().ForHashedVariant("customer", 42).Variant;
+        var different = new SnapshotSettings().ForHashedVariant("customer", 43).Variant;
+
+        Assert.Equal(first, second);
+        Assert.StartsWith("hash-", first, StringComparison.Ordinal);
+        Assert.NotEqual(first, different);
+    }
+
+    [Fact]
+    public async Task Plain_text_snapshots_use_text_files_and_custom_scrubbers()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var settings = CreateUpdatingSettings(snapshotDirectory)
+            .Named("plain-text")
+            .Scrub(value => value.Replace("secret", "{Redacted}", StringComparison.Ordinal));
+
+        try
+        {
+            await SnapshotAssert.MatchTextAsync(
+                "first\r\nsecret\r\n",
+                settings,
+                cancellationToken);
+            var verifiedPath = Directory.EnumerateFiles(snapshotDirectory, "*.verified.txt").Single();
+            Assert.Equal("first\n{Redacted}", await File.ReadAllTextAsync(verifiedPath, cancellationToken));
+
+            settings.Updating(SnapshotUpdateMode.None);
+            var exception = await Assert.ThrowsAsync<SnapshotMismatchException>(() =>
+                SnapshotAssert.MatchTextAsync("second\nsecret", settings, cancellationToken));
+            Assert.Matches(@"\.received\.net(8|10)\.0\.txt$", exception.ReceivedPath);
+            Assert.Equal("$text", exception.DifferencePath);
+
+            Assert.Equal(verifiedPath, SnapshotAssert.AcceptReceived(exception.ReceivedPath));
+            await SnapshotAssert.MatchTextAsync("second\nsecret", settings, cancellationToken);
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
     public void Controller_snapshot_options_support_fluent_capture_configuration()
     {
         var options = new ControllerSnapshotOptions()
@@ -780,15 +1120,190 @@ public sealed class SnapshotAssertTests
             .WithoutBody()
             .WithoutHeaders()
             .IgnoringHeaders("ETag", "X-Correlation-ID")
-            .RedactingHeader("X-Session-Token")
-            .IncludingHeader("Date");
+            .RedactingHeaders("X-Correlation-ID", "X-Session-Token")
+            .IncludingHeader("X-Correlation-ID")
+            .RedactingQueryParameters("session", "signature")
+            .IncludingQueryParameter("signature");
 
         Assert.False(options.IncludeRequest);
         Assert.False(options.IncludeBody);
         Assert.False(options.IncludeHeaders);
         Assert.Contains("ETag", options.IgnoredHeaders);
         Assert.Contains("X-Session-Token", options.RedactedHeaders);
-        Assert.DoesNotContain("Date", options.IgnoredHeaders);
+        Assert.DoesNotContain("X-Correlation-ID", options.IgnoredHeaders);
+        Assert.DoesNotContain("X-Correlation-ID", options.RedactedHeaders);
+        Assert.Contains("session", options.RedactedQueryParameters);
+        Assert.DoesNotContain("signature", options.RedactedQueryParameters);
+    }
+
+    [Fact]
+    public void Captured_request_options_coordinate_header_and_query_rules()
+    {
+        var options = new StubHttpRequestSnapshotOptions()
+            .WithoutHeaders()
+            .WithoutBody()
+            .IgnoringHeaders("X-First", "X-Second")
+            .RedactingHeaders("X-Second", "X-Third")
+            .IncludingHeader("X-Third")
+            .RedactingQueryParameters("custom", "signature")
+            .IncludingQueryParameter("signature");
+
+        Assert.False(options.IncludeHeaders);
+        Assert.False(options.IncludeBody);
+        Assert.Contains("X-First", options.IgnoredHeaders);
+        Assert.DoesNotContain("X-Second", options.IgnoredHeaders);
+        Assert.Contains("X-Second", options.RedactedHeaders);
+        Assert.DoesNotContain("X-Third", options.RedactedHeaders);
+        Assert.Contains("custom", options.RedactedQueryParameters);
+        Assert.DoesNotContain("signature", options.RedactedQueryParameters);
+    }
+
+    [Fact]
+    public void Captured_request_snapshot_handles_body_and_url_fallbacks()
+    {
+        var plain = StubHttpRequestSnapshot.FromRequest(new StubHttpRequest(
+            HttpMethod.Post,
+            new Uri("/plain", UriKind.Relative),
+            new Dictionary<string, string[]>(),
+            "plain body"));
+        var malformedJson = StubHttpRequestSnapshot.FromRequest(new StubHttpRequest(
+            HttpMethod.Post,
+            new Uri("/json", UriKind.Relative),
+            new Dictionary<string, string[]> { ["Content-Type"] = ["application/json"] },
+            "{ invalid"));
+        var invalidContentType = StubHttpRequestSnapshot.FromRequest(new StubHttpRequest(
+            HttpMethod.Post,
+            null,
+            new Dictionary<string, string[]> { ["Content-Type"] = ["not a media type"] },
+            "fallback"));
+        var withoutBody = StubHttpRequestSnapshot.FromRequest(
+            new StubHttpRequest(
+                HttpMethod.Post,
+                new Uri("/ignored", UriKind.Relative),
+                new Dictionary<string, string[]>(),
+                "ignored"),
+            new StubHttpRequestSnapshotOptions().WithoutBody());
+
+        Assert.Equal("plain body", plain.Body);
+        Assert.Equal("{ invalid", malformedJson.Body);
+        Assert.Null(invalidContentType.Url);
+        Assert.Equal("fallback", invalidContentType.Body);
+        Assert.Null(withoutBody.Body);
+    }
+
+    [Fact]
+    public void Captured_request_query_redaction_supports_custom_names_and_inclusion()
+    {
+        var request = new StubHttpRequest(
+            HttpMethod.Get,
+            new Uri("/orders?token=visible&CUSTOM=one&CUSTOM#section", UriKind.Relative),
+            new Dictionary<string, string[]>(),
+            Body: null);
+        var options = new StubHttpRequestSnapshotOptions()
+            .IncludingQueryParameter("TOKEN")
+            .RedactingQueryParameter("custom");
+
+        var snapshot = StubHttpRequestSnapshot.FromRequest(request, options);
+
+        Assert.Equal(
+            "/orders?token=visible&CUSTOM={Redacted}&CUSTOM={Redacted}#section",
+            snapshot.Url);
+    }
+
+    [Fact]
+    public async Task Snapshot_location_and_acceptance_failures_are_explicit()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var sourceFile = Path.Combine(snapshotDirectory, "LocationFailureTests.cs");
+        var emptyResolver = CreateUpdatingSettings(snapshotDirectory)
+            .InDirectory(_ => " ")
+            .Named("empty-resolver");
+        var emptyName = CreateUpdatingSettings(snapshotDirectory);
+        emptyName.SnapshotName = "";
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            SnapshotAssert.MatchAsync(new { Value = 1 }, emptyResolver, cancellationToken, sourceFile, "Test"));
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            SnapshotAssert.MatchAsync(new { Value = 1 }, emptyName, cancellationToken, sourceFile, "Test"));
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            SnapshotAssert.MatchAsync(new { Value = 1 }, emptyName, cancellationToken, "", "Test"));
+
+        Assert.Throws<ArgumentException>(() =>
+            SnapshotAssert.AcceptReceived(Path.Combine(snapshotDirectory, "invalid.json")));
+        Assert.Throws<FileNotFoundException>(() =>
+            SnapshotAssert.AcceptReceived(Path.Combine(snapshotDirectory, "missing.received.net8.0.json")));
+    }
+
+    [Fact]
+    public async Task Explicit_snapshot_directory_takes_precedence_over_a_manually_set_resolver()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var rootDirectory = CreateTemporarySnapshotDirectory();
+        var explicitDirectory = Path.Combine(rootDirectory, "explicit");
+        var resolverCalls = 0;
+        var settings = new SnapshotSettings
+        {
+            Directory = explicitDirectory,
+            DirectoryResolver = _ =>
+            {
+                resolverCalls++;
+                return Path.Combine(rootDirectory, "resolved");
+            },
+            SnapshotName = "precedence",
+            UpdateMode = SnapshotUpdateMode.Missing,
+            AllowUpdatesInContinuousIntegration = true,
+            LaunchDiffTool = false
+        };
+
+        try
+        {
+            await SnapshotAssert.MatchAsync(
+                new { Value = 42 },
+                settings,
+                cancellationToken,
+                Path.Combine(rootDirectory, "LocationTests.cs"),
+                "Precedence");
+
+            Assert.Equal(0, resolverCalls);
+            Assert.Single(Directory.EnumerateFiles(explicitDirectory, "*.verified.json"));
+            Assert.False(Directory.Exists(Path.Combine(rootDirectory, "resolved")));
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(rootDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task Catalog_and_maintenance_handle_missing_and_invalid_paths_safely()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var missingDirectory = Path.Combine(snapshotDirectory, "missing");
+        var verifiedPath = Path.Combine(snapshotDirectory, "Keep.verified.json");
+        var invalidPath = Path.Combine(snapshotDirectory, "not-a-snapshot.json");
+        Directory.CreateDirectory(snapshotDirectory);
+        await File.WriteAllTextAsync(verifiedPath, "{}", cancellationToken);
+        await File.WriteAllTextAsync(invalidPath, "{}", cancellationToken);
+
+        try
+        {
+            Assert.Empty(new SnapshotCatalog().FindObsoleteSnapshots(missingDirectory));
+            Assert.Empty(SnapshotMaintenance.FindReceivedSnapshots(missingDirectory));
+            Assert.Throws<ArgumentException>(() =>
+                SnapshotMaintenance.RemoveVerifiedSnapshots(
+                    [verifiedPath, invalidPath],
+                    confirmed: true));
+            Assert.True(File.Exists(verifiedPath));
+            Assert.Empty(SnapshotMaintenance.RemoveVerifiedSnapshots(
+                [Path.Combine(snapshotDirectory, "Missing.verified.json")],
+                confirmed: true));
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
     }
 
     [Fact]
@@ -872,12 +1387,16 @@ public sealed class SnapshotAssertTests
         {
             await SnapshotAssert.MatchAsync(new { Value = 42 }, settings, cancellationToken);
             var obsoletePath = Path.Combine(snapshotDirectory, "OldTests.Removed.verified.json");
+            var obsoleteTextPath = Path.Combine(snapshotDirectory, "OldTests.Removed.verified.txt");
             await File.WriteAllTextAsync(obsoletePath, "{}", cancellationToken);
+            await File.WriteAllTextAsync(obsoleteTextPath, "old", cancellationToken);
 
             var obsolete = catalog.FindObsoleteSnapshots(snapshotDirectory);
 
             Assert.Single(catalog.ObservedVerifiedSnapshots);
-            Assert.Equal(Path.GetFullPath(obsoletePath), Assert.Single(obsolete));
+            Assert.Equal(
+                [Path.GetFullPath(obsoletePath), Path.GetFullPath(obsoleteTextPath)],
+                obsolete);
         }
         finally
         {
@@ -894,13 +1413,15 @@ public sealed class SnapshotAssertTests
         Directory.CreateDirectory(nestedDirectory);
         var firstReceived = Path.Combine(snapshotDirectory, "First.received.json");
         var secondReceived = Path.Combine(nestedDirectory, "Second.received.json");
+        var thirdReceived = Path.Combine(nestedDirectory, "Third.received.net8.0.txt");
         await File.WriteAllTextAsync(firstReceived, "{}", cancellationToken);
         await File.WriteAllTextAsync(secondReceived, "{}", cancellationToken);
+        await File.WriteAllTextAsync(thirdReceived, "text", cancellationToken);
 
         try
         {
             var preview = SnapshotMaintenance.FindReceivedSnapshots(snapshotDirectory);
-            Assert.Equal(2, preview.Count);
+            Assert.Equal(3, preview.Count);
 
             Assert.Throws<InvalidOperationException>(() =>
                 SnapshotMaintenance.AcceptReceivedSnapshots(snapshotDirectory));
@@ -909,7 +1430,7 @@ public sealed class SnapshotAssertTests
             var accepted = SnapshotMaintenance.AcceptReceivedSnapshots(
                 snapshotDirectory,
                 confirmed: true);
-            Assert.Equal(2, accepted.Count);
+            Assert.Equal(3, accepted.Count);
             Assert.All(accepted, path => Assert.True(File.Exists(path)));
 
             Assert.Throws<InvalidOperationException>(() =>
@@ -1079,6 +1600,211 @@ public sealed class SnapshotAssertTests
         }
     }
 
+    [Theory]
+    [InlineData("different-kinds", "{}", "[]", "$")]
+    [InlineData("different-property", "{\"first\":1}", "{\"second\":1}", "$")]
+    [InlineData("missing-property", "{\"first\":1,\"second\":2}", "{\"first\":1}", "$.second")]
+    [InlineData("extra-property", "{\"first\":1}", "{\"first\":1,\"second\":2}", "$.second")]
+    [InlineData("missing-array-item", "[1,2]", "[1]", "$[1]")]
+    [InlineData("extra-array-item", "[1]", "[1,2]", "$[1]")]
+    [InlineData("escaped-property", "{\"first.name\":1}", "{\"first.name\":2}", "$['first.name']")]
+    [InlineData("invalid-expected", "{ invalid", "{\"first\":1}", "$")]
+    public async Task Mismatch_diagnostics_cover_structural_difference_shapes(
+        string snapshotName,
+        string expected,
+        string actual,
+        string expectedPath)
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var sourceFile = Path.Combine(snapshotDirectory, "Diagnostics.cs");
+        var settings = new SnapshotSettings()
+            .InDirectory(snapshotDirectory)
+            .Named(snapshotName)
+            .WithoutDiffTool();
+        Directory.CreateDirectory(snapshotDirectory);
+        await File.WriteAllTextAsync(
+            Path.Combine(snapshotDirectory, $"Diagnostics.{snapshotName}.verified.json"),
+            expected,
+            cancellationToken);
+
+        try
+        {
+            var exception = await Assert.ThrowsAsync<SnapshotMismatchException>(() =>
+                SnapshotAssert.MatchJsonAsync(
+                    actual,
+                    settings,
+                    cancellationToken,
+                    sourceFile,
+                    "Diagnostics"));
+
+            Assert.Equal(expectedPath, exception.DifferencePath);
+            Assert.NotNull(exception.ExpectedValue);
+            Assert.NotNull(exception.ActualValue);
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task Mismatch_diagnostics_escape_property_names_and_truncate_long_values()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var sourceFile = Path.Combine(snapshotDirectory, "Diagnostics.cs");
+        var settings = new SnapshotSettings()
+            .InDirectory(snapshotDirectory)
+            .Named("escaped-and-long")
+            .WithoutDiffTool();
+        var expectedValue = new string('a', 250);
+        var actualValue = new string('b', 250);
+        Directory.CreateDirectory(snapshotDirectory);
+        await File.WriteAllTextAsync(
+            Path.Combine(snapshotDirectory, "Diagnostics.escaped-and-long.verified.json"),
+            JsonSerializer.Serialize(new Dictionary<string, string> { ["quote'\\name"] = expectedValue }),
+            cancellationToken);
+
+        try
+        {
+            var exception = await Assert.ThrowsAsync<SnapshotMismatchException>(() =>
+                SnapshotAssert.MatchJsonAsync(
+                    JsonSerializer.Serialize(
+                        new Dictionary<string, string> { ["quote'\\name"] = actualValue }),
+                    settings,
+                    cancellationToken,
+                    sourceFile,
+                    "Diagnostics"));
+
+            Assert.Equal("$['quote\\'\\\\name']", exception.DifferencePath);
+            Assert.EndsWith("...", exception.ExpectedValue, StringComparison.Ordinal);
+            Assert.EndsWith("...", exception.ActualValue, StringComparison.Ordinal);
+            Assert.Equal(203, exception.ExpectedValue?.Length);
+            Assert.Equal(203, exception.ActualValue?.Length);
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task Structured_rules_support_root_object_wildcard_and_array_index_targets()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+
+        try
+        {
+            await SnapshotAssert.MatchJsonAsync(
+                """{"dynamic":42}""",
+                CreateUpdatingSettings(snapshotDirectory)
+                    .Named("root-replacement")
+                    .ReplacePath("", new { Stable = true }),
+                cancellationToken);
+            await SnapshotAssert.MatchJsonAsync(
+                """{"dynamic":42}""",
+                CreateUpdatingSettings(snapshotDirectory)
+                    .Named("root-removal")
+                    .IgnorePath(""),
+                cancellationToken);
+            await SnapshotAssert.MatchJsonAsync(
+                """{"first":{"secret":"one"},"second":{"secret":"two"}}""",
+                CreateUpdatingSettings(snapshotDirectory)
+                    .Named("object-wildcard")
+                    .ScrubPath("/*/secret"),
+                cancellationToken);
+            await SnapshotAssert.MatchJsonAsync(
+                """{"items":["first","remove","last"]}""",
+                CreateUpdatingSettings(snapshotDirectory)
+                    .Named("array-index")
+                    .IgnorePath("/items/1"),
+                cancellationToken);
+            await SnapshotAssert.MatchJsonAsync(
+                """{"items":[null]}""",
+                CreateUpdatingSettings(snapshotDirectory)
+                    .Named("null-descent")
+                    .ScrubPath("/items/*/value"),
+                cancellationToken);
+
+            var snapshots = Directory.EnumerateFiles(snapshotDirectory, "*.verified.json")
+                .ToDictionary(path => Path.GetFileName(path)!, File.ReadAllText);
+            Assert.Contains("\"Stable\": true", snapshots["SnapshotAssertTests.root-replacement.verified.json"]);
+            Assert.Equal("null", snapshots["SnapshotAssertTests.root-removal.verified.json"]);
+            Assert.Equal(2, CountOccurrences(
+                snapshots["SnapshotAssertTests.object-wildcard.verified.json"],
+                "{Scrubbed}"));
+            Assert.DoesNotContain("remove", snapshots["SnapshotAssertTests.array-index.verified.json"]);
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task Structured_rules_reject_invalid_sort_targets_and_path_escapes()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+
+        try
+        {
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                SnapshotAssert.MatchJsonAsync(
+                    """{"value":42}""",
+                    CreateUpdatingSettings(snapshotDirectory)
+                        .Named("sort-non-array")
+                        .SortArray("/value"),
+                    cancellationToken));
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                SnapshotAssert.MatchJsonAsync(
+                    """{"items":[{"name":"missing id"}]}""",
+                    CreateUpdatingSettings(snapshotDirectory)
+                        .Named("missing-sort-key")
+                        .SortArray("/items", "/id"),
+                    cancellationToken));
+
+            Assert.Throws<ArgumentException>(() =>
+                new SnapshotSettings().SortArray("/items", "/*/id"));
+            Assert.Throws<ArgumentException>(() =>
+                new SnapshotSettings().ScrubPath("/invalid~"));
+            Assert.Throws<ArgumentException>(() =>
+                new SnapshotSettings().ScrubPath("/invalid~3escape"));
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
+    public void Diff_tool_configuration_validates_and_builds_supported_commands()
+    {
+        Assert.Throws<ArgumentException>(() => new SnapshotDiffTool(" "));
+        Assert.Throws<ArgumentNullException>(() =>
+            new SnapshotDiffTool("custom", (string[])null!));
+
+        var custom = new SnapshotDiffTool("custom", "--left", "{verified}", "{received}");
+        var settings = new SnapshotSettings().WithDiffTool(custom);
+        var visualStudio = SnapshotDiffTool.VisualStudio("devenv-custom");
+        var visualStudioCode = SnapshotDiffTool.VisualStudioCode("code-custom");
+        var rider = SnapshotDiffTool.Rider("rider-custom");
+
+        Assert.True(settings.LaunchDiffTool);
+        Assert.Same(custom, settings.DiffTool);
+        Assert.Equal("custom", custom.Executable);
+        Assert.Equal(["--left", "{verified}", "{received}"], custom.Arguments);
+        Assert.Equal("devenv-custom", visualStudio.Executable);
+        Assert.Equal(["/diff", "{verified}", "{received}"], visualStudio.Arguments);
+        Assert.Equal("code-custom", visualStudioCode.Executable);
+        Assert.Equal(["--diff", "{verified}", "{received}"], visualStudioCode.Arguments);
+        Assert.Equal("rider-custom", rider.Executable);
+        Assert.Equal(["diff", "{verified}", "{received}"], rider.Arguments);
+        Assert.Throws<ArgumentNullException>(() => new SnapshotSettings().WithDiffTool(null!));
+    }
+
     [Fact]
     public async Task Captured_http_requests_have_a_dedicated_snapshot_assertion()
     {
@@ -1168,6 +1894,57 @@ public sealed class SnapshotAssertTests
         if (Directory.Exists(path))
         {
             Directory.Delete(path, recursive: true);
+        }
+    }
+
+    private sealed class NonSeekableReadStream(byte[] content) : Stream
+    {
+        private readonly MemoryStream _inner = new(content, writable: false);
+
+        public long BytesRead => _inner.Position;
+
+        public override bool CanRead => true;
+
+        public override bool CanSeek => false;
+
+        public override bool CanWrite => false;
+
+        public override long Length => _inner.Length;
+
+        public override long Position
+        {
+            get => _inner.Position;
+            set => throw new NotSupportedException();
+        }
+
+        public override void Flush()
+        {
+        }
+
+        public override int Read(byte[] buffer, int offset, int count) =>
+            _inner.Read(buffer, offset, count);
+
+        public override int Read(Span<byte> buffer) => _inner.Read(buffer);
+
+        public override ValueTask<int> ReadAsync(
+            Memory<byte> buffer,
+            CancellationToken cancellationToken = default) =>
+            _inner.ReadAsync(buffer, cancellationToken);
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _inner.Dispose();
+            }
+
+            base.Dispose(disposing);
         }
     }
 }

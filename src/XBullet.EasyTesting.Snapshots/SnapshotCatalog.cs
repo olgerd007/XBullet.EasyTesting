@@ -16,7 +16,7 @@ public sealed class SnapshotCatalog
         _observedPaths.Keys.Order(StringComparer.OrdinalIgnoreCase).ToArray();
 
     /// <summary>
-    /// Finds <c>*.verified.json</c> files below a directory that have not been observed by this
+    /// Finds verified snapshot files below a directory that have not been observed by this
     /// catalog. Call this only after all snapshots in the tracked test scope have executed.
     /// </summary>
     public IReadOnlyList<string> FindObsoleteSnapshots(string directory)
@@ -29,7 +29,8 @@ public sealed class SnapshotCatalog
         }
 
         return Directory
-            .EnumerateFiles(fullDirectory, "*.verified.json", SearchOption.AllDirectories)
+            .EnumerateFiles(fullDirectory, "*", SearchOption.AllDirectories)
+            .Where(path => SnapshotMaintenance.IsSnapshotFile(path, ".verified."))
             .Select(Path.GetFullPath)
             .Where(path => !_observedPaths.ContainsKey(path))
             .Order(StringComparer.OrdinalIgnoreCase)

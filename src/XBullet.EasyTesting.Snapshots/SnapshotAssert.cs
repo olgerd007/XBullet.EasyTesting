@@ -1,4 +1,6 @@
 using System.Runtime.CompilerServices;
+using System.Runtime.Versioning;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
@@ -7,9 +9,12 @@ namespace XBullet.EasyTesting.Snapshots;
 /// <summary>Framework-independent file snapshot assertions.</summary>
 public static class SnapshotAssert
 {
+    private const int MaximumSnapshotStemUtf8Bytes = 180;
+    private static readonly string ReceivedScope = GetTargetFrameworkMoniker();
+
     /// <summary>
     /// Serializes a value and compares it with its committed <c>.verified.json</c> snapshot.
-    /// A <c>.received.json</c> file is written when the snapshot is new or differs.
+    /// A runtime-qualified received file is written when the snapshot is new or differs.
     /// </summary>
     public static async Task MatchAsync(
         object? actual,
@@ -21,9 +26,10 @@ public static class SnapshotAssert
         settings ??= new SnapshotSettings();
 
         var serialized = JsonSerializer.Serialize(actual, settings.JsonSerializerOptions);
-        await MatchSerializedAsync(
+        await MatchContentAsync(
             serialized,
             settings,
+            SnapshotContentKind.Json,
             cancellationToken,
             sourceFile,
             testName);
@@ -48,9 +54,10 @@ public static class SnapshotAssert
             json,
             settings.JsonSerializerOptions);
 
-        await MatchSerializedAsync(
+        await MatchContentAsync(
             serialized,
             settings,
+            SnapshotContentKind.Json,
             cancellationToken,
             sourceFile,
             testName);
@@ -74,32 +81,60 @@ public static class SnapshotAssert
             json,
             settings.JsonSerializerOptions);
 
-        await MatchSerializedAsync(
+        await MatchContentAsync(
             serialized,
             settings,
+            SnapshotContentKind.Json,
             cancellationToken,
             sourceFile,
             testName);
     }
 
-    private static async Task MatchSerializedAsync(
-        string serialized,
+    /// <summary>
+    /// Compares text with a committed <c>.verified.txt</c> snapshot. A runtime-qualified
+    /// <c>.received.*.txt</c> file is written when the snapshot is new or differs.
+    /// </summary>
+    public static Task MatchTextAsync(
+        string actualText,
+        SnapshotSettings? settings = null,
+        CancellationToken cancellationToken = default,
+        [CallerFilePath] string sourceFile = "",
+        [CallerMemberName] string testName = "")
+    {
+        ArgumentNullException.ThrowIfNull(actualText);
+        settings ??= new SnapshotSettings();
+        return MatchContentAsync(
+            actualText,
+            settings,
+            SnapshotContentKind.Text,
+            cancellationToken,
+            sourceFile,
+            testName);
+    }
+
+    private static async Task MatchContentAsync(
+        string content,
         SnapshotSettings settings,
+        SnapshotContentKind contentKind,
         CancellationToken cancellationToken,
         string sourceFile,
         string testName)
     {
-        serialized = StructuredSnapshotScrubber.Apply(serialized, settings);
-        foreach (var scrubber in settings.Scrubbers)
+        if (contentKind == SnapshotContentKind.Json)
         {
-            serialized = scrubber(serialized);
+            content = StructuredSnapshotScrubber.Apply(content, settings);
         }
 
-        if (settings.Scrubbers.Count > 0)
+        foreach (var scrubber in settings.Scrubbers)
+        {
+            content = scrubber(content);
+        }
+
+        if (contentKind == SnapshotContentKind.Json && settings.Scrubbers.Count > 0)
         {
             try
             {
-                _ = JsonSnapshotContent.Parse(serialized, settings.JsonSerializerOptions);
+                _ = JsonSnapshotContent.Parse(content, settings.JsonSerializerOptions);
             }
             catch (JsonException exception)
             {
@@ -109,8 +144,8 @@ public static class SnapshotAssert
             }
         }
 
-        serialized = NormalizeNewLines(serialized);
-        var paths = ResolvePaths(settings, sourceFile, testName);
+        content = NormalizeNewLines(content);
+        var paths = ResolvePaths(settings, sourceFile, testName, contentKind.Extension);
         settings.Catalog?.Record(paths.Verified);
         using var pathLock = await SnapshotPathLock.AcquireAsync(paths.Verified, cancellationToken);
         System.IO.Directory.CreateDirectory(paths.Directory);
@@ -121,15 +156,18 @@ public static class SnapshotAssert
             if (settings.UpdateMode is SnapshotUpdateMode.Missing or SnapshotUpdateMode.All)
             {
                 EnsureAutomaticUpdateIsAllowed(settings);
-                await WriteSnapshotAsync(paths.Verified, serialized, cancellationToken);
+                await WriteSnapshotAsync(paths.Verified, content, cancellationToken);
                 DeleteIfExists(paths.Received);
                 return;
             }
 
-            await WriteSnapshotAsync(paths.Received, serialized, cancellationToken);
-            var difference = SnapshotJsonDifference.MissingExpected(serialized);
+            await WriteSnapshotAsync(paths.Received, content, cancellationToken);
+            var difference = contentKind == SnapshotContentKind.Json
+                ? SnapshotJsonDifference.MissingExpected(content)
+                : SnapshotJsonDifference.MissingExpectedText(content);
             throw new SnapshotMismatchException(
-                $"Snapshot is not approved. Review '{paths.Received}' and rename it to '{paths.Verified}'.",
+                $"Snapshot is not approved. Review '{paths.Received}' and accept it as '{paths.Verified}' " +
+                "with SnapshotAssert.AcceptReceived(...).",
                 paths.Verified,
                 paths.Received,
                 differencePath: difference.Path,
@@ -138,19 +176,21 @@ public static class SnapshotAssert
         }
 
         var expected = NormalizeNewLines(await File.ReadAllTextAsync(paths.Verified, cancellationToken));
-        if (!string.Equals(expected, serialized, StringComparison.Ordinal))
+        if (!string.Equals(expected, content, StringComparison.Ordinal))
         {
             if (settings.UpdateMode == SnapshotUpdateMode.All)
             {
                 EnsureAutomaticUpdateIsAllowed(settings);
-                await WriteSnapshotAsync(paths.Verified, serialized, cancellationToken);
+                await WriteSnapshotAsync(paths.Verified, content, cancellationToken);
                 DeleteIfExists(paths.Received);
                 return;
             }
 
-            await WriteSnapshotAsync(paths.Received, serialized, cancellationToken);
-            var location = FindFirstDifference(expected, serialized);
-            var difference = SnapshotJsonDifference.Find(expected, serialized);
+            await WriteSnapshotAsync(paths.Received, content, cancellationToken);
+            var location = FindFirstDifference(expected, content);
+            var difference = contentKind == SnapshotContentKind.Json
+                ? SnapshotJsonDifference.Find(expected, content)
+                : SnapshotJsonDifference.FindText(expected, content);
             var diffToolLaunched = SnapshotDiffLauncher.TryLaunch(
                 settings,
                 paths.Verified,
@@ -171,22 +211,29 @@ public static class SnapshotAssert
         DeleteIfExists(paths.Received);
     }
 
-    /// <summary>Promotes one <c>.received.json</c> file to its <c>.verified.json</c> counterpart.</summary>
+    /// <summary>Promotes one received snapshot file to its verified counterpart.</summary>
     public static string AcceptReceived(string receivedPath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(receivedPath);
         var fullReceivedPath = Path.GetFullPath(receivedPath);
-        const string receivedSuffix = ".received.json";
-        if (!fullReceivedPath.EndsWith(receivedSuffix, StringComparison.OrdinalIgnoreCase))
+        var fileName = Path.GetFileName(fullReceivedPath);
+        const string receivedMarker = ".received.";
+        var markerIndex = fileName.LastIndexOf(receivedMarker, StringComparison.OrdinalIgnoreCase);
+        var extensionIndex = fileName.LastIndexOf('.');
+        if (markerIndex <= 0 ||
+            extensionIndex < markerIndex + receivedMarker.Length - 1 ||
+            extensionIndex == fileName.Length - 1)
         {
             throw new ArgumentException(
-                $"The snapshot path must end with '{receivedSuffix}'.",
+                "The snapshot filename must contain '.received.' followed by a file extension.",
                 nameof(receivedPath));
         }
 
-        var verifiedPath = string.Concat(
-            fullReceivedPath.AsSpan(0, fullReceivedPath.Length - receivedSuffix.Length),
-            ".verified.json");
+        var verifiedFileName = string.Concat(
+            fileName.AsSpan(0, markerIndex),
+            ".verified",
+            fileName.AsSpan(extensionIndex));
+        var verifiedPath = Path.Combine(Path.GetDirectoryName(fullReceivedPath)!, verifiedFileName);
         using var pathLock = SnapshotPathLock.Acquire(verifiedPath);
         if (!File.Exists(fullReceivedPath))
         {
@@ -226,7 +273,8 @@ public static class SnapshotAssert
     private static SnapshotPaths ResolvePaths(
         SnapshotSettings settings,
         string sourceFile,
-        string testName)
+        string testName,
+        string extension)
     {
         if (string.IsNullOrWhiteSpace(sourceFile))
         {
@@ -236,10 +284,27 @@ public static class SnapshotAssert
         var sourceDirectory = Path.GetFullPath(
             Path.GetDirectoryName(sourceFile)
                 ?? throw new ArgumentException("The calling source directory could not be determined.", nameof(sourceFile)));
-        var directory = string.IsNullOrWhiteSpace(settings.Directory)
-            ? Path.Combine(sourceDirectory, "__snapshots__")
-            : Path.GetFullPath(settings.Directory, sourceDirectory);
         var requestedName = settings.SnapshotName ?? testName;
+        var context = new SnapshotLocationContext(
+            sourceFile,
+            sourceDirectory,
+            Path.GetFileName(sourceFile),
+            testName,
+            requestedName,
+            settings.Variant);
+        var configuredDirectory = settings.Directory;
+        if (string.IsNullOrWhiteSpace(configuredDirectory) && settings.DirectoryResolver is not null)
+        {
+            configuredDirectory = settings.DirectoryResolver(context);
+            if (string.IsNullOrWhiteSpace(configuredDirectory))
+            {
+                throw new InvalidOperationException("The snapshot directory resolver returned an empty path.");
+            }
+        }
+
+        var directory = string.IsNullOrWhiteSpace(configuredDirectory)
+            ? Path.Combine(sourceDirectory, "__snapshots__")
+            : Path.GetFullPath(configuredDirectory, sourceDirectory);
         var safeName = SanitizeFileNameComponent(requestedName);
         var sourceName = SanitizeFileNameComponent(Path.GetFileNameWithoutExtension(sourceFile));
         var variant = settings.Variant is null
@@ -248,11 +313,39 @@ public static class SnapshotAssert
         var fileName = variant is null
             ? $"{sourceName}.{safeName}"
             : $"{sourceName}.{safeName}.{variant}";
+        fileName = LimitSnapshotStem(fileName);
 
         return new SnapshotPaths(
             directory,
-            Path.Combine(directory, $"{fileName}.verified.json"),
-            Path.Combine(directory, $"{fileName}.received.json"));
+            Path.Combine(directory, $"{fileName}.verified.{extension}"),
+            Path.Combine(directory, $"{fileName}.received.{ReceivedScope}.{extension}"));
+    }
+
+    private static string LimitSnapshotStem(string value)
+    {
+        if (Encoding.UTF8.GetByteCount(value) <= MaximumSnapshotStemUtf8Bytes)
+        {
+            return value;
+        }
+
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)))[..16]
+            .ToLowerInvariant();
+        var suffix = $"~{hash}";
+        var byteBudget = MaximumSnapshotStemUtf8Bytes - Encoding.UTF8.GetByteCount(suffix);
+        var builder = new StringBuilder(value.Length);
+        var usedBytes = 0;
+        foreach (var rune in value.EnumerateRunes())
+        {
+            if (usedBytes + rune.Utf8SequenceLength > byteBudget)
+            {
+                break;
+            }
+
+            builder.Append(rune);
+            usedBytes += rune.Utf8SequenceLength;
+        }
+
+        return builder.Append(suffix).ToString();
     }
 
     private static string SanitizeFileNameComponent(string name)
@@ -311,6 +404,28 @@ public static class SnapshotAssert
         name.Length == prefix.Length + 1 &&
         name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) &&
         name[^1] is >= '1' and <= '9';
+
+    private static string GetTargetFrameworkMoniker()
+    {
+        var frameworkName = typeof(SnapshotAssert).Assembly
+            .GetCustomAttributes(typeof(TargetFrameworkAttribute), inherit: false)
+            .OfType<TargetFrameworkAttribute>()
+            .SingleOrDefault()?.FrameworkName;
+        if (frameworkName is null)
+        {
+            return "runtime";
+        }
+
+        var framework = new FrameworkName(frameworkName);
+        return framework.Identifier switch
+        {
+            ".NETCoreApp" => $"net{framework.Version.Major}.{framework.Version.Minor}",
+            ".NETStandard" => $"netstandard{framework.Version.Major}.{framework.Version.Minor}",
+            ".NETFramework" => $"net{framework.Version.Major}{framework.Version.Minor}" +
+                (framework.Version.Build > 0 ? framework.Version.Build : string.Empty),
+            _ => SanitizeFileNameComponent(frameworkName)
+        };
+    }
 
     private static void EnsureNoPortablePathCollision(SnapshotPaths paths)
     {
@@ -385,4 +500,11 @@ public static class SnapshotAssert
     }
 
     private sealed record SnapshotPaths(string Directory, string Verified, string Received);
+
+    private sealed record SnapshotContentKind(string Extension)
+    {
+        public static SnapshotContentKind Json { get; } = new("json");
+
+        public static SnapshotContentKind Text { get; } = new("txt");
+    }
 }

@@ -23,19 +23,22 @@ public sealed record ControllerResponseSnapshot(
         var request = options.IncludeRequest && response.RequestMessage is not null
             ? new ControllerRequestSnapshot(
                 response.RequestMessage.Method.Method,
-                GetRelativeUrl(response.RequestMessage.RequestUri))
+                GetRelativeUrl(
+                    response.RequestMessage.RequestUri,
+                    options.RedactedQueryParameters))
             : null;
 
         var headers = options.IncludeHeaders
             ? response.Headers
                 .Concat(response.Content.Headers)
                 .Where(header => !options.IgnoredHeaders.Contains(header.Key))
-                .OrderBy(header => header.Key, StringComparer.OrdinalIgnoreCase)
+                .GroupBy(header => header.Key, StringComparer.OrdinalIgnoreCase)
+                .OrderBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(
-                    header => header.Key,
-                    header => options.RedactedHeaders.Contains(header.Key)
+                    group => group.Key,
+                    group => options.RedactedHeaders.Contains(group.Key)
                         ? new[] { "{Redacted}" }
-                        : header.Value.ToArray(),
+                        : group.SelectMany(header => header.Value).ToArray(),
                     StringComparer.OrdinalIgnoreCase)
             : new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
 
@@ -51,14 +54,40 @@ public sealed record ControllerResponseSnapshot(
             body);
     }
 
-    private static string? GetRelativeUrl(Uri? uri)
+    private static string? GetRelativeUrl(Uri? uri, ISet<string> redactedQueryParameters)
     {
         if (uri is null)
         {
             return null;
         }
 
-        return uri.IsAbsoluteUri ? uri.PathAndQuery : uri.OriginalString;
+        var value = uri.IsAbsoluteUri ? uri.PathAndQuery : uri.OriginalString;
+        return RedactQueryParameters(value, redactedQueryParameters);
+    }
+
+    private static string RedactQueryParameters(string value, ISet<string> redactedQueryParameters)
+    {
+        var queryIndex = value.IndexOf('?');
+        if (queryIndex < 0 || redactedQueryParameters.Count == 0)
+        {
+            return value;
+        }
+
+        var fragmentIndex = value.IndexOf('#', queryIndex + 1);
+        var queryEnd = fragmentIndex < 0 ? value.Length : fragmentIndex;
+        var query = value[(queryIndex + 1)..queryEnd];
+        var redacted = query.Split('&').Select(segment =>
+        {
+            var equalsIndex = segment.IndexOf('=');
+            var encodedName = equalsIndex < 0 ? segment : segment[..equalsIndex];
+            var name = Uri.UnescapeDataString(encodedName.Replace('+', ' '));
+            return redactedQueryParameters.Contains(name)
+                ? $"{encodedName}={{Redacted}}"
+                : segment;
+        });
+
+        var fragment = fragmentIndex < 0 ? string.Empty : value[fragmentIndex..];
+        return $"{value[..(queryIndex + 1)]}{string.Join('&', redacted)}{fragment}";
     }
 
     private static async Task<object?> ReadBodyAsync(

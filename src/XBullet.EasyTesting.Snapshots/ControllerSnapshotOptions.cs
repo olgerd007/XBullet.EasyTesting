@@ -34,6 +34,12 @@ public sealed class ControllerSnapshotOptions
     /// </summary>
     public ISet<string> RedactedHeaders { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// Gets request query parameters whose values are replaced with <c>{Redacted}</c>.
+    /// Names are matched without regard to case.
+    /// </summary>
+    public ISet<string> RedactedQueryParameters { get; } = CreateSensitiveQueryParameters();
+
     /// <summary>Excludes request details and returns this instance.</summary>
     public ControllerSnapshotOptions WithoutRequest()
     {
@@ -95,4 +101,44 @@ public sealed class ControllerSnapshotOptions
 
         return this;
     }
+
+    /// <summary>Redacts one request query-parameter value and returns this instance.</summary>
+    public ControllerSnapshotOptions RedactingQueryParameter(string parameterName) =>
+        RedactingQueryParameters(parameterName);
+
+    /// <summary>Redacts request query-parameter values and returns this instance.</summary>
+    public ControllerSnapshotOptions RedactingQueryParameters(params string[] parameterNames)
+    {
+        ArgumentNullException.ThrowIfNull(parameterNames);
+        foreach (var parameterName in parameterNames)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(parameterName);
+            RedactedQueryParameters.Add(parameterName);
+        }
+
+        return this;
+    }
+
+    /// <summary>Includes the original value of a query parameter and returns this instance.</summary>
+    public ControllerSnapshotOptions IncludingQueryParameter(string parameterName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(parameterName);
+        RedactedQueryParameters.Remove(parameterName);
+        return this;
+    }
+
+    private static HashSet<string> CreateSensitiveQueryParameters() =>
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            "access_token",
+            "api_key",
+            "apikey",
+            "client_secret",
+            "code",
+            "key",
+            "password",
+            "sig",
+            "signature",
+            "token"
+        };
 }

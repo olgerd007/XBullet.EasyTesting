@@ -1,1 +1,8 @@
 #nullable enable
+XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshotOptions.IncludingQueryParameter(string! parameterName) -> XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshotOptions!
+XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshotOptions.RedactedHeaders.get -> System.Collections.Generic.ISet<string!>!
+XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshotOptions.RedactedQueryParameters.get -> System.Collections.Generic.ISet<string!>!
+XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshotOptions.RedactingHeader(string! headerName) -> XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshotOptions!
+XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshotOptions.RedactingHeaders(params string![]! headerNames) -> XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshotOptions!
+XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshotOptions.RedactingQueryParameter(string! parameterName) -> XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshotOptions!
+XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshotOptions.RedactingQueryParameters(params string![]! parameterNames) -> XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshotOptions!

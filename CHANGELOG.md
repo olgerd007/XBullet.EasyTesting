@@ -4,7 +4,19 @@ Notable changes to XBullet.EasyTesting are documented in this file.
 
 The project follows Semantic Versioning. Package versions are produced from GitHub Release tags.
 
-## [Unreleased]
+## [1.0.6] - 2026-09-18
+
+### Added
+
+- Configurable snapshot placement with `BesideSourceFile()` and a context-aware directory resolver.
+- Plain-text snapshot assertions with `.txt` files and the existing update, diff, catalog, and
+  maintenance workflow.
+- Runtime-qualified received files for safe parallel multi-targeted test runs, plus deterministic
+  filename shortening and hashed parameter variants.
+- Default redaction of sensitive query parameters, outbound-request header redaction, and safe
+  merging of duplicate response and content headers.
+- Snapshot test coverage hardened across public HTTP assertions, structured diagnostics, redaction,
+  location, acceptance, and maintenance paths, with enforced CI coverage thresholds.
 
 ## [1.0.5] - 2026-09-18
 
