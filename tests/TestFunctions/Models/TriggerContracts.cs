@@ -8,6 +8,11 @@ public sealed record AcceptedOrderResponse(string OrderId, int Quantity, string 
 
 public sealed record KafkaOrderMessage(string OrderId, int Quantity);
 
+public sealed record OrderPricingRequestedMessage(
+    string OrderId,
+    int ProductId,
+    int Quantity);
+
 public sealed record EventGridOrderEnvelope(KafkaOrderMessage Data);
 
 public sealed record MultipleBindingOutput(
@@ -20,4 +25,6 @@ public sealed record TriggerInvocation(
     string Trigger,
     string Subject,
     int Quantity,
-    bool IsPastDue = false);
+    bool IsPastDue = false,
+    string? Detail = null,
+    decimal? Amount = null);

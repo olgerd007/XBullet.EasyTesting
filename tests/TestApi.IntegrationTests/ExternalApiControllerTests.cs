@@ -108,6 +108,114 @@ public sealed class ExternalApiControllerTests : IClassFixture<TestApiFactory>
             Assert.Equal(0, productCount);
         });
 
+    [Fact]
+    public Task Catalog_sync_calls_external_api_and_upserts_products_with_an_audit_record() =>
+        Run(async (scope, cancellationToken) =>
+        {
+            await _factory.Database(scope)
+                .Seed(new TestApi.Models.Product
+                {
+                    Id = 801,
+                    Name = "Old Keyboard",
+                    Price = 99m
+                })
+                .ExecuteAsync(cancellationToken);
+            _factory.ExternalCatalog
+                .When(HttpMethod.Get, "/products")
+                .WithQueryParameter("category", "computer accessories")
+                .WithQueryParameter("limit", "10")
+                .RespondJson(new[]
+                {
+                    new { Id = 801, Name = "Updated Keyboard", Price = 119.95m },
+                    new { Id = 802, Name = "Ergonomic Mouse", Price = 69.50m }
+                });
+            using var client = scope.CreateAuthenticatedClient();
+
+            using var response = await client.PostAsJsonAsync(
+                "/api/products/sync",
+                new { Category = "computer accessories", Limit = 10 },
+                cancellationToken);
+            var body = await response.Content.ReadFromJsonAsync<CatalogSyncResponse>(
+                cancellationToken);
+            var result = await _factory.QueryDatabaseAsync(
+                scope,
+                async (database, token) => new
+                {
+                    Products = await database.Products
+                        .AsNoTracking()
+                        .OrderBy(product => product.Id)
+                        .ToListAsync(token),
+                    SyncRun = await database.CatalogSyncRuns
+                        .AsNoTracking()
+                        .SingleAsync(token)
+                },
+                cancellationToken);
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.NotNull(body);
+            Assert.Equal("Completed", body.Status);
+            Assert.Equal(1, body.CreatedCount);
+            Assert.Equal(1, body.UpdatedCount);
+            Assert.Equal(result.SyncRun.Id, body.SyncRunId);
+            Assert.Collection(
+                result.Products,
+                product => Assert.Equal("Updated Keyboard", product.Name),
+                product => Assert.Equal("Ergonomic Mouse", product.Name));
+            Assert.Equal(TestApi.Models.CatalogSyncStatus.Completed, result.SyncRun.Status);
+            Assert.NotNull(result.SyncRun.CompletedAt);
+            Assert.Equal(1, _factory.ExternalCatalog.CallCount);
+        });
+
+    [Fact]
+    public Task Failed_catalog_sync_saves_a_failed_audit_record_without_changing_products() =>
+        Run(async (scope, cancellationToken) =>
+        {
+            _factory.ExternalCatalog
+                .When(HttpMethod.Get, "/products")
+                .WithQueryParameter("category", "unavailable")
+                .Respond(HttpStatusCode.ServiceUnavailable);
+            using var client = scope.CreateAuthenticatedClient();
+
+            using var response = await client.PostAsJsonAsync(
+                "/api/products/sync",
+                new { Category = "unavailable", Limit = 25 },
+                cancellationToken);
+            var result = await _factory.QueryDatabaseAsync(
+                scope,
+                async (database, token) => new
+                {
+                    ProductCount = await database.Products.CountAsync(token),
+                    SyncRun = await database.CatalogSyncRuns.AsNoTracking().SingleAsync(token)
+                },
+                cancellationToken);
+
+            Assert.Equal(HttpStatusCode.BadGateway, response.StatusCode);
+            Assert.Equal(0, result.ProductCount);
+            Assert.Equal(TestApi.Models.CatalogSyncStatus.Failed, result.SyncRun.Status);
+            Assert.Equal("The external catalog request failed.", result.SyncRun.FailureReason);
+            Assert.NotNull(result.SyncRun.CompletedAt);
+        });
+
+    [Fact]
+    public Task Invalid_catalog_sync_is_rejected_before_external_or_database_work() =>
+        Run(async (scope, cancellationToken) =>
+        {
+            using var client = scope.CreateAuthenticatedClient();
+
+            using var response = await client.PostAsJsonAsync(
+                "/api/products/sync",
+                new { Category = string.Empty, Limit = 101 },
+                cancellationToken);
+            var syncRunCount = await _factory.QueryDatabaseAsync(
+                scope,
+                (database, token) => database.CatalogSyncRuns.CountAsync(token),
+                cancellationToken);
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            Assert.Equal(0, _factory.ExternalCatalog.CallCount);
+            Assert.Equal(0, syncRunCount);
+        });
+
     private Task Run(Func<TestScenarioScope<Program>, CancellationToken, Task> test) =>
         _factory.RunInTestScenarioScopeAsync(
             test,
@@ -122,4 +230,10 @@ public sealed class ExternalApiControllerTests : IClassFixture<TestApiFactory>
             cancellationToken);
 
     private sealed record ProductResponse(int Id, string Name, decimal Price);
+
+    private sealed record CatalogSyncResponse(
+        long SyncRunId,
+        string Status,
+        int CreatedCount,
+        int UpdatedCount);
 }

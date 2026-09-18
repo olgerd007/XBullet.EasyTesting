@@ -18,4 +18,20 @@ public sealed class ExternalCatalogClient(HttpClient httpClient) : IExternalCata
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<ExternalCatalogProduct>(cancellationToken);
     }
+
+    public async Task<IReadOnlyList<ExternalCatalogProduct>> GetProductsAsync(
+        string category,
+        int limit,
+        CancellationToken cancellationToken = default)
+    {
+        var encodedCategory = Uri.EscapeDataString(category);
+        using var response = await httpClient.GetAsync(
+            $"products?category={encodedCategory}&limit={limit}",
+            cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadFromJsonAsync<List<ExternalCatalogProduct>>(
+                cancellationToken)
+            ?? [];
+    }
 }

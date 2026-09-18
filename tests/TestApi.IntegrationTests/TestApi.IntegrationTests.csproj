@@ -19,7 +19,7 @@
     <ProjectReference Include="..\..\src\XBullet.EasyTesting.Messaging\XBullet.EasyTesting.Messaging.csproj" />
     <ProjectReference Include="..\..\src\XBullet.EasyTesting.Observability\XBullet.EasyTesting.Observability.csproj" />
     <ProjectReference Include="..\..\src\XBullet.EasyTesting.Testcontainers\XBullet.EasyTesting.Testcontainers.csproj" />
-    <ProjectReference Include="..\..\src\XBullet.EasyTesting.Snapshots\XBullet.EasyTesting.Snapshots.csproj" />
+    <ProjectReference Include="..\..\src\XBullet.EasyTesting.Snapshots\XBullet.EasyTesting.Snapshots.Core.csproj" />
     <ProjectReference Include="..\..\src\XBullet.EasyTesting.Verify.Xunit\XBullet.EasyTesting.Verify.Xunit.csproj" />
     <ProjectReference Include="..\TestApi\TestApi.csproj" />
     <ProjectReference Include="..\TestAppHost\TestAppHost.csproj"

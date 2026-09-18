@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using System.Text.Json;
 using XBullet.EasyTesting.Http;
 
@@ -54,7 +55,7 @@ public sealed record StubHttpRequestSnapshot(
         try
         {
             using var document = JsonDocument.Parse(request.Body);
-            return ToSnapshotValue(document.RootElement);
+            return document.RootElement.Clone();
         }
         catch (JsonException)
         {
@@ -64,27 +65,15 @@ public sealed record StubHttpRequestSnapshot(
 
     private static bool IsJsonContentType(string contentType)
     {
-        var mediaType = contentType.Split(';', 2)[0].Trim();
-        return mediaType.Equals("application/json", StringComparison.OrdinalIgnoreCase) ||
-            mediaType.EndsWith("+json", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static object? ToSnapshotValue(JsonElement element) =>
-        element.ValueKind switch
+        if (!MediaTypeHeaderValue.TryParse(contentType, out var parsed))
         {
-            JsonValueKind.Object => element.EnumerateObject().ToDictionary(
-                property => property.Name,
-                property => ToSnapshotValue(property.Value)),
-            JsonValueKind.Array => element.EnumerateArray().Select(ToSnapshotValue).ToArray(),
-            JsonValueKind.String => element.GetString(),
-            JsonValueKind.Number when element.TryGetInt64(out var integer) => integer,
-            JsonValueKind.Number when element.TryGetDecimal(out var decimalNumber) => decimalNumber,
-            JsonValueKind.Number => element.GetDouble(),
-            JsonValueKind.True => true,
-            JsonValueKind.False => false,
-            JsonValueKind.Null or JsonValueKind.Undefined => null,
-            _ => element.GetRawText()
-        };
+            return false;
+        }
+
+        var mediaType = parsed.MediaType;
+        return string.Equals(mediaType, "application/json", StringComparison.OrdinalIgnoreCase) ||
+            mediaType?.EndsWith("+json", StringComparison.OrdinalIgnoreCase) is true;
+    }
 
     private static string? GetRelativeUrl(Uri? uri) =>
         uri is null

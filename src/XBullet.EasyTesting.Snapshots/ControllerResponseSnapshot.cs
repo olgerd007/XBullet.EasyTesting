@@ -1,6 +1,5 @@
 using System.Net.Http.Headers;
 using System.Text;
-using System.Text.Json;
 
 namespace XBullet.EasyTesting.Snapshots;
 
@@ -27,14 +26,18 @@ public sealed record ControllerResponseSnapshot(
                 GetRelativeUrl(response.RequestMessage.RequestUri))
             : null;
 
-        var headers = response.Headers
-            .Concat(response.Content.Headers)
-            .Where(header => !options.IgnoredHeaders.Contains(header.Key))
-            .OrderBy(header => header.Key, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(
-                header => header.Key,
-                header => header.Value.ToArray(),
-                StringComparer.OrdinalIgnoreCase);
+        var headers = options.IncludeHeaders
+            ? response.Headers
+                .Concat(response.Content.Headers)
+                .Where(header => !options.IgnoredHeaders.Contains(header.Key))
+                .OrderBy(header => header.Key, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(
+                    header => header.Key,
+                    header => options.RedactedHeaders.Contains(header.Key)
+                        ? new[] { "{Redacted}" }
+                        : header.Value.ToArray(),
+                    StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
 
         var body = options.IncludeBody
             ? await ReadBodyAsync(response.Content, cancellationToken)
@@ -68,10 +71,9 @@ public sealed record ControllerResponseSnapshot(
             return null;
         }
 
-        if (IsJson(content.Headers.ContentType))
+        if (JsonSnapshotContent.IsJson(content.Headers.ContentType))
         {
-            using var document = JsonDocument.Parse(bytes);
-            return ToSnapshotValue(document.RootElement);
+            return JsonSnapshotContent.Parse(bytes);
         }
 
         if (IsText(content.Headers.ContentType))
@@ -82,26 +84,6 @@ public sealed record ControllerResponseSnapshot(
 
         return new ControllerBinaryBodySnapshot("base64", Convert.ToBase64String(bytes));
     }
-
-    private static object? ToSnapshotValue(JsonElement element) =>
-        element.ValueKind switch
-        {
-            JsonValueKind.Object => element.EnumerateObject().ToDictionary(
-                property => property.Name,
-                property => ToSnapshotValue(property.Value)),
-            JsonValueKind.Array => element.EnumerateArray().Select(ToSnapshotValue).ToArray(),
-            JsonValueKind.String => element.GetString(),
-            JsonValueKind.Number when element.TryGetInt64(out var integer) => integer,
-            JsonValueKind.Number when element.TryGetDecimal(out var decimalNumber) => decimalNumber,
-            JsonValueKind.Number => element.GetDouble(),
-            JsonValueKind.True => true,
-            JsonValueKind.False => false,
-            JsonValueKind.Null or JsonValueKind.Undefined => null,
-            _ => element.GetRawText()
-        };
-
-    private static bool IsJson(MediaTypeHeaderValue? contentType) =>
-        contentType?.MediaType?.EndsWith("json", StringComparison.OrdinalIgnoreCase) is true;
 
     private static bool IsText(MediaTypeHeaderValue? contentType) =>
         contentType?.MediaType?.StartsWith("text/", StringComparison.OrdinalIgnoreCase) is true ||

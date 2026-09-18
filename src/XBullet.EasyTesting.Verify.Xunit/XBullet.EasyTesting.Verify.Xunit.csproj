@@ -9,7 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="Verify.XunitV3" Version="31.24.0" />
-    <ProjectReference Include="..\XBullet.EasyTesting.Snapshots\XBullet.EasyTesting.Snapshots.csproj" />
+    <ProjectReference Include="..\XBullet.EasyTesting.Snapshots\XBullet.EasyTesting.Snapshots.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

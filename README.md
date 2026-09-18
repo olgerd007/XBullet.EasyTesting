@@ -19,7 +19,7 @@ dotnet add package XBullet.EasyTesting.Aspire
 dotnet add package XBullet.EasyTesting.Azure
 dotnet add package XBullet.EasyTesting.Observability
 dotnet add package XBullet.EasyTesting.Testcontainers
-dotnet add package XBullet.EasyTesting.Snapshots
+dotnet add package XBullet.EasyTesting.Snapshots.Core
 ```
 
 Optional packages provide distributed Aspire testing, real containerized dependencies, Azure SDK
@@ -37,8 +37,10 @@ integration, and isolated Azure Functions helpers.
 - `XBullet.EasyTesting.Observability` captures structured logs, distributed traces, and metrics, with deterministic time support.
 - `XBullet.EasyTesting.Testcontainers` provides scenario-scoped real PostgreSQL, SQL Server, Kafka, Redis, RabbitMQ, Azurite, and Service Bus emulator dependencies.
 - `XBullet.EasyTesting.AzureFunctions` provides isolated-worker contexts and fluent HTTP, timer, and Kafka trigger data.
-- `XBullet.EasyTesting.Snapshots` provides framework-independent JSON snapshot assertions.
-- `XBullet.EasyTesting.Verify.Xunit` provides the optional Verify.Xunit v3 adapter and depends on the snapshots package.
+- `XBullet.EasyTesting.Snapshots.Core` provides lightweight, framework-independent JSON snapshot assertions.
+- `XBullet.EasyTesting.Snapshots.Http` adds snapshot adapters for captured outbound HTTP requests.
+- `XBullet.EasyTesting.Snapshots` is the compatibility facade that references and forwards both snapshot packages.
+- `XBullet.EasyTesting.Verify.Xunit` provides the optional Verify.Xunit v3 adapter and depends on snapshot core.
 
 The repository keeps framework behavior tests in `tests/XBullet.EasyTesting.Tests`, sample API scenarios in `tests/TestApi.IntegrationTests`, and function scenarios in `tests/TestFunctions.IntegrationTests`.
 
@@ -497,6 +499,30 @@ Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 factory.ExternalCatalog.VerifyCalled(HttpMethod.Get, "/products/701");
 ```
 
+The test API also has a bulk synchronization workflow at `POST /api/products/sync`.
+It requests a category and limit from the external catalog, updates existing products,
+inserts new products, and stores a `CatalogSyncRun` audit record. Upstream failures
+return `502 Bad Gateway` and are retained as failed sync runs without changing products.
+
+```csharp
+factory.ExternalCatalog
+    .When(HttpMethod.Get, "/products")
+    .WithQueryParameter("category", "computer accessories")
+    .WithQueryParameter("limit", "10")
+    .RespondJson(externalProducts);
+
+using var response = await client.PostAsJsonAsync(
+    "/api/products/sync",
+    new { Category = "computer accessories", Limit = 10 });
+
+var syncRun = await factory.QueryDatabaseAsync(
+    (database, cancellationToken) => database.CatalogSyncRuns
+        .SingleAsync(cancellationToken));
+
+Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+Assert.Equal(CatalogSyncStatus.Completed, syncRun.Status);
+```
+
 Rules can match query parameters, headers, exact text bodies, structural JSON bodies, or a custom `StubHttpRequest` predicate. Query matching is independent of parameter order and supports decoded and repeated values:
 
 ```csharp
@@ -549,7 +575,7 @@ stub.When(HttpMethod.Get, "/truncated")
 
 An unmatched request receives `501 Not Implemented` with diagnostics for every configured rule, including method and URI differences, failed query/header/body predicates, and exceptions thrown by custom predicates.
 
-When `XBullet.EasyTesting.Snapshots` is referenced, snapshot one request or every request captured by the handler with the same update, scrubber, acceptance, and diff-viewer workflow used by controller snapshots:
+When `XBullet.EasyTesting.Snapshots.Http` is referenced, snapshot one request or every request captured by the handler with the same update, scrubber, acceptance, and diff-viewer workflow used by controller snapshots:
 
 ```csharp
 await stub.ShouldMatchRequestsSnapshot(
@@ -673,6 +699,43 @@ var kafkaMessage = KafkaTriggerData.Json(
     new KafkaOrderMessage("order-42", 3));
 ```
 
+Kafka-triggered functions can be composed with outbound HTTP stubs. The sample
+`PriceOrderKafkaFunction` consumes an order-pricing event, fetches the product price from an
+external API, and records the calculated total:
+
+```csharp
+var pricingApi = new StubHttpMessageHandler();
+pricingApi
+    .When(HttpMethod.Get, "/products/42/price")
+    .RespondJson(new { ProductId = 42, UnitPrice = 19.95m, Currency = "USD" });
+
+await using var host = AzureFunctionTestHost.CreateBuilder()
+    .AddFunction<PriceOrderKafkaFunction>()
+    .ConfigureServices(services =>
+    {
+        services.AddSingleton<ITriggerInvocationSink>(recorder);
+        services
+            .AddHttpClient<IOrderPricingClient, OrderPricingClient>(client =>
+                client.BaseAddress = new Uri("https://pricing.example.test/"))
+            .ConfigurePrimaryHttpMessageHandler(() => pricingApi);
+    })
+    .Build();
+
+var trigger = KafkaTriggerData.JsonTrigger(
+    new OrderPricingRequestedMessage("order-42", ProductId: 42, Quantity: 3),
+    topic: "order-pricing");
+
+await host.InvokeAsync<PriceOrderKafkaFunction, string>(
+    nameof(PriceOrderKafkaFunction),
+    trigger,
+    (function, message, context) => function.RunAsync(message, context));
+
+pricingApi.VerifyCalled(HttpMethod.Get, "/products/42/price");
+```
+
+The function lets HTTP failures propagate so the deployed Kafka trigger can retry the event;
+the integration test also verifies that a failed pricing call produces no recorded result.
+
 Service Bus, Queue Storage, Blob, Event Grid, and Event Hubs builders return `TestTriggerData<T>`. Passing it to `InvokeAsync` captures the input and binding metadata, runs configured worker middleware in order, and invokes the function:
 
 ```csharp
@@ -711,7 +774,9 @@ These tests exercise function code, dependency injection, serialization, binding
 
 ## Built-in snapshots
 
-Reference the separate `XBullet.EasyTesting.Snapshots` package to use snapshot assertions without a dependency on xUnit, Verify, or another test framework:
+Reference `XBullet.EasyTesting.Snapshots.Core` to use snapshot assertions without a dependency on
+xUnit, Verify, ASP.NET testing, or the outbound HTTP-stub package. Existing projects can keep
+`XBullet.EasyTesting.Snapshots`; it is a binary-compatible facade over core and the HTTP adapter:
 
 ```csharp
 [Fact]
@@ -743,7 +808,100 @@ The lower-level assertion works with any serializable value:
 await SnapshotAssert.MatchAsync(result);
 ```
 
+Raw JSON content has a dedicated assertion so it is parsed and normalized rather than captured as
+an escaped JSON string. Serialization uses `System.Text.Json`, and the generated snapshots retain
+the `.received.json` and `.verified.json` extensions:
+
+```csharp
+var settings = new SnapshotSettings()
+    .ScrubGuids();
+
+await SnapshotAssert.MatchJsonAsync(json, settings);
+
+using var response = await client.GetAsync("/api/orders/42");
+response.EnsureSuccessStatusCode();
+await response.ShouldMatchJsonBodySnapshot();
+```
+
+Use `MatchJsonAsync` for a raw JSON string and `ShouldMatchJsonBodySnapshot` when only an HTTP
+response body belongs in the snapshot. `response.Content.ShouldMatchJsonSnapshot()` provides the
+same behavior when only the content is in scope. Buffered or seekable content is rewound for the
+assertion and its original position is restored. Use `ShouldMatchControllerSnapshot` when request
+metadata, status, and stable headers should be included too.
+
+Controller snapshots exclude volatile and sensitive headers by default, including `Date`, tracing
+identifiers, `Set-Cookie`, `Authentication-Info`, and `Proxy-Authentication-Info`. Preserve a
+header's presence without exposing its value, or omit all headers:
+
+```csharp
+var redacted = new ControllerSnapshotOptions()
+    .RedactingHeaders("Set-Cookie", "X-Session-Token");
+
+var bodyOnly = new ControllerSnapshotOptions()
+    .WithoutRequest()
+    .WithoutHeaders();
+```
+
+Redacted values appear as `{Redacted}`. `IncludingHeader(name)` explicitly restores a default
+exclusion when its real value is safe and stable.
+
+For multiple snapshots or parameterized cases in one test method, append a stable variant:
+
+```csharp
+await SnapshotAssert.MatchAsync(
+    result,
+    new SnapshotSettings().ForVariant($"case-{caseId}"));
+```
+
+The remaining work is tracked in the [snapshot package roadmap](docs/snapshots-roadmap.md).
+
+Target individual values with extended JSON Pointer rules when global member-name scrubbing would
+hide too much:
+
+```csharp
+var settings = new SnapshotSettings()
+    .ScrubPath("/orders/*/id")
+    .IgnorePath("/orders/*/generatedAt")
+    .HashPath("/largePayload")
+    .SortArray("/orders", "/id")
+    .CanonicalizeJson();
+```
+
+The `*` segment selects one object or array level. Exact path names are case-sensitive.
+
 Structured scrubbers are applied recursively to objects and arrays. `ScrubMembers` preserves a member but stores `{Scrubbed}` instead of its dynamic value; `IgnoreMembers` removes it. Member matching is case-insensitive. `ScrubGuids` and `ScrubDateTimes` replace matching JSON string values with `{Guid}` and `{DateTime}`. For specialized transformations, the existing `Scrub(content => ...)` string scrubber remains available. Parameterized tests should set a unique snapshot name for each case.
+
+Snapshot mismatch messages report the first structural difference as JSONPath with compact
+expected and actual values. The same details are available through `DifferencePath`,
+`ExpectedValue`, and `ActualValue` on `SnapshotMismatchException`.
+
+### Snapshot defaults and obsolete-file detection
+
+Use an instance-scoped defaults template to keep project conventions consistent without mutable
+global settings. Each call to `Create` returns an independent settings instance:
+
+```csharp
+private static readonly SnapshotCatalog SnapshotCatalog = new();
+
+private static readonly SnapshotSettingsDefaults SnapshotDefaults = new(settings => settings
+    .ScrubGuids()
+    .ScrubDateTimes()
+    .TrackingWith(SnapshotCatalog)
+    .WithoutDiffTool());
+
+var settings = SnapshotDefaults.Create(settings => settings.ForVariant($"{caseId}"));
+await SnapshotAssert.MatchAsync(result, settings);
+```
+
+After every snapshot in the catalog's intended scope has run, detect verified files that were not
+observed:
+
+```csharp
+var obsolete = SnapshotCatalog.FindObsoleteSnapshots(snapshotDirectory);
+```
+
+Do not perform this audit after a filtered or failed test run: unexecuted snapshots would appear
+obsolete.
 
 ### Diff viewer and snapshot acceptance
 
@@ -772,6 +930,33 @@ var settings = new SnapshotSettings()
 
 They can also be selected for a test run with `INTEGRATION_TESTS_UPDATE_SNAPSHOTS=missing` or `INTEGRATION_TESTS_UPDATE_SNAPSHOTS=all`. `missing` creates only absent verified files; `all` also replaces changed verified files. Never enable `all` in a normal CI verification run.
 
+CI requires a second explicit authorization before either automatic update mode can write:
+
+```shell
+INTEGRATION_TESTS_UPDATE_SNAPSHOTS=all
+INTEGRATION_TESTS_ALLOW_SNAPSHOT_UPDATES_IN_CI=true
+```
+
+Code can opt in with `AllowingUpdatesInContinuousIntegration()`. Limit either form to a dedicated
+snapshot-update job.
+
+Preview and then explicitly confirm bulk maintenance operations:
+
+```csharp
+var received = SnapshotMaintenance.FindReceivedSnapshots(snapshotDirectory);
+var accepted = SnapshotMaintenance.AcceptReceivedSnapshots(
+    snapshotDirectory,
+    confirmed: true);
+
+var obsolete = SnapshotCatalog.FindObsoleteSnapshots(snapshotDirectory);
+var removed = SnapshotMaintenance.RemoveVerifiedSnapshots(
+    obsolete,
+    confirmed: true);
+```
+
+Acceptance and removal throw unless `confirmed: true` is supplied. Removal validates the complete
+input before deleting any verified file.
+
 ## Verify.Xunit v3 controller snapshots
 
 Reference the optional `XBullet.EasyTesting.Verify.Xunit` package from an xUnit v3 test project and verify an HTTP response directly:
@@ -795,7 +980,8 @@ Volatile headers such as `Date`, `Server`, and correlation identifiers are exclu
 ```csharp
 var options = new ControllerSnapshotOptions()
     .WithoutRequest()
-    .IgnoringHeaders("ETag");
+    .IgnoringHeaders("ETag")
+    .RedactingHeader("X-Session-Token");
 
 var settings = new VerifySettings();
 settings.ScrubMember("createdAt");

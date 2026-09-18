@@ -6,6 +6,32 @@ The project follows Semantic Versioning. Package versions are produced from GitH
 
 ## [Unreleased]
 
+## [1.0.5] - 2026-09-18
+
+### Added
+
+- Structured raw JSON and HTTP-content snapshot assertions backed by `System.Text.Json`, producing
+  `.received.json` and `.verified.json` files.
+- Lossless JSON body capture for controller responses and recorded HTTP requests, including large
+  and high-precision number tokens and strict structured JSON media-type recognition.
+- Atomic, parallel-safe snapshot writes; portable collision-resistant filenames; and named
+  snapshot variants for parameterized tests and multiple assertions in one test method.
+- Extended JSON Pointer transformations for targeted scrubbing, ignoring, replacement, hashing,
+  array sorting, and opt-in canonical object ordering, with strict date handling and scrubber
+  output validation.
+- Safer HTTP snapshots with header omission and redaction, expanded sensitive-header defaults,
+  response-body JSON assertions, and repeatable verification after seekable content is consumed.
+- JSONPath mismatch diagnostics with expected and actual values; instance-scoped obsolete snapshot
+  tracking and reusable defaults; guarded bulk maintenance; and explicit CI update authorization.
+- Split snapshots into lightweight `XBullet.EasyTesting.Snapshots.Core` and outbound-request
+  `XBullet.EasyTesting.Snapshots.Http` packages, with the original package retained as a
+  type-forwarding compatibility facade.
+- A bulk external-catalog synchronization workflow in the sample test API that upserts products
+  and persists success or failure audit records, with integration coverage for outbound HTTP,
+  database state, validation, and upstream failures.
+- A Kafka-triggered order-pricing function sample that calls an external HTTP API, records the
+  enriched total, and preserves upstream exceptions for broker retry behavior.
+
 ## [1.0.4] - 2026-09-16
 
 ### Added
