@@ -7,7 +7,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XBullet.EasyTesting", "src\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XBullet.EasyTesting.Verify.Xunit", "src\XBullet.EasyTesting.Verify.Xunit\XBullet.EasyTesting.Verify.Xunit.csproj", "{00DCA785-9E27-435C-A2BF-2826118612C7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XBullet.EasyTesting.Snapshots", "src\XBullet.EasyTesting.Snapshots\XBullet.EasyTesting.Snapshots.csproj", "{C7230D1A-91FD-4749-960A-7AB8BA24D530}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XBullet.EasyTesting.Snapshots.Core", "src\XBullet.EasyTesting.Snapshots\XBullet.EasyTesting.Snapshots.Core.csproj", "{C7230D1A-91FD-4749-960A-7AB8BA24D530}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XBullet.EasyTesting.Snapshots.Http", "src\XBullet.EasyTesting.Snapshots.Http\XBullet.EasyTesting.Snapshots.Http.csproj", "{A2D20D94-1B18-47B7-A77C-D7104D08F621}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XBullet.EasyTesting.Snapshots", "src\XBullet.EasyTesting.Snapshots.Compatibility\XBullet.EasyTesting.Snapshots.Compatibility.csproj", "{4A0E475E-74D9-4842-BC3B-6F3F900CEB54}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XBullet.EasyTesting.EntityFrameworkCore", "src\XBullet.EasyTesting.EntityFrameworkCore\XBullet.EasyTesting.EntityFrameworkCore.csproj", "{D5622BAC-5173-4A12-B2F9-21F37C2D6662}"
 EndProject
@@ -63,6 +67,14 @@ Global
 		{C7230D1A-91FD-4749-960A-7AB8BA24D530}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C7230D1A-91FD-4749-960A-7AB8BA24D530}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C7230D1A-91FD-4749-960A-7AB8BA24D530}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A2D20D94-1B18-47B7-A77C-D7104D08F621}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A2D20D94-1B18-47B7-A77C-D7104D08F621}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A2D20D94-1B18-47B7-A77C-D7104D08F621}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A2D20D94-1B18-47B7-A77C-D7104D08F621}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4A0E475E-74D9-4842-BC3B-6F3F900CEB54}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4A0E475E-74D9-4842-BC3B-6F3F900CEB54}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4A0E475E-74D9-4842-BC3B-6F3F900CEB54}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4A0E475E-74D9-4842-BC3B-6F3F900CEB54}.Release|Any CPU.Build.0 = Release|Any CPU
 		{D5622BAC-5173-4A12-B2F9-21F37C2D6662}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{D5622BAC-5173-4A12-B2F9-21F37C2D6662}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D5622BAC-5173-4A12-B2F9-21F37C2D6662}.Release|Any CPU.ActiveCfg = Release|Any CPU

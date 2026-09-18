@@ -9,7 +9,7 @@ internal static class SnapshotDiffLauncher
         string verifiedPath,
         string receivedPath)
     {
-        if (!settings.LaunchDiffTool || IsContinuousIntegration())
+        if (!settings.LaunchDiffTool || ContinuousIntegrationEnvironment.IsDetected())
         {
             return false;
         }
@@ -146,13 +146,4 @@ internal static class SnapshotDiffLauncher
         return null;
     }
 
-    private static bool IsContinuousIntegration() =>
-        IsEnabled("CI") ||
-        IsEnabled("TF_BUILD") ||
-        IsEnabled("GITHUB_ACTIONS") ||
-        IsEnabled("TEAMCITY_VERSION") ||
-        IsEnabled("JENKINS_URL");
-
-    private static bool IsEnabled(string variableName) =>
-        !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(variableName));
 }

@@ -2,17 +2,16 @@
   <PropertyGroup>
     <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <PackageId>XBullet.EasyTesting.Verify.Xunit</PackageId>
-    <Description>Verify.XunitV3 snapshot support for XBullet.EasyTesting controller responses.</Description>
+    <PackageId>XBullet.EasyTesting.Snapshots.Http</PackageId>
+    <SkipPackageValidationBaseline>true</SkipPackageValidationBaseline>
+    <Description>Snapshot adapters for XBullet.EasyTesting outbound HTTP stubs.</Description>
+    <PackageTags>snapshot-testing;http;integration-testing;dotnet</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Verify.XunitV3" Version="31.24.0" />
+    <ProjectReference Include="..\XBullet.EasyTesting.Http\XBullet.EasyTesting.Http.csproj" />
     <ProjectReference Include="..\XBullet.EasyTesting.Snapshots\XBullet.EasyTesting.Snapshots.Core.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 </Project>

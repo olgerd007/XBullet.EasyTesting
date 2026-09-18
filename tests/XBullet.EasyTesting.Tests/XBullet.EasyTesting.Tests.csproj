@@ -14,8 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\XBullet.EasyTesting.Azure\XBullet.EasyTesting.Azure.csproj" />
-    <ProjectReference Include="..\..\src\XBullet.EasyTesting.Http\XBullet.EasyTesting.Http.csproj" />
     <ProjectReference Include="..\..\src\XBullet.EasyTesting.Messaging\XBullet.EasyTesting.Messaging.csproj" />
-    <ProjectReference Include="..\..\src\XBullet.EasyTesting.Snapshots\XBullet.EasyTesting.Snapshots.csproj" />
+    <ProjectReference Include="..\..\src\XBullet.EasyTesting.Snapshots.Compatibility\XBullet.EasyTesting.Snapshots.Compatibility.csproj" />
   </ItemGroup>
 </Project>

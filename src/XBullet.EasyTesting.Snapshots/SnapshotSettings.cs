@@ -7,9 +7,30 @@ public sealed class SnapshotSettings
 {
     private readonly HashSet<string> _scrubbedMembers = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _ignoredMembers = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<JsonSnapshotPathRule> _pathRules = new();
 
     /// <summary>The environment variable used to select automatic snapshot updates.</summary>
     public const string UpdateModeEnvironmentVariable = "INTEGRATION_TESTS_UPDATE_SNAPSHOTS";
+
+    /// <summary>The environment variable that explicitly permits automatic updates in CI.</summary>
+    public const string AllowCiUpdatesEnvironmentVariable =
+        "INTEGRATION_TESTS_ALLOW_SNAPSHOT_UPDATES_IN_CI";
+
+    /// <summary>Creates snapshot settings using package defaults and environment configuration.</summary>
+    public SnapshotSettings()
+        : this(readEnvironment: true)
+    {
+    }
+
+    private SnapshotSettings(bool readEnvironment)
+    {
+        if (readEnvironment)
+        {
+            UpdateMode = ReadUpdateMode();
+            AllowUpdatesInContinuousIntegration =
+                ContinuousIntegrationEnvironment.IsEnabled(AllowCiUpdatesEnvironmentVariable);
+        }
+    }
 
     /// <summary>
     /// Gets or sets the snapshot directory. Relative paths are resolved from the calling source file.
@@ -21,6 +42,12 @@ public sealed class SnapshotSettings
     /// Gets or sets the snapshot name. The calling method name is used when this is not specified.
     /// </summary>
     public string? SnapshotName { get; set; }
+
+    /// <summary>
+    /// Gets or sets an optional snapshot variant. Variants create distinct snapshots for multiple
+    /// assertions or parameterized cases in the same test method.
+    /// </summary>
+    public string? Variant { get; set; }
 
     /// <summary>Gets or sets the JSON options used to serialize the snapshot.</summary>
     public JsonSerializerOptions JsonSerializerOptions { get; set; } = CreateDefaultJsonOptions();
@@ -36,11 +63,15 @@ public sealed class SnapshotSettings
 
     internal bool ScrubDateTimeValues { get; private set; }
 
+    internal IReadOnlyList<JsonSnapshotPathRule> PathRules => _pathRules;
+
+    internal bool CanonicalizeObjectProperties { get; private set; }
+
     /// <summary>
     /// Gets or sets automatic snapshot-update behavior. The default can be selected with
     /// <c>INTEGRATION_TESTS_UPDATE_SNAPSHOTS=missing</c> or <c>all</c>.
     /// </summary>
-    public SnapshotUpdateMode UpdateMode { get; set; } = ReadUpdateMode();
+    public SnapshotUpdateMode UpdateMode { get; set; }
 
     /// <summary>Gets or sets whether an installed diff viewer is launched after a mismatch.</summary>
     public bool LaunchDiffTool { get; set; } = true;
@@ -51,11 +82,29 @@ public sealed class SnapshotSettings
     /// </summary>
     public SnapshotDiffTool? DiffTool { get; set; }
 
+    /// <summary>
+    /// Gets or sets whether automatic snapshot updates are allowed when a continuous-integration
+    /// environment is detected. The default is controlled by
+    /// <c>INTEGRATION_TESTS_ALLOW_SNAPSHOT_UPDATES_IN_CI</c> and is otherwise false.
+    /// </summary>
+    public bool AllowUpdatesInContinuousIntegration { get; set; }
+
+    /// <summary>Gets or sets an optional instance-scoped catalog that records exercised snapshots.</summary>
+    public SnapshotCatalog? Catalog { get; set; }
+
     /// <summary>Sets the snapshot name and returns this instance.</summary>
     public SnapshotSettings Named(string snapshotName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(snapshotName);
         SnapshotName = snapshotName;
+        return this;
+    }
+
+    /// <summary>Sets a snapshot variant and returns this instance.</summary>
+    public SnapshotSettings ForVariant(string variant)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(variant);
+        Variant = variant;
         return this;
     }
 
@@ -103,6 +152,73 @@ public sealed class SnapshotSettings
     /// <summary>Removes a matching JSON member from the snapshot at every nesting level.</summary>
     public SnapshotSettings IgnoreMember(string memberName) => IgnoreMembers(memberName);
 
+    /// <summary>
+    /// Replaces values selected by an extended JSON Pointer with <c>{Scrubbed}</c>.
+    /// Use an empty path for the root, <c>/</c> separators, and <c>*</c> as a wildcard segment.
+    /// </summary>
+    public SnapshotSettings ScrubPath(string path)
+    {
+        _pathRules.Add(new JsonSnapshotPathRule(
+            JsonSnapshotPathRuleKind.Scrub,
+            JsonSnapshotPath.Parse(path)));
+        return this;
+    }
+
+    /// <summary>
+    /// Removes values selected by an extended JSON Pointer. Use <c>*</c> as a wildcard segment.
+    /// </summary>
+    public SnapshotSettings IgnorePath(string path)
+    {
+        _pathRules.Add(new JsonSnapshotPathRule(
+            JsonSnapshotPathRuleKind.Ignore,
+            JsonSnapshotPath.Parse(path)));
+        return this;
+    }
+
+    /// <summary>Replaces values selected by an extended JSON Pointer with a serialized value.</summary>
+    public SnapshotSettings ReplacePath(string path, object? replacement)
+    {
+        _pathRules.Add(new JsonSnapshotPathRule(
+            JsonSnapshotPathRuleKind.Replace,
+            JsonSnapshotPath.Parse(path),
+            replacement));
+        return this;
+    }
+
+    /// <summary>
+    /// Replaces values selected by an extended JSON Pointer with a deterministic SHA-256 hash of
+    /// their canonical JSON representation.
+    /// </summary>
+    public SnapshotSettings HashPath(string path)
+    {
+        _pathRules.Add(new JsonSnapshotPathRule(
+            JsonSnapshotPathRuleKind.Hash,
+            JsonSnapshotPath.Parse(path)));
+        return this;
+    }
+
+    /// <summary>
+    /// Sorts arrays selected by an extended JSON Pointer. When <paramref name="itemPath"/> is set,
+    /// it is resolved relative to each array item and used as the ordinal JSON sort key.
+    /// </summary>
+    public SnapshotSettings SortArray(string path, string? itemPath = null)
+    {
+        _pathRules.Add(new JsonSnapshotPathRule(
+            JsonSnapshotPathRuleKind.SortArray,
+            JsonSnapshotPath.Parse(path),
+            SortItemPath: itemPath is null
+                ? null
+                : JsonSnapshotPath.Parse(itemPath, allowWildcard: false)));
+        return this;
+    }
+
+    /// <summary>Sorts JSON object properties by ordinal name before comparison.</summary>
+    public SnapshotSettings CanonicalizeJson()
+    {
+        CanonicalizeObjectProperties = true;
+        return this;
+    }
+
     /// <summary>Replaces every JSON string containing a GUID with <c>{Guid}</c>.</summary>
     public SnapshotSettings ScrubGuids()
     {
@@ -121,6 +237,21 @@ public sealed class SnapshotSettings
     public SnapshotSettings Updating(SnapshotUpdateMode updateMode)
     {
         UpdateMode = updateMode;
+        return this;
+    }
+
+    /// <summary>Explicitly permits automatic snapshot updates in continuous integration.</summary>
+    public SnapshotSettings AllowingUpdatesInContinuousIntegration()
+    {
+        AllowUpdatesInContinuousIntegration = true;
+        return this;
+    }
+
+    /// <summary>Records matched snapshot paths in an instance-scoped catalog.</summary>
+    public SnapshotSettings TrackingWith(SnapshotCatalog catalog)
+    {
+        ArgumentNullException.ThrowIfNull(catalog);
+        Catalog = catalog;
         return this;
     }
 
@@ -146,6 +277,34 @@ public sealed class SnapshotSettings
         WriteIndented = true,
         PropertyNamingPolicy = null
     };
+
+    internal SnapshotSettings Copy()
+    {
+        var copy = new SnapshotSettings(readEnvironment: false)
+        {
+            Directory = Directory,
+            SnapshotName = SnapshotName,
+            Variant = Variant,
+            JsonSerializerOptions = new JsonSerializerOptions(JsonSerializerOptions),
+            UpdateMode = UpdateMode,
+            LaunchDiffTool = LaunchDiffTool,
+            DiffTool = DiffTool,
+            AllowUpdatesInContinuousIntegration = AllowUpdatesInContinuousIntegration,
+            Catalog = Catalog,
+            ScrubGuidValues = ScrubGuidValues,
+            ScrubDateTimeValues = ScrubDateTimeValues,
+            CanonicalizeObjectProperties = CanonicalizeObjectProperties
+        };
+
+        foreach (var scrubber in Scrubbers)
+        {
+            copy.Scrubbers.Add(scrubber);
+        }
+        copy._scrubbedMembers.UnionWith(_scrubbedMembers);
+        copy._ignoredMembers.UnionWith(_ignoredMembers);
+        copy._pathRules.AddRange(_pathRules);
+        return copy;
+    }
 
     private static void AddMemberNames(ISet<string> target, string[] memberNames)
     {

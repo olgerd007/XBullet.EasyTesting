@@ -1,14 +1,20 @@
-# XBullet.EasyTesting.Snapshots
+# XBullet.EasyTesting.Snapshots.Core
 
-Framework-independent JSON snapshot assertions for controller responses, outbound HTTP requests, and arbitrary serializable values.
+Lightweight, framework-independent JSON snapshot assertions for HTTP responses and arbitrary
+serializable values. This package does not depend on `XBullet.EasyTesting`, ASP.NET testing, or
+`XBullet.EasyTesting.Http`.
 
 The package targets .NET 8 and .NET 10.
 
 ## Install
 
 ```shell
-dotnet add package XBullet.EasyTesting.Snapshots
+dotnet add package XBullet.EasyTesting.Snapshots.Core
 ```
+
+Use `XBullet.EasyTesting.Snapshots.Http` for snapshots of outbound requests captured by
+`StubHttpMessageHandler`. The original `XBullet.EasyTesting.Snapshots` package remains available as
+a compatibility facade that references both packages.
 
 ```csharp
 var settings = new SnapshotSettings()
@@ -60,11 +66,118 @@ snapshot:
 using var response = await client.GetAsync("/api/orders/42");
 response.EnsureSuccessStatusCode();
 
-await response.Content.ShouldMatchJsonSnapshot();
+await response.ShouldMatchJsonBodySnapshot();
 ```
 
+`response.Content.ShouldMatchJsonSnapshot()` is also available when only the `HttpContent` is in
+scope. For buffered or seekable content, both assertions rewind the body and restore its original
+position, so they remain reliable after the body has already been read.
+
 Use `response.ShouldMatchControllerSnapshot()` instead when the snapshot should also contain the
-request method and URL, response status, and stable headers.
+request method and URL, response status, and stable headers. Sensitive and volatile headers,
+including `Set-Cookie`, `Authentication-Info`, `Proxy-Authentication-Info`, `Date`, and tracing
+identifiers, are excluded by default. Header capture can be customized without exposing values:
+
+```csharp
+var options = new ControllerSnapshotOptions()
+    .RedactingHeaders("Set-Cookie", "X-Session-Token");
+
+await response.ShouldMatchControllerSnapshot(options);
+```
+
+Redacted headers are captured with the value `{Redacted}`. Call `WithoutHeaders()` to omit the
+entire header collection, or `IncludingHeader(name)` to explicitly include a default exclusion.
+
+### Multiple snapshots and parameterized tests
+
+Use a variant when one test method produces multiple snapshots or when each parameterized case
+needs its own file:
+
+```csharp
+var settings = new SnapshotSettings()
+    .ForVariant($"status-{statusCode}");
+
+await SnapshotAssert.MatchAsync(result, settings);
+```
+
+The variant is appended to the test-derived snapshot name. Snapshot names and variants are encoded
+portably, so the same test uses the same safe filename on Windows and Linux.
+
+### Targeted JSON transformations
+
+Use extended JSON Pointer rules when a member name should only be transformed at a specific path:
+
+```csharp
+var settings = new SnapshotSettings()
+    .ScrubPath("/orders/*/id")
+    .IgnorePath("/orders/*/generatedAt")
+    .ReplacePath("/environment", "test")
+    .HashPath("/largePayload")
+    .SortArray("/orders", "/id")
+    .CanonicalizeJson();
+
+await SnapshotAssert.MatchJsonAsync(json, settings);
+```
+
+Paths are case-sensitive. An empty path selects the root, `/` separates segments, and `*` selects
+every member or array item at one level. Escape `~` as `~0`, `/` as `~1`, and a literal `*` member
+as `~2`. Missing paths are ignored. Array sort keys are compared by their canonical JSON text;
+array order remains unchanged unless `SortArray` is configured.
+
+`HashPath` writes a stable `sha256:...` marker based on canonical JSON. It is useful for reducing
+large values while still detecting changes, but it is not a substitute for removing secrets with
+`IgnorePath`.
+
+`CanonicalizeJson` sorts object properties recursively while preserving array order. `ScrubDateTimes`
+only matches ISO-8601 round-trip timestamps. Custom string scrubbers must return valid JSON.
+
+### Diagnostics and safe maintenance
+
+Mismatches identify the first structural difference using JSONPath and expose its values on
+`SnapshotMismatchException`:
+
+```csharp
+var exception = await Assert.ThrowsAsync<SnapshotMismatchException>(
+    () => SnapshotAssert.MatchAsync(result));
+
+Assert.Equal("$.orders[0].status", exception.DifferencePath);
+Console.WriteLine($"{exception.ExpectedValue} -> {exception.ActualValue}");
+```
+
+Track the snapshots exercised by a complete test scope to find obsolete verified files. The
+catalog is explicit and instance-scoped, so parallel projects do not share mutable global state:
+
+```csharp
+var catalog = new SnapshotCatalog();
+var defaults = new SnapshotSettingsDefaults(settings => settings
+    .ScrubGuids()
+    .TrackingWith(catalog));
+
+await SnapshotAssert.MatchAsync(result, defaults.Create());
+
+// Run only after every snapshot in this catalog's scope has executed.
+var obsolete = catalog.FindObsoleteSnapshots(snapshotDirectory);
+```
+
+Maintenance is preview-first and requires explicit confirmation:
+
+```csharp
+var received = SnapshotMaintenance.FindReceivedSnapshots(snapshotDirectory);
+var accepted = SnapshotMaintenance.AcceptReceivedSnapshots(
+    snapshotDirectory,
+    confirmed: true);
+var removed = SnapshotMaintenance.RemoveVerifiedSnapshots(
+    obsolete,
+    confirmed: true);
+```
+
+Review `received` and `obsolete` before changing files. Removal validates every supplied path as a
+`*.verified.json` file before deleting any of them.
+
+Automatic update modes remain disabled in CI unless separately authorized. Set
+`INTEGRATION_TESTS_ALLOW_SNAPSHOT_UPDATES_IN_CI=true` or call
+`AllowingUpdatesInContinuousIntegration()` in addition to selecting `missing` or `all` update
+mode. Keep this opt-in limited to dedicated snapshot-update jobs.
 
 The first run writes a received snapshot. Review and approve it as the verified snapshot; subsequent runs report structural differences. Update modes and local diff viewers are opt-in.
 

@@ -43,11 +43,9 @@ public static class SnapshotAssert
         ArgumentNullException.ThrowIfNull(actualJson);
         settings ??= new SnapshotSettings();
 
-        using var document = JsonDocument.Parse(
-            actualJson,
-            CreateDocumentOptions(settings.JsonSerializerOptions));
+        var json = JsonSnapshotContent.Parse(actualJson, settings.JsonSerializerOptions);
         var serialized = JsonSerializer.Serialize(
-            document.RootElement,
+            json,
             settings.JsonSerializerOptions);
 
         await MatchSerializedAsync(
@@ -68,12 +66,12 @@ public static class SnapshotAssert
         ArgumentNullException.ThrowIfNull(actualJson);
         settings ??= new SnapshotSettings();
 
-        using var document = await JsonDocument.ParseAsync(
+        var json = await JsonSnapshotContent.ParseAsync(
             actualJson,
-            CreateDocumentOptions(settings.JsonSerializerOptions),
+            settings.JsonSerializerOptions,
             cancellationToken);
         var serialized = JsonSerializer.Serialize(
-            document.RootElement,
+            json,
             settings.JsonSerializerOptions);
 
         await MatchSerializedAsync(
@@ -97,24 +95,46 @@ public static class SnapshotAssert
             serialized = scrubber(serialized);
         }
 
+        if (settings.Scrubbers.Count > 0)
+        {
+            try
+            {
+                _ = JsonSnapshotContent.Parse(serialized, settings.JsonSerializerOptions);
+            }
+            catch (JsonException exception)
+            {
+                throw new InvalidOperationException(
+                    "A custom snapshot scrubber produced invalid JSON.",
+                    exception);
+            }
+        }
+
         serialized = NormalizeNewLines(serialized);
         var paths = ResolvePaths(settings, sourceFile, testName);
+        settings.Catalog?.Record(paths.Verified);
+        using var pathLock = await SnapshotPathLock.AcquireAsync(paths.Verified, cancellationToken);
         System.IO.Directory.CreateDirectory(paths.Directory);
+        EnsureNoPortablePathCollision(paths);
 
         if (!File.Exists(paths.Verified))
         {
             if (settings.UpdateMode is SnapshotUpdateMode.Missing or SnapshotUpdateMode.All)
             {
+                EnsureAutomaticUpdateIsAllowed(settings);
                 await WriteSnapshotAsync(paths.Verified, serialized, cancellationToken);
                 DeleteIfExists(paths.Received);
                 return;
             }
 
             await WriteSnapshotAsync(paths.Received, serialized, cancellationToken);
+            var difference = SnapshotJsonDifference.MissingExpected(serialized);
             throw new SnapshotMismatchException(
                 $"Snapshot is not approved. Review '{paths.Received}' and rename it to '{paths.Verified}'.",
                 paths.Verified,
-                paths.Received);
+                paths.Received,
+                differencePath: difference.Path,
+                expectedValue: difference.Expected,
+                actualValue: difference.Actual);
         }
 
         var expected = NormalizeNewLines(await File.ReadAllTextAsync(paths.Verified, cancellationToken));
@@ -122,34 +142,34 @@ public static class SnapshotAssert
         {
             if (settings.UpdateMode == SnapshotUpdateMode.All)
             {
+                EnsureAutomaticUpdateIsAllowed(settings);
                 await WriteSnapshotAsync(paths.Verified, serialized, cancellationToken);
                 DeleteIfExists(paths.Received);
                 return;
             }
 
             await WriteSnapshotAsync(paths.Received, serialized, cancellationToken);
-            var difference = FindFirstDifference(expected, serialized);
+            var location = FindFirstDifference(expected, serialized);
+            var difference = SnapshotJsonDifference.Find(expected, serialized);
             var diffToolLaunched = SnapshotDiffLauncher.TryLaunch(
                 settings,
                 paths.Verified,
                 paths.Received);
             throw new SnapshotMismatchException(
-                $"Snapshot differs at line {difference.Line}, column {difference.Column}. " +
+                $"Snapshot differs at {difference.Path}: expected {difference.Expected}; " +
+                $"actual {difference.Actual}. Text location: line {location.Line}, " +
+                $"column {location.Column}. " +
                 $"Expected '{paths.Verified}'; received '{paths.Received}'.",
                 paths.Verified,
                 paths.Received,
-                diffToolLaunched);
+                diffToolLaunched,
+                difference.Path,
+                difference.Expected,
+                difference.Actual);
         }
 
         DeleteIfExists(paths.Received);
     }
-
-    private static JsonDocumentOptions CreateDocumentOptions(JsonSerializerOptions options) => new()
-    {
-        AllowTrailingCommas = options.AllowTrailingCommas,
-        CommentHandling = options.ReadCommentHandling,
-        MaxDepth = options.MaxDepth
-    };
 
     /// <summary>Promotes one <c>.received.json</c> file to its <c>.verified.json</c> counterpart.</summary>
     public static string AcceptReceived(string receivedPath)
@@ -164,14 +184,15 @@ public static class SnapshotAssert
                 nameof(receivedPath));
         }
 
+        var verifiedPath = string.Concat(
+            fullReceivedPath.AsSpan(0, fullReceivedPath.Length - receivedSuffix.Length),
+            ".verified.json");
+        using var pathLock = SnapshotPathLock.Acquire(verifiedPath);
         if (!File.Exists(fullReceivedPath))
         {
             throw new FileNotFoundException("The received snapshot does not exist.", fullReceivedPath);
         }
 
-        var verifiedPath = string.Concat(
-            fullReceivedPath.AsSpan(0, fullReceivedPath.Length - receivedSuffix.Length),
-            ".verified.json");
         File.Move(fullReceivedPath, verifiedPath, overwrite: true);
         return verifiedPath;
     }
@@ -181,11 +202,25 @@ public static class SnapshotAssert
         string content,
         CancellationToken cancellationToken)
     {
-        await File.WriteAllTextAsync(
-            path,
-            content,
-            new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
-            cancellationToken);
+        var directory = Path.GetDirectoryName(path)
+            ?? throw new ArgumentException("The snapshot directory could not be determined.", nameof(path));
+        var temporaryPath = Path.Combine(
+            directory,
+            $".{Path.GetFileName(path)}.{Guid.NewGuid():N}.tmp");
+
+        try
+        {
+            await File.WriteAllTextAsync(
+                temporaryPath,
+                content,
+                new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
+                cancellationToken);
+            File.Move(temporaryPath, path, overwrite: true);
+        }
+        finally
+        {
+            DeleteIfExists(temporaryPath);
+        }
     }
 
     private static SnapshotPaths ResolvePaths(
@@ -205,9 +240,14 @@ public static class SnapshotAssert
             ? Path.Combine(sourceDirectory, "__snapshots__")
             : Path.GetFullPath(settings.Directory, sourceDirectory);
         var requestedName = settings.SnapshotName ?? testName;
-        var safeName = SanitizeFileName(requestedName);
-        var sourceName = Path.GetFileNameWithoutExtension(sourceFile);
-        var fileName = $"{sourceName}.{safeName}";
+        var safeName = SanitizeFileNameComponent(requestedName);
+        var sourceName = SanitizeFileNameComponent(Path.GetFileNameWithoutExtension(sourceFile));
+        var variant = settings.Variant is null
+            ? null
+            : SanitizeFileNameComponent(settings.Variant);
+        var fileName = variant is null
+            ? $"{sourceName}.{safeName}"
+            : $"{sourceName}.{safeName}.{variant}";
 
         return new SnapshotPaths(
             directory,
@@ -215,16 +255,80 @@ public static class SnapshotAssert
             Path.Combine(directory, $"{fileName}.received.json"));
     }
 
-    private static string SanitizeFileName(string name)
+    private static string SanitizeFileNameComponent(string name)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
             throw new ArgumentException("A snapshot name is required.", nameof(name));
         }
 
-        var invalidCharacters = Path.GetInvalidFileNameChars();
-        return string.Concat(name.Select(character =>
-            invalidCharacters.Contains(character) ? '_' : character));
+        var normalized = name.Normalize(NormalizationForm.FormC);
+        var trailingStart = normalized.Length;
+        while (trailingStart > 0 && normalized[trailingStart - 1] is ' ' or '.')
+        {
+            trailingStart--;
+        }
+
+        var builder = new StringBuilder(normalized.Length);
+        for (var index = 0; index < normalized.Length; index++)
+        {
+            var character = normalized[index];
+            if (character == '%' ||
+                character < ' ' ||
+                character is '<' or '>' or ':' or '"' or '/' or '\\' or '|' or '?' or '*' ||
+                index >= trailingStart)
+            {
+                builder.Append('%');
+                builder.Append(((int)character).ToString("X4", System.Globalization.CultureInfo.InvariantCulture));
+            }
+            else
+            {
+                builder.Append(character);
+            }
+        }
+
+        var sanitized = builder.ToString();
+        if (IsReservedWindowsDeviceName(sanitized))
+        {
+            sanitized = $"%{(int)sanitized[0]:X4}{sanitized[1..]}";
+        }
+
+        return sanitized;
+    }
+
+    private static bool IsReservedWindowsDeviceName(string name)
+    {
+        var stem = name.Split('.', 2)[0];
+        return stem.Equals("CON", StringComparison.OrdinalIgnoreCase) ||
+            stem.Equals("PRN", StringComparison.OrdinalIgnoreCase) ||
+            stem.Equals("AUX", StringComparison.OrdinalIgnoreCase) ||
+            stem.Equals("NUL", StringComparison.OrdinalIgnoreCase) ||
+            IsNumberedDeviceName(stem, "COM") ||
+            IsNumberedDeviceName(stem, "LPT");
+    }
+
+    private static bool IsNumberedDeviceName(string name, string prefix) =>
+        name.Length == prefix.Length + 1 &&
+        name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) &&
+        name[^1] is >= '1' and <= '9';
+
+    private static void EnsureNoPortablePathCollision(SnapshotPaths paths)
+    {
+        foreach (var targetPath in new[] { paths.Verified, paths.Received })
+        {
+            var targetName = Path.GetFileName(targetPath);
+            foreach (var existingPath in System.IO.Directory.EnumerateFiles(paths.Directory))
+            {
+                var existingName = Path.GetFileName(existingPath);
+                if (string.Equals(existingName, targetName, StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(existingName, targetName, StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"Snapshot path '{targetPath}' conflicts with existing file '{existingPath}' " +
+                        "on case-insensitive file systems. Use a distinct snapshot name or variant.");
+                }
+            }
+        }
     }
 
     private static string NormalizeNewLines(string value) =>
@@ -238,6 +342,18 @@ public static class SnapshotAssert
         if (File.Exists(path))
         {
             File.Delete(path);
+        }
+    }
+
+    private static void EnsureAutomaticUpdateIsAllowed(SnapshotSettings settings)
+    {
+        if (ContinuousIntegrationEnvironment.IsDetected() &&
+            !settings.AllowUpdatesInContinuousIntegration)
+        {
+            throw new InvalidOperationException(
+                "Automatic snapshot updates are disabled in continuous integration. " +
+                $"Set {SnapshotSettings.AllowCiUpdatesEnvironmentVariable}=true or call " +
+                $"{nameof(SnapshotSettings.AllowingUpdatesInContinuousIntegration)}() to opt in explicitly.");
         }
     }
 

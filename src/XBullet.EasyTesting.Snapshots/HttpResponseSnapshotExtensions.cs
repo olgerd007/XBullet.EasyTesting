@@ -19,8 +19,47 @@ public static class HttpResponseSnapshotExtensions
         ArgumentNullException.ThrowIfNull(content);
 
         var stream = await content.ReadAsStreamAsync(cancellationToken);
-        await SnapshotAssert.MatchJsonAsync(
-            stream,
+        if (!stream.CanSeek)
+        {
+            await SnapshotAssert.MatchJsonAsync(
+                stream,
+                snapshotSettings,
+                cancellationToken,
+                sourceFile,
+                testName);
+            return;
+        }
+
+        var originalPosition = stream.Position;
+        try
+        {
+            stream.Position = 0;
+            await SnapshotAssert.MatchJsonAsync(
+                stream,
+                snapshotSettings,
+                cancellationToken,
+                sourceFile,
+                testName);
+        }
+        finally
+        {
+            stream.Position = originalPosition;
+        }
+    }
+
+    /// <summary>
+    /// Asserts that the JSON body of an HTTP response matches its committed
+    /// <c>.verified.json</c> snapshot.
+    /// </summary>
+    public static Task ShouldMatchJsonBodySnapshot(
+        this HttpResponseMessage response,
+        SnapshotSettings? snapshotSettings = null,
+        CancellationToken cancellationToken = default,
+        [CallerFilePath] string sourceFile = "",
+        [CallerMemberName] string testName = "")
+    {
+        ArgumentNullException.ThrowIfNull(response);
+        return response.Content.ShouldMatchJsonSnapshot(
             snapshotSettings,
             cancellationToken,
             sourceFile,

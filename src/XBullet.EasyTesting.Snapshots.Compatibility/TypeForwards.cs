@@ -1,0 +1,19 @@
+using System.Runtime.CompilerServices;
+using XBullet.EasyTesting.Snapshots;
+
+[assembly: TypeForwardedTo(typeof(ControllerBinaryBodySnapshot))]
+[assembly: TypeForwardedTo(typeof(ControllerRequestSnapshot))]
+[assembly: TypeForwardedTo(typeof(ControllerResponseSnapshot))]
+[assembly: TypeForwardedTo(typeof(ControllerSnapshotOptions))]
+[assembly: TypeForwardedTo(typeof(HttpResponseSnapshotExtensions))]
+[assembly: TypeForwardedTo(typeof(SnapshotAssert))]
+[assembly: TypeForwardedTo(typeof(SnapshotCatalog))]
+[assembly: TypeForwardedTo(typeof(SnapshotDiffTool))]
+[assembly: TypeForwardedTo(typeof(SnapshotMaintenance))]
+[assembly: TypeForwardedTo(typeof(SnapshotMismatchException))]
+[assembly: TypeForwardedTo(typeof(SnapshotSettings))]
+[assembly: TypeForwardedTo(typeof(SnapshotSettingsDefaults))]
+[assembly: TypeForwardedTo(typeof(SnapshotUpdateMode))]
+[assembly: TypeForwardedTo(typeof(StubHttpRequestSnapshot))]
+[assembly: TypeForwardedTo(typeof(StubHttpRequestSnapshotExtensions))]
+[assembly: TypeForwardedTo(typeof(StubHttpRequestSnapshotOptions))]

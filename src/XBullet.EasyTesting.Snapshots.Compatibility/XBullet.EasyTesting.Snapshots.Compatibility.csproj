@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <AssemblyName>XBullet.EasyTesting.Snapshots</AssemblyName>
+    <PackageId>XBullet.EasyTesting.Snapshots</PackageId>
+    <Description>Compatibility facade for the split snapshot core and outbound HTTP adapter packages.</Description>
+    <PackageTags>snapshot-testing;integration-testing;dotnet</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <!-- Forwarded APIs are validated by package compatibility; PublicApiAnalyzers appends
+         assembly-location text that cannot share the source-package approval files. -->
+    <NoWarn>$(NoWarn);RS0016;RS0017;RS0037</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\XBullet.EasyTesting.Snapshots\XBullet.EasyTesting.Snapshots.Core.csproj" />
+    <ProjectReference Include="..\XBullet.EasyTesting.Snapshots.Http\XBullet.EasyTesting.Snapshots.Http.csproj" />
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+</Project>
