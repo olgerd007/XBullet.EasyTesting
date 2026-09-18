@@ -60,7 +60,16 @@ jobs:
           --results-directory TestResults
           --report-xunit-trx
           --coverage
+          --coverage-settings eng/snapshot-coverage.settings.xml
           --coverage-output-format cobertura
+
+      - name: Verify snapshot coverage thresholds
+        shell: pwsh
+        run: >-
+          ./eng/verify-snapshot-coverage.ps1
+          -ResultsDirectory TestResults
+          -MinimumLineCoverage 90
+          -MinimumBranchCoverage 80
 
       - name: Upload test results and coverage
         if: always()

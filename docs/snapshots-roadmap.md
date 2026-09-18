@@ -65,3 +65,14 @@ Goal: keep the core snapshot package lightweight and framework-independent.
 The lightweight package is `XBullet.EasyTesting.Snapshots.Core`; outbound-request adapters live in
 `XBullet.EasyTesting.Snapshots.Http`. The original `XBullet.EasyTesting.Snapshots` package is now a
 type-forwarding facade over both packages, preserving existing assembly-qualified type references.
+
+## Milestone 7: test coverage hardening
+
+Goal: protect every public snapshot workflow and its high-risk failure paths with deterministic
+tests on every supported target framework.
+
+- [x] Exercise the public HTTP snapshot assertion entry points and stream behavior.
+- [x] Cover redaction, request-body parsing, location, acceptance, catalog, and maintenance edges.
+- [x] Cover JSON mismatch diagnostics and structured-transformation failure paths.
+- [x] Define the operating-system process-launch boundary and exclude only true integration code.
+- [x] Enforce at least 90% line and 80% branch coverage for the unit-testable snapshot code in CI.

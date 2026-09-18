@@ -1,7 +1,7 @@
 # XBullet.EasyTesting.Snapshots.Core
 
-Lightweight, framework-independent JSON snapshot assertions for HTTP responses and arbitrary
-serializable values. This package does not depend on `XBullet.EasyTesting`, ASP.NET testing, or
+Lightweight, framework-independent JSON and text snapshot assertions for HTTP responses and
+arbitrary values. This package does not depend on `XBullet.EasyTesting`, ASP.NET testing, or
 `XBullet.EasyTesting.Http`.
 
 The package targets .NET 8 and .NET 10.
@@ -25,11 +25,36 @@ var settings = new SnapshotSettings()
 await SnapshotAssert.MatchAsync(result, settings);
 ```
 
+For a centralized or test-specific layout, resolve the directory from the calling context:
+
+```csharp
+var settings = new SnapshotSettings()
+    .InDirectory(context => Path.Combine(
+        context.SourceDirectory,
+        "snapshots",
+        context.SourceFileName));
+```
+
+### Snapshot locations
+
+Snapshots are stored in a `__snapshots__` directory beside the calling source file by default.
+Choose another directory with `InDirectory`; relative paths are resolved from the calling source
+file rather than the process working directory. To keep snapshots directly beside the source file,
+use `BesideSourceFile`:
+
+```csharp
+var settings = new SnapshotSettings()
+    .BesideSourceFile();
+
+await SnapshotAssert.MatchAsync(result, settings);
+```
+
 ### Raw JSON
 
 Raw JSON can be verified as structured JSON instead of as an escaped string. Raw strings and
-HTTP content are parsed and normalized with `System.Text.Json`, and snapshots use the
-`*.verified.json` and `*.received.json` file extensions.
+HTTP content are parsed and normalized with `System.Text.Json`. Verified files use
+`*.verified.json`; received files include the current target framework, such as
+`*.received.net8.0.json`, so multi-targeted test runs cannot overwrite each other's failures.
 
 ```csharp
 var json = $$"""
@@ -57,6 +82,19 @@ The resulting verified snapshot contains normalized JSON:
 
 Invalid JSON throws `JsonException` without creating a snapshot.
 
+### Plain text
+
+Use `MatchTextAsync` when the content should not be parsed or serialized as JSON. Text snapshots
+use `.verified.txt` and runtime-qualified `.received.*.txt` files. Custom string scrubbers still
+apply:
+
+```csharp
+var settings = new SnapshotSettings()
+    .Scrub(text => text.Replace(secret, "{Redacted}", StringComparison.Ordinal));
+
+await SnapshotAssert.MatchTextAsync(commandOutput, settings);
+```
+
 ### HTTP JSON content
 
 Verify only the JSON response body when status, headers, and request metadata do not belong in the
@@ -80,13 +118,16 @@ identifiers, are excluded by default. Header capture can be customized without e
 
 ```csharp
 var options = new ControllerSnapshotOptions()
-    .RedactingHeaders("Set-Cookie", "X-Session-Token");
+    .RedactingHeaders("Set-Cookie", "X-Session-Token")
+    .RedactingQueryParameter("tenant_secret");
 
 await response.ShouldMatchControllerSnapshot(options);
 ```
 
-Redacted headers are captured with the value `{Redacted}`. Call `WithoutHeaders()` to omit the
-entire header collection, or `IncludingHeader(name)` to explicitly include a default exclusion.
+Redacted headers and query values are captured as `{Redacted}`. Common secret-bearing query names,
+including `access_token`, `api_key`, `client_secret`, `sig`, and `token`, are redacted by default.
+Call `WithoutHeaders()` to omit the entire header collection, or `IncludingHeader(name)` and
+`IncludingQueryParameter(name)` to explicitly include a value known to be safe.
 
 ### Multiple snapshots and parameterized tests
 
@@ -101,7 +142,9 @@ await SnapshotAssert.MatchAsync(result, settings);
 ```
 
 The variant is appended to the test-derived snapshot name. Snapshot names and variants are encoded
-portably, so the same test uses the same safe filename on Windows and Linux.
+portably, automatically shortened with a stable hash when necessary, and produce the same safe
+filename on Windows and Linux. When parameter text should never appear in the filename, use
+`ForHashedVariant(parameters)`.
 
 ### Targeted JSON transformations
 
@@ -172,7 +215,7 @@ var removed = SnapshotMaintenance.RemoveVerifiedSnapshots(
 ```
 
 Review `received` and `obsolete` before changing files. Removal validates every supplied path as a
-`*.verified.json` file before deleting any of them.
+verified snapshot file before deleting any of them.
 
 Automatic update modes remain disabled in CI unless separately authorized. Set
 `INTEGRATION_TESTS_ALLOW_SNAPSHOT_UPDATES_IN_CI=true` or call

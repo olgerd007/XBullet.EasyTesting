@@ -5,7 +5,7 @@ public static class SnapshotMaintenance
 {
     /// <summary>Finds received snapshots below a directory without changing any files.</summary>
     public static IReadOnlyList<string> FindReceivedSnapshots(string directory) =>
-        FindSnapshots(directory, "*.received.json");
+        FindSnapshots(directory, ".received.");
 
     /// <summary>
     /// Accepts every received snapshot below a directory. Set <paramref name="confirmed"/> to
@@ -37,10 +37,10 @@ public static class SnapshotMaintenance
             {
                 ArgumentException.ThrowIfNullOrWhiteSpace(path);
                 var fullPath = Path.GetFullPath(path);
-                if (!fullPath.EndsWith(".verified.json", StringComparison.OrdinalIgnoreCase))
+                if (!IsSnapshotFile(fullPath, ".verified."))
                 {
                     throw new ArgumentException(
-                        $"Snapshot path '{fullPath}' must end with '.verified.json'.",
+                        $"Snapshot path '{fullPath}' must be a verified snapshot file.",
                         nameof(verifiedPaths));
                 }
 
@@ -64,7 +64,7 @@ public static class SnapshotMaintenance
         return removed;
     }
 
-    private static IReadOnlyList<string> FindSnapshots(string directory, string pattern)
+    private static IReadOnlyList<string> FindSnapshots(string directory, string marker)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(directory);
         var fullDirectory = Path.GetFullPath(directory);
@@ -74,10 +74,21 @@ public static class SnapshotMaintenance
         }
 
         return Directory
-            .EnumerateFiles(fullDirectory, pattern, SearchOption.AllDirectories)
+            .EnumerateFiles(fullDirectory, "*", SearchOption.AllDirectories)
+            .Where(path => IsSnapshotFile(path, marker))
             .Select(Path.GetFullPath)
             .Order(StringComparer.OrdinalIgnoreCase)
             .ToArray();
+    }
+
+    internal static bool IsSnapshotFile(string path, string marker)
+    {
+        var fileName = Path.GetFileName(path);
+        var markerIndex = fileName.LastIndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        var extensionIndex = fileName.LastIndexOf('.');
+        return markerIndex > 0 &&
+            extensionIndex >= markerIndex + marker.Length - 1 &&
+            extensionIndex < fileName.Length - 1;
     }
 
     private static void EnsureConfirmed(bool confirmed)

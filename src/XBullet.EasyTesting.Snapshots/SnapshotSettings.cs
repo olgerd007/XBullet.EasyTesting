@@ -1,4 +1,6 @@
 using System.Text.Json;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace XBullet.EasyTesting.Snapshots;
 
@@ -37,6 +39,12 @@ public sealed class SnapshotSettings
     /// The default is a <c>__snapshots__</c> directory beside that source file.
     /// </summary>
     public string? Directory { get; set; }
+
+    /// <summary>
+    /// Gets or sets an optional callback that selects the snapshot directory from the calling test
+    /// context. <see cref="Directory"/> takes precedence when both are set.
+    /// </summary>
+    public Func<SnapshotLocationContext, string>? DirectoryResolver { get; set; }
 
     /// <summary>
     /// Gets or sets the snapshot name. The calling method name is used when this is not specified.
@@ -108,13 +116,41 @@ public sealed class SnapshotSettings
         return this;
     }
 
+    /// <summary>
+    /// Creates a compact deterministic variant from serialized parameter values and returns this
+    /// instance. This is useful when parameter text would produce an excessively long filename.
+    /// </summary>
+    public SnapshotSettings ForHashedVariant(params object?[] values)
+    {
+        ArgumentNullException.ThrowIfNull(values);
+        var serialized = JsonSerializer.Serialize(values, JsonSerializerOptions);
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(serialized));
+        return ForVariant($"hash-{Convert.ToHexString(hash)[..16].ToLowerInvariant()}");
+    }
+
     /// <summary>Sets the snapshot directory and returns this instance.</summary>
     public SnapshotSettings InDirectory(string directory)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(directory);
         Directory = directory;
+        DirectoryResolver = null;
         return this;
     }
+
+    /// <summary>Sets a context-aware snapshot-directory resolver and returns this instance.</summary>
+    public SnapshotSettings InDirectory(Func<SnapshotLocationContext, string> directoryResolver)
+    {
+        ArgumentNullException.ThrowIfNull(directoryResolver);
+        Directory = null;
+        DirectoryResolver = directoryResolver;
+        return this;
+    }
+
+    /// <summary>
+    /// Stores snapshots directly beside the calling source file instead of in its default
+    /// <c>__snapshots__</c> directory.
+    /// </summary>
+    public SnapshotSettings BesideSourceFile() => InDirectory(".");
 
     /// <summary>Adds a serialized-content scrubber and returns this instance.</summary>
     public SnapshotSettings Scrub(Func<string, string> scrubber)
@@ -283,6 +319,7 @@ public sealed class SnapshotSettings
         var copy = new SnapshotSettings(readEnvironment: false)
         {
             Directory = Directory,
+            DirectoryResolver = DirectoryResolver,
             SnapshotName = SnapshotName,
             Variant = Variant,
             JsonSerializerOptions = new JsonSerializerOptions(JsonSerializerOptions),

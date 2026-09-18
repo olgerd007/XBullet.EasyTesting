@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Configuration>
+  <CodeCoverage>
+    <Sources>
+      <Exclude>
+        <!-- External process discovery and launching is exercised by platform integration tests. -->
+        <Source>.*[\\/]SnapshotDiffLauncher\.cs$</Source>
+      </Exclude>
+    </Sources>
+  </CodeCoverage>
+</Configuration>
