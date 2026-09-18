@@ -1,1 +1,3 @@
 #nullable enable
+static XBullet.EasyTesting.Snapshots.HttpResponseSnapshotExtensions.ShouldMatchJsonSnapshot(this System.Net.Http.HttpContent! content, XBullet.EasyTesting.Snapshots.SnapshotSettings? snapshotSettings = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken), string! sourceFile = "", string! testName = "") -> System.Threading.Tasks.Task!
+static XBullet.EasyTesting.Snapshots.SnapshotAssert.MatchJsonAsync(string! actualJson, XBullet.EasyTesting.Snapshots.SnapshotSettings? settings = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken), string! sourceFile = "", string! testName = "") -> System.Threading.Tasks.Task!

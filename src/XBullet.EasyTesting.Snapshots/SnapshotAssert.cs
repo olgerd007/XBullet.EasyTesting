@@ -21,6 +21,76 @@ public static class SnapshotAssert
         settings ??= new SnapshotSettings();
 
         var serialized = JsonSerializer.Serialize(actual, settings.JsonSerializerOptions);
+        await MatchSerializedAsync(
+            serialized,
+            settings,
+            cancellationToken,
+            sourceFile,
+            testName);
+    }
+
+    /// <summary>
+    /// Parses JSON content with <see cref="JsonDocument"/> and compares its normalized JSON
+    /// representation with a committed <c>.verified.json</c> snapshot.
+    /// </summary>
+    public static async Task MatchJsonAsync(
+        string actualJson,
+        SnapshotSettings? settings = null,
+        CancellationToken cancellationToken = default,
+        [CallerFilePath] string sourceFile = "",
+        [CallerMemberName] string testName = "")
+    {
+        ArgumentNullException.ThrowIfNull(actualJson);
+        settings ??= new SnapshotSettings();
+
+        using var document = JsonDocument.Parse(
+            actualJson,
+            CreateDocumentOptions(settings.JsonSerializerOptions));
+        var serialized = JsonSerializer.Serialize(
+            document.RootElement,
+            settings.JsonSerializerOptions);
+
+        await MatchSerializedAsync(
+            serialized,
+            settings,
+            cancellationToken,
+            sourceFile,
+            testName);
+    }
+
+    internal static async Task MatchJsonAsync(
+        Stream actualJson,
+        SnapshotSettings? settings,
+        CancellationToken cancellationToken,
+        string sourceFile,
+        string testName)
+    {
+        ArgumentNullException.ThrowIfNull(actualJson);
+        settings ??= new SnapshotSettings();
+
+        using var document = await JsonDocument.ParseAsync(
+            actualJson,
+            CreateDocumentOptions(settings.JsonSerializerOptions),
+            cancellationToken);
+        var serialized = JsonSerializer.Serialize(
+            document.RootElement,
+            settings.JsonSerializerOptions);
+
+        await MatchSerializedAsync(
+            serialized,
+            settings,
+            cancellationToken,
+            sourceFile,
+            testName);
+    }
+
+    private static async Task MatchSerializedAsync(
+        string serialized,
+        SnapshotSettings settings,
+        CancellationToken cancellationToken,
+        string sourceFile,
+        string testName)
+    {
         serialized = StructuredSnapshotScrubber.Apply(serialized, settings);
         foreach (var scrubber in settings.Scrubbers)
         {
@@ -73,6 +143,13 @@ public static class SnapshotAssert
 
         DeleteIfExists(paths.Received);
     }
+
+    private static JsonDocumentOptions CreateDocumentOptions(JsonSerializerOptions options) => new()
+    {
+        AllowTrailingCommas = options.AllowTrailingCommas,
+        CommentHandling = options.ReadCommentHandling,
+        MaxDepth = options.MaxDepth
+    };
 
     /// <summary>Promotes one <c>.received.json</c> file to its <c>.verified.json</c> counterpart.</summary>
     public static string AcceptReceived(string receivedPath)

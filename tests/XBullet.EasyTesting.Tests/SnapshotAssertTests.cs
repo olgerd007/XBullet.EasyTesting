@@ -9,6 +9,77 @@ namespace XBullet.EasyTesting.Tests;
 public sealed class SnapshotAssertTests
 {
     [Fact]
+    public async Task Json_content_is_normalized_into_a_json_snapshot()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var settings = new SnapshotSettings()
+            .InDirectory(snapshotDirectory)
+            .Named("json-content")
+            .Updating(SnapshotUpdateMode.Missing)
+            .WithoutDiffTool();
+
+        try
+        {
+            await SnapshotAssert.MatchJsonAsync(
+                """{"name":"Ada","roles":["admin","author"]}""",
+                settings,
+                cancellationToken);
+
+            settings.Updating(SnapshotUpdateMode.None);
+            await SnapshotAssert.MatchJsonAsync(
+                """
+                {
+                  "name": "Ada",
+                  "roles": [ "admin", "author" ]
+                }
+                """,
+                settings,
+                cancellationToken);
+
+            var verifiedPath = Directory.EnumerateFiles(snapshotDirectory).Single();
+            var verified = await File.ReadAllTextAsync(verifiedPath, cancellationToken);
+
+            Assert.EndsWith(".verified.json", verifiedPath, StringComparison.Ordinal);
+            Assert.StartsWith("{", verified, StringComparison.Ordinal);
+            Assert.Contains("\"name\": \"Ada\"", verified);
+            Assert.DoesNotContain("\\\"name\\\"", verified);
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task Http_json_content_can_be_matched_directly()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var settings = new SnapshotSettings()
+            .InDirectory(snapshotDirectory)
+            .Named("http-json-content")
+            .Updating(SnapshotUpdateMode.Missing)
+            .WithoutDiffTool();
+        using var content = JsonContent.Create(new { Value = 42 });
+
+        try
+        {
+            await content.ShouldMatchJsonSnapshot(settings, cancellationToken);
+
+            var verifiedPath = Directory.EnumerateFiles(snapshotDirectory).Single();
+            var verified = await File.ReadAllTextAsync(verifiedPath, cancellationToken);
+
+            Assert.EndsWith(".verified.json", verifiedPath, StringComparison.Ordinal);
+            Assert.Contains("\"value\": 42", verified);
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
     public async Task New_snapshot_writes_a_received_file()
     {
         var cancellationToken = TestContext.Current.CancellationToken;

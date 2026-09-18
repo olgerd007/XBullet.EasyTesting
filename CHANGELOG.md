@@ -8,6 +8,8 @@ The project follows Semantic Versioning. Package versions are produced from GitH
 
 ### Added
 
+- Structured raw JSON and HTTP-content snapshot assertions backed by `System.Text.Json`, producing
+  `.received.json` and `.verified.json` files.
 - A bulk external-catalog synchronization workflow in the sample test API that upserts products
   and persists success or failure audit records, with integration coverage for outbound HTTP,
   database state, validation, and upstream failures.

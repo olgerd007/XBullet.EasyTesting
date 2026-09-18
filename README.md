@@ -804,6 +804,25 @@ The lower-level assertion works with any serializable value:
 await SnapshotAssert.MatchAsync(result);
 ```
 
+Raw JSON content has a dedicated assertion so it is parsed and normalized rather than captured as
+an escaped JSON string. Serialization uses `System.Text.Json`, and the generated snapshots retain
+the `.received.json` and `.verified.json` extensions:
+
+```csharp
+var settings = new SnapshotSettings()
+    .ScrubGuids();
+
+await SnapshotAssert.MatchJsonAsync(json, settings);
+
+using var response = await client.GetAsync("/api/orders/42");
+response.EnsureSuccessStatusCode();
+await response.Content.ShouldMatchJsonSnapshot();
+```
+
+Use `MatchJsonAsync` for a raw JSON string and `ShouldMatchJsonSnapshot` when only an HTTP response
+body belongs in the snapshot. Use `ShouldMatchControllerSnapshot` when request metadata, status,
+and stable headers should be included too.
+
 Structured scrubbers are applied recursively to objects and arrays. `ScrubMembers` preserves a member but stores `{Scrubbed}` instead of its dynamic value; `IgnoreMembers` removes it. Member matching is case-insensitive. `ScrubGuids` and `ScrubDateTimes` replace matching JSON string values with `{Guid}` and `{DateTime}`. For specialized transformations, the existing `Scrub(content => ...)` string scrubber remains available. Parameterized tests should set a unique snapshot name for each case.
 
 ### Diff viewer and snapshot acceptance
