@@ -2,7 +2,7 @@
 
 In-memory test infrastructure for .NET isolated Azure Functions, including function contexts, middleware, bindings, retry state, and fluent trigger data.
 
-The package targets .NET 8 and .NET 10.
+The package targets .NET 8, .NET 9, and .NET 10.
 
 ## Install
 

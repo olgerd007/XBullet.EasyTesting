@@ -14,6 +14,7 @@ public sealed class EasyTestHostBuilder<TEntryPoint>
     private readonly List<Action<IServiceCollection>> _serviceActions = [];
     private readonly List<Action<TestAuthenticationSchemeBuilder>> _authenticationActions = [];
     private readonly List<Action<TestScenarioEnvironmentBuilder>> _environmentActions = [];
+    private readonly List<Action<IDictionary<string, string>>> _hostSettingActions = [];
     private bool _built;
 
     /// <summary>Adds an application-configuration action and returns this builder.</summary>
@@ -24,6 +25,27 @@ public sealed class EasyTestHostBuilder<TEntryPoint>
         EnsureNotBuilt();
         _configurationActions.Add(configure);
         return this;
+    }
+
+    /// <summary>
+    /// Adds settings that are visible to minimal-hosting startup code as soon as
+    /// <c>WebApplication.CreateBuilder</c> returns.
+    /// </summary>
+    public EasyTestHostBuilder<TEntryPoint> ConfigureHostSettings(
+        Action<IDictionary<string, string>> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        EnsureNotBuilt();
+        _hostSettingActions.Add(configure);
+        return this;
+    }
+
+    /// <summary>Adds or replaces one early host setting.</summary>
+    public EasyTestHostBuilder<TEntryPoint> UseSetting(string key, string value)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        ArgumentNullException.ThrowIfNull(value);
+        return ConfigureHostSettings(settings => settings[key] = value);
     }
 
     /// <summary>Adds a test-service configuration action and returns this builder.</summary>
@@ -64,6 +86,7 @@ public sealed class EasyTestHostBuilder<TEntryPoint>
         var configurationActions = _configurationActions.ToArray();
         var authenticationActions = _authenticationActions.ToArray();
         var environmentActions = _environmentActions.ToArray();
+        var hostSettingActions = _hostSettingActions.ToArray();
 
         return AuthenticatedWebApplicationFactory<TEntryPoint>.CreateWithEnvironment(
             services =>
@@ -92,6 +115,13 @@ public sealed class EasyTestHostBuilder<TEntryPoint>
                 foreach (var configure in environmentActions)
                 {
                     configure(environment);
+                }
+            },
+            settings =>
+            {
+                foreach (var configure in hostSettingActions)
+                {
+                    configure(settings);
                 }
             });
     }

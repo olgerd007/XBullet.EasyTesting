@@ -15,6 +15,7 @@ public sealed class DatabaseScenarioBuilder<TEntryPoint, TDbContext>
     private bool _recreate;
     private bool _transactional;
     private bool _executed;
+    private Func<TDbContext, CancellationToken, Task>? _recreateDatabase;
 
     internal DatabaseScenarioBuilder(
         EntityFrameworkWebApplicationFactory<TEntryPoint, TDbContext> factory,
@@ -35,6 +36,19 @@ public sealed class DatabaseScenarioBuilder<TEntryPoint, TDbContext>
     /// <summary>Deletes and recreates the isolated test database before subsequent actions.</summary>
     public DatabaseScenarioBuilder<TEntryPoint, TDbContext> Recreate()
     {
+        _recreate = true;
+        _initialize = false;
+        return this;
+    }
+
+    /// <summary>
+    /// Uses an application-specific database recreation operation before subsequent actions.
+    /// </summary>
+    public DatabaseScenarioBuilder<TEntryPoint, TDbContext> RecreateDatabaseWith(
+        Func<TDbContext, CancellationToken, Task> recreateDatabase)
+    {
+        ArgumentNullException.ThrowIfNull(recreateDatabase);
+        _recreateDatabase = recreateDatabase;
         _recreate = true;
         _initialize = false;
         return this;
@@ -97,8 +111,15 @@ public sealed class DatabaseScenarioBuilder<TEntryPoint, TDbContext>
     {
         if (_recreate)
         {
-            await database.Database.EnsureDeletedAsync(cancellationToken);
-            await database.Database.EnsureCreatedAsync(cancellationToken);
+            if (_recreateDatabase is not null)
+            {
+                await _recreateDatabase(database, cancellationToken);
+            }
+            else
+            {
+                await database.Database.EnsureDeletedAsync(cancellationToken);
+                await database.Database.EnsureCreatedAsync(cancellationToken);
+            }
         }
         else if (_initialize)
         {

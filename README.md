@@ -6,7 +6,7 @@
 
 Reusable infrastructure for integration-testing authenticated ASP.NET Core controllers through an in-memory `TestServer`.
 
-All packages target both .NET 8 and .NET 10.
+All packages target .NET 8, .NET 9, and .NET 10.
 
 ## Installation
 
@@ -227,6 +227,22 @@ public sealed class ApiFactory : AuthenticatedWebApplicationFactory<Program>
 }
 ```
 
+Minimal-hosting applications sometimes read a connection string or another setting immediately
+after `WebApplication.CreateBuilder`. Use early host settings for those values; ordinary
+`ConfigureConfiguration` overrides remain appropriate for values consumed later:
+
+```csharp
+using var factory = EasyTestHost.Create<Program>()
+    .UseSetting("ConnectionStrings:Orders", testDatabaseConnectionString)
+    .ConfigureConfiguration(configuration =>
+        configuration.AddInMemoryCollection(otherTestSettings))
+    .Build();
+```
+
+Derived factories can override `ConfigureTestHostSettings`, and callers that do not use the fluent
+builder can use `AuthenticatedWebApplicationFactory<Program>.CreateWithHostSettings(...)`. These
+APIs apply the settings early enough for top-level minimal-hosting startup code.
+
 ### Startup-based hosts
 
 Applications that already expose an `IntegrationTestStartup` can keep that host and avoid invoking
@@ -315,6 +331,42 @@ using var apiKeyClient = factory.Client()
 Azure AD profiles expose common `oid`, `tid`, `preferred_username`, `scp`, `roles`, and `azp` claims. API-key profiles expose a non-secret `api_key_id`. Both support custom claims and roles. For another authentication type, map its scheme and use `TestUser.CreateBuilder().WithAuthenticationScheme(...)`.
 
 These profiles test controller authentication and authorization without external identity infrastructure. They intentionally bypass signature, issuer, token-expiry, and secret validation.
+
+### Hybrid simulated and real authentication
+
+By default, XBullet keeps its existing behavior and selects simulated authentication as the test
+host default. Opt into coexistence when the application must keep its real default handler:
+
+```csharp
+protected override void ConfigureTestAuthentication(
+    TestAuthenticationSchemeBuilder authentication) =>
+    authentication
+        .PreserveDefaultAuthenticationScheme()
+        .MapTestAuthentication("IntegrationTest");
+
+using var client = factory.Client()
+    .AsUser(
+        user => user.WithName("Ada").WithRole("Administrator"),
+        authenticationScheme: "IntegrationTest")
+    .Build();
+```
+
+Policies intended for simulated identities should name `IntegrationTest`; the application's
+default policy continues to use its real scheme. This lets one host and test project use both
+approaches:
+
+- Simulated identities exercise authorization policies and business behavior quickly.
+- Real handlers exercise registration, login, password changes, token validation, refresh, and
+  other credential-lifecycle behavior.
+- ASP.NET Core Identity users can be persisted through `SeedIdentityUserAsync`, then converted to a
+  linked simulated user through `CreateIdentityTestUserAsync` or `UserManager.CreateTestUserAsync`.
+- A token returned by an Identity API login endpoint can be sent with
+  `factory.Client().WithBearerToken(accessToken)`; no JWT authority or JWT-specific test
+  configuration is required because the application's own Identity bearer handler validates it.
+
+Keep registration and credential-lifecycle tests on the real handler. Use the linked simulated
+principal for downstream authorization tests where cryptographic token validation is not the
+behavior under test.
 
 ### End-to-end authentication
 
@@ -429,6 +481,30 @@ await factory.ExecuteInTransactionAsync(async (database, cancellationToken) =>
     // Changes are saved and committed when the callback succeeds.
 });
 ```
+
+Application registrations made with `AddDbContextFactory<TContext>` are supported. When the test
+factory replaces a database, both `TContext` and `IDbContextFactory<TContext>` registrations are
+removed before the test provider is added.
+
+Override the scenario database lifecycle when `EnsureDeleted`/`EnsureCreated` does not match the
+application's schema process:
+
+```csharp
+protected override Task InitializeScenarioDatabaseAsync(
+    AppDbContext database,
+    CancellationToken cancellationToken) =>
+    applicationDatabaseInitializer.InitializeAsync(database, cancellationToken);
+
+protected override Task CleanupScenarioDatabaseAsync(
+    AppDbContext database,
+    CancellationToken cancellationToken) =>
+    applicationDatabaseInitializer.CleanupAsync(database, cancellationToken);
+```
+
+For one fluent arrangement, use `Database().RecreateDatabaseWith(...)`. The defaults remain
+backward-compatible. Default SQLite scenario cleanup clears connection pools before deletion,
+retries transient file-lock failures, and attaches `SqliteDatabaseCleanupDiagnostics` to the final
+exception under `SqliteDatabaseCleanupDiagnostics.ExceptionDataKey`.
 
 Related setup can also be composed and saved once as a fluent database scenario:
 

@@ -895,7 +895,7 @@ public sealed class SnapshotAssertTests
 
             Assert.True(File.Exists(exception.ReceivedPath));
             Assert.False(File.Exists(exception.VerifiedPath));
-            Assert.Matches(@"\.received\.net(8|10)\.0\.json$", exception.ReceivedPath);
+            Assert.Matches(@"\.received\.net(8|9|10)\.0\.json$", exception.ReceivedPath);
 
             var verifiedPath = SnapshotAssert.AcceptReceived(exception.ReceivedPath);
 
@@ -1100,7 +1100,7 @@ public sealed class SnapshotAssertTests
             settings.Updating(SnapshotUpdateMode.None);
             var exception = await Assert.ThrowsAsync<SnapshotMismatchException>(() =>
                 SnapshotAssert.MatchTextAsync("second\nsecret", settings, cancellationToken));
-            Assert.Matches(@"\.received\.net(8|10)\.0\.txt$", exception.ReceivedPath);
+            Assert.Matches(@"\.received\.net(8|9|10)\.0\.txt$", exception.ReceivedPath);
             Assert.Equal("$text", exception.DifferencePath);
 
             Assert.Equal(verifiedPath, SnapshotAssert.AcceptReceived(exception.ReceivedPath));

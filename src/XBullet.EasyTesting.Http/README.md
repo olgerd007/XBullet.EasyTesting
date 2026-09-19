@@ -2,7 +2,7 @@
 
 Fluent outbound HTTP stubs, request matching, fault simulation, and call recording for integration tests.
 
-The package targets .NET 8 and .NET 10.
+The package targets .NET 8, .NET 9, and .NET 10.
 
 ## Install
 

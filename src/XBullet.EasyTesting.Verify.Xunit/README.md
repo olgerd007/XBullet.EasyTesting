@@ -2,7 +2,7 @@
 
 Optional Verify.Xunit v3 integration for snapshot-testing HTTP controller responses produced by `XBullet.EasyTesting`.
 
-The package targets .NET 8 and .NET 10.
+The package targets .NET 8, .NET 9, and .NET 10.
 
 ## Install
 

@@ -56,6 +56,20 @@ public sealed class TestClientBuilder<TEntryPoint>
         return AsUser(builder.Build());
     }
 
+    /// <summary>Builds a test identity that targets a named simulated scheme.</summary>
+    public TestClientBuilder<TEntryPoint> AsUser(
+        Action<TestUserBuilder> configure,
+        string authenticationScheme)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        ArgumentException.ThrowIfNullOrWhiteSpace(authenticationScheme);
+        var builder = TestUser.CreateBuilder()
+            .WithAuthenticationScheme(authenticationScheme)
+            .WithAuthenticationType(authenticationScheme);
+        configure(builder);
+        return AsUser(builder.Build());
+    }
+
     /// <summary>Builds an Azure AD-shaped identity for this client.</summary>
     public TestClientBuilder<TEntryPoint> AsAzureAdUser(Action<TestAzureAdUserBuilder> configure)
     {
@@ -251,7 +265,11 @@ public sealed class TestClientBuilder<TEntryPoint>
         return client;
     }
 
-    private TestClientBuilder<TEntryPoint> WithBearerToken(string token)
+    /// <summary>
+    /// Sends an existing bearer token through the application's configured authentication handler.
+    /// This can be used with tokens returned by ASP.NET Core Identity API endpoints.
+    /// </summary>
+    public TestClientBuilder<TEntryPoint> WithBearerToken(string token)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(token);
         _user = null;

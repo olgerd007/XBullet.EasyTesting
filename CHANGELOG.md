@@ -4,6 +4,21 @@ Notable changes to XBullet.EasyTesting are documented in this file.
 
 The project follows Semantic Versioning. Package versions are produced from GitHub Release tags.
 
+## [1.0.7] - 2026-09-19
+
+### Added
+
+- Explicit .NET 9 package targeting and CI coverage alongside .NET 8 and .NET 10.
+- Opt-in preservation of an application's default authentication scheme, named simulated schemes,
+  ASP.NET Core Identity user seeding and principal linkage, and transport of real Identity bearer
+  tokens without JWT-specific test configuration.
+- Early minimal-host settings for connection strings and other values consumed during top-level
+  startup.
+- EF Core context-factory replacement, custom scenario database lifecycle hooks, and fluent custom
+  recreation callbacks.
+- SQLite pool clearing, transient file-lock retries, and terminal cleanup diagnostics.
+- Guidance for hybrid simulated-identity and real-handler testing in one test project.
+
 ## [1.0.6] - 2026-09-18
 
 ### Added

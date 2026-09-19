@@ -12,7 +12,7 @@ public sealed class ComposableHostTests
     public async Task Builder_composes_multiple_authentication_modules()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
-        var builder = EasyTestHost.Create<Program>()
+        var builder = TestApiHostSettings.CreateBuilder()
             .ConfigureConfiguration(configuration => configuration.AddInMemoryCollection(
                 new Dictionary<string, string?>
                 {
@@ -59,7 +59,7 @@ public sealed class ComposableHostTests
     public async Task Scenario_requires_exactly_one_request_and_executes_only_once()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
-        using var factory = EasyTestHost.Create<Program>().Build();
+        using var factory = TestApiHostSettings.CreateBuilder().Build();
         var missingRequest = factory.Scenario();
         var duplicateRequest = factory.Scenario().Get("/health");
         var executable = factory.Scenario().Get("/health");

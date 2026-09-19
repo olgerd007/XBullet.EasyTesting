@@ -3,7 +3,7 @@
 Scenario-scoped PostgreSQL, SQL Server, Kafka, Redis, RabbitMQ, Azurite, and Azure
 Service Bus emulator infrastructure powered by Testcontainers for .NET.
 
-The package targets .NET 8 and .NET 10 and requires a Docker-compatible container runtime.
+The package targets .NET 8, .NET 9, and .NET 10 and requires a Docker-compatible container runtime.
 
 ## Install
 

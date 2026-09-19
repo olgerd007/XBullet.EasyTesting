@@ -2,7 +2,7 @@
 
 Reusable infrastructure for integration-testing authenticated ASP.NET Core applications through an in-memory `TestServer`.
 
-The package targets .NET 8 and .NET 10.
+The package targets .NET 8, .NET 9, and .NET 10.
 
 ## Install
 
@@ -40,6 +40,19 @@ Map a Federation scheme with `MapFederation`, then use `AsFederatedUser` to crea
 `Federation` identity plus an additional `ApiUserIdentity`-shaped identity. Applications that need
 a concrete custom identity subclass can replace `ITestClaimsPrincipalFactory` with a derived
 `TestClaimsPrincipalFactory`.
+
+To keep the application's real default authentication scheme, configure
+`PreserveDefaultAuthenticationScheme().MapTestAuthentication("IntegrationTest")` and select the
+named scheme with `AsUser(..., authenticationScheme: "IntegrationTest")`. This supports a hybrid
+test project: use simulated principals for authorization and business behavior, and real ASP.NET
+Core Identity endpoints and handlers for registration, login, passwords, and token lifecycle.
+`SeedIdentityUserAsync` persists users through `UserManager<TUser>`,
+`CreateIdentityTestUserAsync` creates linked simulated users, and `WithBearerToken` sends real
+Identity bearer tokens without JWT-specific test configuration.
+
+Use `EasyTestHost.Create<Program>().UseSetting(key, value)` for connection strings and other values
+read immediately after `WebApplication.CreateBuilder`; these early settings are visible before
+minimal-hosting startup code consumes them.
 
 External dependencies that need asynchronous startup can implement
 `ITestScenarioEnvironmentResource`. Register a new resource for each scenario with

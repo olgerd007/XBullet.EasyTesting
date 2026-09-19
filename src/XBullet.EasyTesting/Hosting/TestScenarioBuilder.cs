@@ -48,6 +48,16 @@ public sealed class TestScenarioBuilder<TEntryPoint>
         return this;
     }
 
+    /// <summary>Builds a test identity that targets a named simulated scheme.</summary>
+    public TestScenarioBuilder<TEntryPoint> AsUser(
+        Action<TestUserBuilder> configure,
+        string authenticationScheme)
+    {
+        EnsureNotExecuted();
+        _client.AsUser(configure, authenticationScheme);
+        return this;
+    }
+
     /// <summary>Configures the client with an Azure AD-shaped test identity.</summary>
     public TestScenarioBuilder<TEntryPoint> AsAzureAdUser(Action<TestAzureAdUserBuilder> configure)
     {
@@ -78,6 +88,14 @@ public sealed class TestScenarioBuilder<TEntryPoint>
     {
         EnsureNotExecuted();
         _client.AsJwt(configure);
+        return this;
+    }
+
+    /// <summary>Sends an existing bearer token through the application's configured handler.</summary>
+    public TestScenarioBuilder<TEntryPoint> WithBearerToken(string token)
+    {
+        EnsureNotExecuted();
+        _client.WithBearerToken(token);
         return this;
     }
 
