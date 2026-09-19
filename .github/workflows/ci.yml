@@ -21,7 +21,7 @@ env:
 
 jobs:
   build-test:
-    name: Build and test .NET 8/9/10 (${{ matrix.os }})
+    name: Build and test (${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
