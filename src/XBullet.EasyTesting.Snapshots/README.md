@@ -4,7 +4,7 @@ Lightweight, framework-independent JSON and text snapshot assertions for HTTP re
 arbitrary values. This package does not depend on `XBullet.EasyTesting`, ASP.NET testing, or
 `XBullet.EasyTesting.Http`.
 
-The package targets .NET 8 and .NET 10.
+The package targets .NET 8, .NET 9, and .NET 10.
 
 ## Install
 

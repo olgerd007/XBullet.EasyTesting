@@ -256,8 +256,9 @@ public abstract class EntityFrameworkWebApplicationFactory<TEntryPoint, TDbConte
     private static void RemoveDatabaseServices(IServiceCollection services)
     {
         services.RemoveAll<TDbContext>();
+        services.RemoveAll<IDbContextFactory<TDbContext>>();
         services.RemoveAll<DbContextOptions<TDbContext>>();
-#if NET10_0_OR_GREATER
+#if NET9_0_OR_GREATER
         services.RemoveAll<IDbContextOptionsConfiguration<TDbContext>>();
 #endif
     }
@@ -268,12 +269,20 @@ public abstract class EntityFrameworkWebApplicationFactory<TEntryPoint, TDbConte
         CancellationToken cancellationToken) =>
         WithScenarioDbContextAsync(
             scope,
-            async (database, token) =>
-            {
-                await database.Database.EnsureDeletedAsync(token);
-                await database.Database.EnsureCreatedAsync(token);
-            },
+            InitializeScenarioDatabaseAsync,
             cancellationToken);
+
+    /// <summary>
+    /// Initializes a scenario database. Override this to run application migrations, invoke a
+    /// schema verifier, restore a template, or apply another application-specific lifecycle.
+    /// </summary>
+    protected virtual async Task InitializeScenarioDatabaseAsync(
+        TDbContext database,
+        CancellationToken cancellationToken)
+    {
+        await database.Database.EnsureDeletedAsync(cancellationToken);
+        await database.Database.EnsureCreatedAsync(cancellationToken);
+    }
 
     /// <inheritdoc />
     protected override async ValueTask<object?> CaptureScenarioDiagnosticsAsync(
@@ -297,11 +306,18 @@ public abstract class EntityFrameworkWebApplicationFactory<TEntryPoint, TDbConte
         CancellationToken cancellationToken) =>
         WithScenarioDbContextAsync(
             scope,
-            async (database, token) =>
-            {
-                await database.Database.EnsureDeletedAsync(token);
-            },
+            CleanupScenarioDatabaseAsync,
             cancellationToken);
+
+    /// <summary>
+    /// Cleans up a scenario database. The default implementation retries SQLite file cleanup and
+    /// attaches <see cref="SqliteDatabaseCleanupDiagnostics"/> to terminal cleanup failures.
+    /// Override this when the application owns database disposal or cleanup.
+    /// </summary>
+    protected virtual Task CleanupScenarioDatabaseAsync(
+        TDbContext database,
+        CancellationToken cancellationToken) =>
+        DatabaseCleanup.EnsureDeletedAsync(database, cancellationToken);
 
     /// <inheritdoc />
     protected override void Dispose(bool disposing)

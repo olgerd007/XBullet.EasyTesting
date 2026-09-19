@@ -21,7 +21,7 @@ env:
 
 jobs:
   build-test:
-    name: Build and test (${{ matrix.os }})
+    name: Build and test .NET 8/9/10 (${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
@@ -37,8 +37,10 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
-          dotnet-version: 8.0.x
-          global-json-file: global.json
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
 
       - name: Restore
         run: dotnet restore XBullet.EasyTesting.sln
@@ -96,8 +98,10 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
-          dotnet-version: 8.0.x
-          global-json-file: global.json
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
 
       - name: Restore
         run: dotnet restore XBullet.EasyTesting.sln

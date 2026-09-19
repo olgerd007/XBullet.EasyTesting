@@ -2,7 +2,7 @@
 
 Entity Framework Core database actions and test-factory support for `XBullet.EasyTesting` integration tests.
 
-The package targets .NET 8 and .NET 10.
+The package targets .NET 8, .NET 9, and .NET 10.
 
 ## Install
 
@@ -46,5 +46,18 @@ var product = await factory.QueryDatabaseAsync(
     (database, cancellationToken) => database.Products
         .SingleAsync(item => item.Id == 42, cancellationToken));
 ```
+
+`AddDbContextFactory<TContext>` is supported as a test registration. Database replacement removes
+both the application's context and `IDbContextFactory<TContext>` registrations before adding the
+test provider.
+
+The default per-scenario lifecycle remains `EnsureDeleted` followed by `EnsureCreated`. Override
+`InitializeScenarioDatabaseAsync` and `CleanupScenarioDatabaseAsync` to invoke application
+migrations, schema verification, template restore, or another initializer. For a single database
+arrangement, use `Database().RecreateDatabaseWith(...)`.
+
+SQLite file cleanup clears connection pools, retries transient lock failures, and adds a
+`SqliteDatabaseCleanupDiagnostics` value to the terminal exception's `Data` dictionary under
+`SqliteDatabaseCleanupDiagnostics.ExceptionDataKey`.
 
 See the [repository documentation](https://github.com/olgerd007/XBullet.EasyTesting) for factory setup and isolation examples.

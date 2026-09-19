@@ -17,7 +17,7 @@ public sealed class ObservabilityTests
     [Fact]
     public async Task Captures_structured_logs_scopes_and_fake_time_from_the_scenario_host()
     {
-        using var factory = EasyTestHost.Create<Program>()
+        using var factory = TestApiHostSettings.CreateBuilder()
             .UseObservability(options => options.UseFakeTime(StartTime))
             .Build();
         await using var scope = await factory.CreateTestScenarioScopeAsync(
@@ -63,7 +63,7 @@ public sealed class ObservabilityTests
     [Fact]
     public async Task Captured_logs_are_included_in_failure_diagnostics()
     {
-        using var factory = EasyTestHost.Create<Program>()
+        using var factory = TestApiHostSettings.CreateBuilder()
             .UseObservability()
             .Build();
 
@@ -101,7 +101,7 @@ public sealed class ObservabilityTests
     {
         const string sourceName = "EasyTesting.Tests.Orders";
         const string meterName = "EasyTesting.Tests.OrderMetrics";
-        using var factory = EasyTestHost.Create<Program>()
+        using var factory = TestApiHostSettings.CreateBuilder()
             .UseObservability(options => options
                 .UseFakeTime(StartTime)
                 .CaptureActivitySource(sourceName)

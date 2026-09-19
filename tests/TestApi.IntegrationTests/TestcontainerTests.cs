@@ -56,7 +56,7 @@ public sealed class TestcontainerTests
     public async Task Generic_registration_integrates_with_scenario_host_and_typed_lookup()
     {
         var container = CreateContainer(out var proxy);
-        using var factory = EasyTestHost.Create<Program>()
+        using var factory = TestApiHostSettings.CreateBuilder()
             .UseTestcontainer(
                 "dependency",
                 _ => container,

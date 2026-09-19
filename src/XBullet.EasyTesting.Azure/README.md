@@ -2,7 +2,7 @@
 
 Deterministic Azure SDK responses, credentials, paging, and HTTP pipeline transport for tests.
 
-The package targets .NET 8 and .NET 10 and depends only on `Azure.Core` plus the core
+The package targets .NET 8, .NET 9, and .NET 10 and depends only on `Azure.Core` plus the core
 XBullet package. Service-specific Azure SDK packages remain in the application or test project.
 
 ## Install

@@ -2,7 +2,7 @@
 
 Structured logs, distributed traces, metrics, and deterministic time for XBullet integration-test scenarios.
 
-The package targets .NET 8 and .NET 10.
+The package targets .NET 8, .NET 9, and .NET 10.
 
 ## Install
 

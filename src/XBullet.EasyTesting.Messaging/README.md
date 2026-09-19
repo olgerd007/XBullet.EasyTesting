@@ -2,7 +2,7 @@
 
 Transport-neutral recording of messages published by an application under test.
 
-The package targets .NET 8 and .NET 10.
+The package targets .NET 8, .NET 9, and .NET 10.
 
 ## Install
 

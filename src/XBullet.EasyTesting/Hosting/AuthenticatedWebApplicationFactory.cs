@@ -21,6 +21,7 @@ public class AuthenticatedWebApplicationFactory<TEntryPoint> : WebApplicationFac
     private readonly Action<IConfigurationBuilder>? _configureConfiguration;
     private readonly Action<TestAuthenticationSchemeBuilder>? _configureAuthentication;
     private readonly Action<TestScenarioEnvironmentBuilder>? _configureEnvironment;
+    private readonly Action<IDictionary<string, string>>? _configureHostSettings;
     private readonly object _authenticationConfigurationLock = new();
     private readonly object _scenarioResourcesLock = new();
     private readonly SemaphoreSlim _scenarioGate = new(1, 1);
@@ -36,12 +37,14 @@ public class AuthenticatedWebApplicationFactory<TEntryPoint> : WebApplicationFac
         Action<IServiceCollection>? configureServices,
         Action<IConfigurationBuilder>? configureConfiguration,
         Action<TestAuthenticationSchemeBuilder>? configureAuthentication,
-        Action<TestScenarioEnvironmentBuilder>? configureEnvironment)
+        Action<TestScenarioEnvironmentBuilder>? configureEnvironment,
+        Action<IDictionary<string, string>>? configureHostSettings)
     {
         _configureServices = configureServices;
         _configureConfiguration = configureConfiguration;
         _configureAuthentication = configureAuthentication;
         _configureEnvironment = configureEnvironment;
+        _configureHostSettings = configureHostSettings;
     }
 
     /// <summary>Creates a factory with test service, configuration, and authentication callbacks.</summary>
@@ -49,23 +52,54 @@ public class AuthenticatedWebApplicationFactory<TEntryPoint> : WebApplicationFac
         Action<IServiceCollection>? configureServices = null,
         Action<IConfigurationBuilder>? configureConfiguration = null,
         Action<TestAuthenticationSchemeBuilder>? configureAuthentication = null) =>
-        new(configureServices, configureConfiguration, configureAuthentication, null);
+        new(
+            configureServices,
+            configureConfiguration,
+            configureAuthentication,
+            null,
+            null);
+
+    /// <summary>Creates a factory with settings available to minimal-hosting startup code.</summary>
+    public static AuthenticatedWebApplicationFactory<TEntryPoint> CreateWithHostSettings(
+        Action<IDictionary<string, string>> configureHostSettings,
+        Action<IServiceCollection>? configureServices = null,
+        Action<IConfigurationBuilder>? configureConfiguration = null,
+        Action<TestAuthenticationSchemeBuilder>? configureAuthentication = null)
+    {
+        ArgumentNullException.ThrowIfNull(configureHostSettings);
+        return new(
+            configureServices,
+            configureConfiguration,
+            configureAuthentication,
+            null,
+            configureHostSettings);
+    }
 
     internal static AuthenticatedWebApplicationFactory<TEntryPoint> CreateWithEnvironment(
         Action<IServiceCollection>? configureServices,
         Action<IConfigurationBuilder>? configureConfiguration,
         Action<TestAuthenticationSchemeBuilder>? configureAuthentication,
-        Action<TestScenarioEnvironmentBuilder>? configureEnvironment) =>
+        Action<TestScenarioEnvironmentBuilder>? configureEnvironment,
+        Action<IDictionary<string, string>>? configureHostSettings = null) =>
         new(
             configureServices,
             configureConfiguration,
             configureAuthentication,
-            configureEnvironment);
+            configureEnvironment,
+            configureHostSettings);
 
     /// <inheritdoc />
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         var testAuthentication = GetAuthenticationConfiguration();
+        var hostSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        ConfigureTestHostSettings(hostSettings);
+        _configureHostSettings?.Invoke(hostSettings);
+        foreach (var setting in hostSettings)
+        {
+            builder.UseSetting(setting.Key, setting.Value);
+        }
+
         builder.UseEnvironment("Testing");
 
         builder.ConfigureAppConfiguration((_, configuration) =>
@@ -78,17 +112,18 @@ public class AuthenticatedWebApplicationFactory<TEntryPoint> : WebApplicationFac
         {
             var defaultScheme = testAuthentication.DefaultEndToEndScheme
                 ?? TestAuthenticationDefaults.AuthenticationScheme;
-            services
-                .AddAuthentication(options =>
+            var authentication = testAuthentication.PreserveApplicationDefaultScheme
+                ? services.AddAuthentication()
+                : services.AddAuthentication(options =>
                 {
                     options.DefaultAuthenticateScheme = defaultScheme;
                     options.DefaultChallengeScheme = defaultScheme;
                     options.DefaultForbidScheme = defaultScheme;
                     options.DefaultScheme = defaultScheme;
-                })
-                .AddScheme<TestAuthenticationOptions, TestAuthenticationHandler>(
-                    TestAuthenticationDefaults.AuthenticationScheme,
-                    _ => { });
+                });
+            authentication.AddScheme<TestAuthenticationOptions, TestAuthenticationHandler>(
+                TestAuthenticationDefaults.AuthenticationScheme,
+                _ => { });
             services.TryAddSingleton<ITestClaimsPrincipalFactory, TestClaimsPrincipalFactory>();
 
             foreach (var authenticationScheme in testAuthentication.AdditionalSchemes)
@@ -135,6 +170,15 @@ public class AuthenticatedWebApplicationFactory<TEntryPoint> : WebApplicationFac
 
     /// <summary>Override to add in-memory configuration values to the test application.</summary>
     protected virtual void ConfigureTestConfiguration(IConfigurationBuilder configuration)
+    {
+    }
+
+    /// <summary>
+    /// Adds host settings that are visible while a minimal-hosting application is executing its
+    /// top-level startup code. This is appropriate for connection strings and other values read
+    /// immediately after <c>WebApplication.CreateBuilder</c>.
+    /// </summary>
+    protected virtual void ConfigureTestHostSettings(IDictionary<string, string> settings)
     {
     }
 

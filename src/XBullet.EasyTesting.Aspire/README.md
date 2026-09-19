@@ -2,7 +2,7 @@
 
 Closed-box distributed application testing helpers for .NET Aspire.
 
-The package targets .NET 8 and .NET 10. Use it when a test needs the complete AppHost topology;
+The package targets .NET 8, .NET 9, and .NET 10. Use it when a test needs the complete AppHost topology;
 keep using `WebApplicationFactory` and `XBullet.EasyTesting` for fast, single-service in-memory tests.
 
 ## Install

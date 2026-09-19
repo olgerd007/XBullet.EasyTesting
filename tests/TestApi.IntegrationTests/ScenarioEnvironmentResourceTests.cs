@@ -13,7 +13,7 @@ public sealed class ScenarioEnvironmentResourceTests
     {
         var events = new List<string>();
         RecordingEnvironmentResource? resource = null;
-        using var factory = EasyTestHost.Create<Program>()
+        using var factory = TestApiHostSettings.CreateBuilder()
             .ConfigureEnvironment(environment => environment.AddResource(
                 "dependency",
                 context => resource = new RecordingEnvironmentResource(
@@ -44,7 +44,7 @@ public sealed class ScenarioEnvironmentResourceTests
     [Fact]
     public async Task Environment_resource_diagnostics_are_captured_before_cleanup()
     {
-        using var factory = new AuthenticatedWebApplicationFactory<Program>();
+        using var factory = TestApiHostSettings.CreateIsolatedFactory();
         var resource = new RecordingEnvironmentResource("diagnostic-scenario", []);
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
@@ -65,7 +65,7 @@ public sealed class ScenarioEnvironmentResourceTests
     [Fact]
     public async Task Environment_resource_is_disposed_when_startup_fails()
     {
-        using var factory = new AuthenticatedWebApplicationFactory<Program>();
+        using var factory = TestApiHostSettings.CreateIsolatedFactory();
         var events = new List<string>();
         var first = new RecordingEnvironmentResource("first-scenario", events);
         var failing = new RecordingEnvironmentResource(

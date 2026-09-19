@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
     <AssemblyName>XBullet.EasyTesting.Snapshots</AssemblyName>
     <PackageId>XBullet.EasyTesting.Snapshots</PackageId>
     <Description>Compatibility facade for the split snapshot core and outbound HTTP adapter packages.</Description>

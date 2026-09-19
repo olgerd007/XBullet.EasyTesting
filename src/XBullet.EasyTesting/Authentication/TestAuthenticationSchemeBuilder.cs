@@ -9,6 +9,8 @@ public sealed class TestAuthenticationSchemeBuilder
 
     internal TestAuthenticationEventRecorder EventRecorder { get; } = new();
 
+    internal bool PreserveApplicationDefaultScheme { get; private set; }
+
     internal string AzureAdScheme { get; private set; } = TestAuthenticationDefaults.AuthenticationScheme;
 
     internal string ApiKeyScheme { get; private set; } = TestAuthenticationDefaults.AuthenticationScheme;
@@ -72,6 +74,27 @@ public sealed class TestAuthenticationSchemeBuilder
     public TestAuthenticationSchemeBuilder MapScheme(string authenticationScheme)
     {
         AddScheme(authenticationScheme);
+        return this;
+    }
+
+    /// <summary>
+    /// Adds a dedicated simulated-authentication scheme without changing an application scheme.
+    /// Use this together with <see cref="PreserveDefaultAuthenticationScheme"/> when simulated
+    /// identities and the application's real authentication handlers must coexist.
+    /// </summary>
+    public TestAuthenticationSchemeBuilder MapTestAuthentication(string authenticationScheme)
+    {
+        AddScheme(authenticationScheme);
+        return this;
+    }
+
+    /// <summary>
+    /// Keeps the default authentication, challenge, and forbid schemes selected by the application.
+    /// Simulated identities remain available through mapped test schemes.
+    /// </summary>
+    public TestAuthenticationSchemeBuilder PreserveDefaultAuthenticationScheme()
+    {
+        PreserveApplicationDefaultScheme = true;
         return this;
     }
 
