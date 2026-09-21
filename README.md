@@ -355,11 +355,26 @@ Policies intended for simulated identities should name `IntegrationTest`; the ap
 default policy continues to use its real scheme. This lets one host and test project use both
 approaches:
 
+When real and simulated identities must authorize against the same endpoint using plain
+`RequireAuthorization()`, opt into the hybrid default instead:
+
+```csharp
+protected override void ConfigureTestAuthentication(
+    TestAuthenticationSchemeBuilder authentication) =>
+    authentication.UseHybridDefaultAuthentication("IntegrationTest");
+```
+
+The hybrid policy scheme selects `IntegrationTest` only when the XBullet test-identity header is
+present. All other requests use the application's original default authentication scheme, while
+challenge and forbid operations continue to use the application's original handlers. The existing
+preserved-default behavior remains unchanged for hosts that do not opt in.
+
 - Simulated identities exercise authorization policies and business behavior quickly.
 - Real handlers exercise registration, login, password changes, token validation, refresh, and
   other credential-lifecycle behavior.
 - ASP.NET Core Identity users can be persisted through `SeedIdentityUserAsync`, then converted to a
   linked simulated user through `CreateIdentityTestUserAsync` or `UserManager.CreateTestUserAsync`.
+  Stores without role or claim support produce linked users with empty role or claim collections.
 - A token returned by an Identity API login endpoint can be sent with
   `factory.Client().WithBearerToken(accessToken)`; no JWT authority or JWT-specific test
   configuration is required because the application's own Identity bearer handler validates it.

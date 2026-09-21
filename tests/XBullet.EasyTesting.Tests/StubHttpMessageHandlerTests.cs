@@ -348,6 +348,136 @@ public sealed class StubHttpMessageHandlerTests
     }
 
     [Fact]
+    public async Task Failed_verification_redacts_sensitive_query_values()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var handler = new StubHttpMessageHandler();
+        using var client = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("https://external.example.test/")
+        };
+        using var response = await client.GetAsync(
+            "/actual?ToKeN=recorded-secret&page=2",
+            cancellationToken);
+
+        var exactFailure = Assert.Throws<StubHttpVerificationException>(() =>
+            handler.VerifyCalled(
+                HttpMethod.Get,
+                "/expected?access_token=expected-secret&view=full"));
+        var predicateFailure = Assert.Throws<StubHttpVerificationException>(() =>
+            handler.Verify(_ => false, expectedCount: 1));
+
+        Assert.DoesNotContain("recorded-secret", exactFailure.Message);
+        Assert.DoesNotContain("expected-secret", exactFailure.Message);
+        Assert.DoesNotContain("recorded-secret", predicateFailure.Message);
+        Assert.Contains("/expected?access_token={Redacted}&view=full", exactFailure.Message);
+        Assert.Contains("/actual?ToKeN={Redacted}&page=2", exactFailure.Message);
+        Assert.Contains("page=2", predicateFailure.Message);
+    }
+
+    [Theory]
+    [InlineData("https://external.example.test/orders?API_KEY=absolute-secret&view=full", true)]
+    [InlineData("/orders?signature=relative-secret&view=full", false)]
+    public async Task Unmatched_diagnostics_redact_absolute_and_relative_request_uris(
+        string requestUri,
+        bool isAbsolute)
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var handler = new StubHttpMessageHandler();
+        using var invoker = new HttpMessageInvoker(handler);
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            new Uri(requestUri, isAbsolute ? UriKind.Absolute : UriKind.Relative));
+
+        using var response = await invoker.SendAsync(request, cancellationToken);
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        Assert.Equal(HttpStatusCode.NotImplemented, response.StatusCode);
+        Assert.DoesNotContain(isAbsolute ? "absolute-secret" : "relative-secret", body);
+        Assert.Contains("/orders?", body);
+        Assert.Contains("={Redacted}&view=full", body);
+    }
+
+    [Fact]
+    public async Task Unmatched_rule_diagnostics_redact_configured_and_received_query_values()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var handler = new StubHttpMessageHandler();
+        handler
+            .When(HttpMethod.Get, "/expected?code=configured-secret&mode=test")
+            .Respond(HttpStatusCode.OK);
+        using var client = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("https://external.example.test/")
+        };
+
+        using var response = await client.GetAsync(
+            "/actual?sas=received-secret&mode=debug",
+            cancellationToken);
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        Assert.DoesNotContain("configured-secret", body);
+        Assert.DoesNotContain("received-secret", body);
+        Assert.Contains("/expected?code={Redacted}&mode=test", body);
+        Assert.Contains("/actual?sas={Redacted}&mode=debug", body);
+    }
+
+    [Fact]
+    public async Task Captured_diagnostics_redact_request_uri_without_changing_recorded_request()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var handler = new StubHttpMessageHandler();
+        using var client = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("https://external.example.test/")
+        };
+        using var response = await client.GetAsync(
+            "/orders?secret=diagnostic-secret&status=open",
+            cancellationToken);
+
+        var diagnostics = await handler.CaptureDiagnosticsAsync(cancellationToken);
+        var json = System.Text.Json.JsonSerializer.Serialize(
+            diagnostics,
+            new System.Text.Json.JsonSerializerOptions
+            {
+                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            });
+
+        Assert.DoesNotContain("diagnostic-secret", json);
+        Assert.Contains("/orders?secret={Redacted}&status=open", json);
+        Assert.Equal(
+            "/orders?secret=diagnostic-secret&status=open",
+            Assert.Single(handler.Requests).RequestUri!.PathAndQuery);
+    }
+
+    [Fact]
+    public void Malformed_configured_uri_has_a_safe_verification_fallback()
+    {
+        using var handler = new StubHttpMessageHandler();
+
+        var exception = Assert.Throws<StubHttpVerificationException>(() =>
+            handler.VerifyCalled(HttpMethod.Get, "http://[?token=malformed-secret"));
+
+        Assert.Contains("<malformed URI>", exception.Message);
+        Assert.DoesNotContain("malformed-secret", exception.Message);
+    }
+
+    [Fact]
+    public async Task Missing_request_uri_has_a_safe_unmatched_diagnostic()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var handler = new StubHttpMessageHandler();
+        using var invoker = new HttpMessageInvoker(handler);
+        using var request = new HttpRequestMessage(HttpMethod.Get, (Uri?)null);
+
+        using var response = await invoker.SendAsync(request, cancellationToken);
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        Assert.Equal(HttpStatusCode.NotImplemented, response.StatusCode);
+        Assert.Contains("GET <no URI>", body);
+    }
+
+    [Fact]
     public async Task Exact_body_async_response_and_negative_verification_are_supported()
     {
         var cancellationToken = TestContext.Current.CancellationToken;

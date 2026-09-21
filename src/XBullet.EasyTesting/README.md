@@ -46,9 +46,14 @@ To keep the application's real default authentication scheme, configure
 named scheme with `AsUser(..., authenticationScheme: "IntegrationTest")`. This supports a hybrid
 test project: use simulated principals for authorization and business behavior, and real ASP.NET
 Core Identity endpoints and handlers for registration, login, passwords, and token lifecycle.
+To let both identity types use the same plain `RequireAuthorization()` endpoint, configure
+`UseHybridDefaultAuthentication("IntegrationTest")`; requests carrying XBullet's test-identity
+header use the simulated scheme, other requests use the application's original default scheme,
+and the original challenge and forbid handlers remain active. This behavior is opt-in.
 `SeedIdentityUserAsync` persists users through `UserManager<TUser>`,
 `CreateIdentityTestUserAsync` creates linked simulated users, and `WithBearerToken` sends real
-Identity bearer tokens without JWT-specific test configuration.
+Identity bearer tokens without JWT-specific test configuration. Identity stores without role or
+claim support produce linked simulated users with empty role or claim collections.
 
 Use `EasyTestHost.Create<Program>().UseSetting(key, value)` for connection strings and other values
 read immediately after `WebApplication.CreateBuilder`; these early settings are visible before

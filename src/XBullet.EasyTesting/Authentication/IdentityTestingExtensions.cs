@@ -68,8 +68,12 @@ public static class IdentityTestingExtensions
 
         var userId = await userManager.GetUserIdAsync(user);
         var userName = await userManager.GetUserNameAsync(user);
-        var roles = await userManager.GetRolesAsync(user);
-        var claims = await userManager.GetClaimsAsync(user);
+        var roles = userManager.SupportsUserRole
+            ? await userManager.GetRolesAsync(user)
+            : [];
+        var claims = userManager.SupportsUserClaim
+            ? await userManager.GetClaimsAsync(user)
+            : [];
 
         return TestUser.Create(
             name: userName ?? userId,

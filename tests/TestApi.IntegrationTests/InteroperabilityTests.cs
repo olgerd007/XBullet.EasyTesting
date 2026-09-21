@@ -48,6 +48,39 @@ public sealed class InteroperabilityTests
     }
 
     [Fact]
+    public async Task Hybrid_default_scheme_supports_real_and_simulated_authentication_on_same_endpoint()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var factory = new HybridDefaultAuthenticationFactory();
+
+        using var real = await factory.Scenario()
+            .WithBearerToken("credential")
+            .Get("/hybrid/default")
+            .ExecuteAsync(cancellationToken);
+
+        using var simulated = await factory.Scenario()
+            .AsUser(user => user.WithName("Persisted user"), authenticationScheme: "IntegrationTest")
+            .Get("/hybrid/default")
+            .ExecuteAsync(cancellationToken);
+
+        using var challenged = await factory.Scenario()
+            .Get("/hybrid/default")
+            .ExecuteAsync(cancellationToken);
+
+        using var forbidden = await factory.Scenario()
+            .AsUser(user => user.WithName("Persisted user"), authenticationScheme: "IntegrationTest")
+            .Get("/hybrid/administrator")
+            .ExecuteAsync(cancellationToken);
+
+        Assert.Equal(HttpStatusCode.NoContent, real.Response.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, simulated.Response.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, challenged.Response.StatusCode);
+        Assert.Equal("Real", challenged.Response.Headers.GetValues("X-Challenge-Scheme").Single());
+        Assert.Equal(HttpStatusCode.Forbidden, forbidden.Response.StatusCode);
+        Assert.Equal("Real", forbidden.Response.Headers.GetValues("X-Forbid-Scheme").Single());
+    }
+
+    [Fact]
     public void Host_settings_override_values_read_during_minimal_startup()
     {
         const string connectionString = "Data Source=early-settings;Mode=Memory;Cache=Shared";
@@ -84,6 +117,26 @@ public sealed class InteroperabilityTests
         Assert.Equal("ada", testUser.Name);
         Assert.Equal(["Administrator"], testUser.Roles);
         Assert.Contains(testUser.Claims, claim => claim.Type == "department" && claim.Value == "research");
+    }
+
+    [Fact]
+    public async Task Identity_helper_supports_identity_api_endpoints_without_roles_or_claims()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services
+            .AddIdentityApiEndpoints<IdentityUser>()
+            .AddUserStore<NoOpUserStore>();
+        await using var provider = services.BuildServiceProvider();
+        var manager = provider.GetRequiredService<UserManager<IdentityUser>>();
+        var identityUser = new IdentityUser("ada") { Id = "identity-42" };
+
+        var testUser = await manager.CreateTestUserAsync(identityUser);
+
+        Assert.False(manager.SupportsUserRole);
+        Assert.False(manager.SupportsUserClaim);
+        Assert.Empty(testUser.Roles);
+        Assert.Empty(testUser.Claims);
     }
 
     [Fact]
@@ -162,6 +215,14 @@ public sealed class InteroperabilityTests
                 .MapTestAuthentication("IntegrationTest");
     }
 
+    private sealed class HybridDefaultAuthenticationFactory
+        : StartupAuthenticatedWebApplicationFactory<HybridAuthenticationStartup>
+    {
+        protected override void ConfigureTestAuthentication(
+            TestAuthenticationSchemeBuilder authentication) =>
+            authentication.UseHybridDefaultAuthentication("IntegrationTest");
+    }
+
     private sealed class ContextFactoryTestHost
         : StartupEntityFrameworkWebApplicationFactory<ContextFactoryStartup, FactoryDbContext>
     {
@@ -192,7 +253,7 @@ public sealed class InteroperabilityTests
     {
         public RecordingUserManager()
             : base(
-                new NoOpUserStore(),
+                new RoleAndClaimUserStore(),
                 Microsoft.Extensions.Options.Options.Create(new IdentityOptions()),
                 new PasswordHasher<IdentityUser>(),
                 [],
@@ -237,7 +298,7 @@ public sealed class InteroperabilityTests
             Task.FromResult<IList<Claim>>([new Claim("department", "research")]);
     }
 
-    private sealed class NoOpUserStore : IUserStore<IdentityUser>
+    private class NoOpUserStore : IUserStore<IdentityUser>
     {
         public void Dispose()
         {
@@ -292,6 +353,59 @@ public sealed class InteroperabilityTests
             CancellationToken cancellationToken) => Task.FromResult<IdentityUser?>(null);
     }
 
+    private sealed class RoleAndClaimUserStore :
+        NoOpUserStore,
+        IUserRoleStore<IdentityUser>,
+        IUserClaimStore<IdentityUser>
+    {
+        public Task AddToRoleAsync(
+            IdentityUser user,
+            string roleName,
+            CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task RemoveFromRoleAsync(
+            IdentityUser user,
+            string roleName,
+            CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task<IList<string>> GetRolesAsync(
+            IdentityUser user,
+            CancellationToken cancellationToken) => Task.FromResult<IList<string>>([]);
+
+        public Task<bool> IsInRoleAsync(
+            IdentityUser user,
+            string roleName,
+            CancellationToken cancellationToken) => Task.FromResult(false);
+
+        public Task<IList<IdentityUser>> GetUsersInRoleAsync(
+            string roleName,
+            CancellationToken cancellationToken) => Task.FromResult<IList<IdentityUser>>([]);
+
+        public Task<IList<Claim>> GetClaimsAsync(
+            IdentityUser user,
+            CancellationToken cancellationToken) => Task.FromResult<IList<Claim>>([]);
+
+        public Task AddClaimsAsync(
+            IdentityUser user,
+            IEnumerable<Claim> claims,
+            CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task ReplaceClaimAsync(
+            IdentityUser user,
+            Claim claim,
+            Claim newClaim,
+            CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task RemoveClaimsAsync(
+            IdentityUser user,
+            IEnumerable<Claim> claims,
+            CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task<IList<IdentityUser>> GetUsersForClaimAsync(
+            Claim claim,
+            CancellationToken cancellationToken) => Task.FromResult<IList<IdentityUser>>([]);
+    }
+
     private sealed class EmptyServiceProvider : IServiceProvider
     {
         public static EmptyServiceProvider Instance { get; } = new();
@@ -313,6 +427,9 @@ public sealed class HybridAuthenticationStartup
             policy => policy
                 .AddAuthenticationSchemes("IntegrationTest")
                 .RequireAuthenticatedUser()));
+        services.AddAuthorizationBuilder().AddPolicy(
+            "Administrator",
+            policy => policy.RequireRole("Administrator"));
     }
 
     public void Configure(IApplicationBuilder application)
@@ -332,6 +449,11 @@ public sealed class HybridAuthenticationStartup
                 context.Response.StatusCode = StatusCodes.Status204NoContent;
                 return Task.CompletedTask;
             }).RequireAuthorization("Simulated");
+            endpoints.MapGet("/hybrid/administrator", context =>
+            {
+                context.Response.StatusCode = StatusCodes.Status204NoContent;
+                return Task.CompletedTask;
+            }).RequireAuthorization("Administrator");
         });
     }
 }
@@ -356,6 +478,18 @@ public sealed class RealAuthenticationHandler : AuthenticationHandler<Authentica
         var identity = new ClaimsIdentity([new Claim(ClaimTypes.Name, "real-user")], Scheme.Name);
         return Task.FromResult(AuthenticateResult.Success(
             new AuthenticationTicket(new ClaimsPrincipal(identity), Scheme.Name)));
+    }
+
+    protected override Task HandleChallengeAsync(AuthenticationProperties properties)
+    {
+        Response.Headers["X-Challenge-Scheme"] = Scheme.Name;
+        return base.HandleChallengeAsync(properties);
+    }
+
+    protected override Task HandleForbiddenAsync(AuthenticationProperties properties)
+    {
+        Response.Headers["X-Forbid-Scheme"] = Scheme.Name;
+        return base.HandleForbiddenAsync(properties);
     }
 }
 

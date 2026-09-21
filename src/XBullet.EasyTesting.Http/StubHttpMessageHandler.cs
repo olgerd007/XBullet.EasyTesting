@@ -1,4 +1,5 @@
 using System.Net;
+using XBullet.EasyTesting.Diagnostics;
 using XBullet.EasyTesting.Hosting;
 
 namespace XBullet.EasyTesting.Http;
@@ -64,7 +65,8 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
         if (actualCount != expectedCount)
         {
             throw new StubHttpVerificationException(
-                $"Expected {method} {requestUri} to be called {expectedCount} time(s), " +
+                $"Expected {method} {UriDiagnosticFormatter.Format(requestUri)} to be called " +
+                $"{expectedCount} time(s), " +
                 $"but it was called {actualCount} time(s).{Environment.NewLine}" +
                 FormatRecordedRequests(requests));
         }
@@ -130,10 +132,22 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
     public ValueTask<object?> CaptureDiagnosticsAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        StubHttpRequest[] requests;
+        lock (_gate)
+        {
+            requests = _requests.ToArray();
+        }
+
         return ValueTask.FromResult<object?>(new
         {
-            CallCount,
-            Requests
+            CallCount = requests.Length,
+            Requests = requests.Select(request => new
+            {
+                request.Method,
+                RequestUri = UriDiagnosticFormatter.Format(request.RequestUri),
+                request.Headers,
+                request.Body
+            }).ToArray()
         });
     }
 
@@ -221,7 +235,8 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
             {
                 return new StubRuleMatchResult(
                     this,
-                    [$"URI differed: expected {RequestUri}, received {GetDisplayUri(request.RequestUri)}"]);
+                    [$"URI differed: expected {UriDiagnosticFormatter.Format(RequestUri)}, " +
+                     $"received {UriDiagnosticFormatter.Format(request.RequestUri)}"]);
             }
 
             var failures = new List<string>();
@@ -303,21 +318,15 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
             : "Recorded requests:" + Environment.NewLine + string.Join(
                 Environment.NewLine,
                 requests.Select(request =>
-                    $"- {request.Method} {GetDisplayUri(request.RequestUri)}"));
-
-    private static string GetDisplayUri(Uri? uri) =>
-        uri is null
-            ? "<no URI>"
-            : uri.IsAbsoluteUri
-                ? uri.PathAndQuery
-                : uri.OriginalString;
+                    $"- {request.Method} {UriDiagnosticFormatter.Format(request.RequestUri)}"));
 
     private static string FormatMatchFailure(
         StubHttpRequest request,
         IReadOnlyList<StubRuleMatchResult> matchResults)
     {
         var message =
-            $"No outbound HTTP stub matches {request.Method} {GetDisplayUri(request.RequestUri)}.";
+            $"No outbound HTTP stub matches {request.Method} " +
+            $"{UriDiagnosticFormatter.Format(request.RequestUri)}.";
         if (matchResults.Count == 0)
         {
             return $"{message}{Environment.NewLine}No rules were configured.";
@@ -327,7 +336,8 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
             string.Join(
                 Environment.NewLine,
                 matchResults.Select((result, index) =>
-                    $"- Rule {index + 1} ({result.Rule.Method} {result.Rule.RequestUri}): " +
+                    $"- Rule {index + 1} ({result.Rule.Method} " +
+                    $"{UriDiagnosticFormatter.Format(result.Rule.RequestUri)}): " +
                     string.Join("; ", result.Failures)));
     }
 

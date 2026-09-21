@@ -65,17 +65,20 @@ public sealed class AzureFunctionTestHost : IDisposable, IAsyncDisposable
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(invoke);
         context.FunctionDefinition.ConfigureForFunction(typeof(TFunction));
-        var function = _services.GetRequiredService<TFunction>();
-        var functionExecuted = false;
-
-        FunctionExecutionDelegate terminal = async workerContext =>
+        return await InvokeInScopeAsync(context, async services =>
         {
-            functionExecuted = true;
-            await invoke(function, RequireTestContext(workerContext)).ConfigureAwait(false);
-        };
+            var function = services.GetRequiredService<TFunction>();
+            var functionExecuted = false;
 
-        await BuildPipeline(terminal)(context).ConfigureAwait(false);
-        return new TestFunctionInvocationResult(context, functionExecuted);
+            FunctionExecutionDelegate terminal = async workerContext =>
+            {
+                functionExecuted = true;
+                await invoke(function, RequireTestContext(workerContext)).ConfigureAwait(false);
+            };
+
+            await BuildPipeline(services, terminal)(context).ConfigureAwait(false);
+            return new TestFunctionInvocationResult(context, functionExecuted);
+        }).ConfigureAwait(false);
     }
 
     /// <summary>Executes a value-returning function delegate and captures all returned output properties.</summary>
@@ -87,25 +90,28 @@ public sealed class AzureFunctionTestHost : IDisposable, IAsyncDisposable
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(invoke);
         context.FunctionDefinition.ConfigureForFunction(typeof(TFunction));
-        var function = _services.GetRequiredService<TFunction>();
-        var functionExecuted = false;
-        TResult? result = default;
-
-        FunctionExecutionDelegate terminal = async workerContext =>
+        return await InvokeInScopeAsync(context, async services =>
         {
-            functionExecuted = true;
-            result = await invoke(function, RequireTestContext(workerContext)).ConfigureAwait(false);
-            context.Bindings.CaptureInvocationResult(result);
-            foreach (var output in context.Bindings.Outputs.Keys)
-            {
-                context.FunctionDefinition.AddOutput(
-                    output,
-                    context.Bindings.OutputTypes[output]);
-            }
-        };
+            var function = services.GetRequiredService<TFunction>();
+            var functionExecuted = false;
+            TResult? result = default;
 
-        await BuildPipeline(terminal)(context).ConfigureAwait(false);
-        return new TestFunctionInvocationResult<TResult>(context, functionExecuted, result);
+            FunctionExecutionDelegate terminal = async workerContext =>
+            {
+                functionExecuted = true;
+                result = await invoke(function, RequireTestContext(workerContext)).ConfigureAwait(false);
+                context.Bindings.CaptureInvocationResult(result);
+                foreach (var output in context.Bindings.Outputs.Keys)
+                {
+                    context.FunctionDefinition.AddOutput(
+                        output,
+                        context.Bindings.OutputTypes[output]);
+                }
+            };
+
+            await BuildPipeline(services, terminal)(context).ConfigureAwait(false);
+            return new TestFunctionInvocationResult<TResult>(context, functionExecuted, result);
+        }).ConfigureAwait(false);
     }
 
     /// <summary>Creates a context, captures trigger input, and invokes a function through middleware.</summary>
@@ -138,12 +144,30 @@ public sealed class AzureFunctionTestHost : IDisposable, IAsyncDisposable
             invoke(function, trigger.Value, testContext));
     }
 
-    private FunctionExecutionDelegate BuildPipeline(FunctionExecutionDelegate terminal)
+    private async Task<TResult> InvokeInScopeAsync<TResult>(
+        TestFunctionContext context,
+        Func<IServiceProvider, Task<TResult>> invoke)
+    {
+        await using var scope = _services.CreateAsyncScope();
+        context.InstanceServices = scope.ServiceProvider;
+        try
+        {
+            return await invoke(scope.ServiceProvider).ConfigureAwait(false);
+        }
+        finally
+        {
+            context.InstanceServices = _services;
+        }
+    }
+
+    private FunctionExecutionDelegate BuildPipeline(
+        IServiceProvider services,
+        FunctionExecutionDelegate terminal)
     {
         var next = terminal;
         for (var index = _middleware.Count - 1; index >= 0; index--)
         {
-            var middleware = _middleware[index](_services);
+            var middleware = _middleware[index](services);
             var capturedNext = next;
             next = context => middleware.Invoke(context, capturedNext);
         }

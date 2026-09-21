@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using XBullet.EasyTesting.Diagnostics;
 
 namespace XBullet.EasyTesting.Http;
 
@@ -48,8 +49,11 @@ public sealed class StubHttpResponseBuilder
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentNullException.ThrowIfNull(value);
         _hasQueryParameterMatcher = true;
+        var displayedValue = UriDiagnosticFormatter.IsSensitiveQueryParameter(name)
+            ? "{Redacted}"
+            : value;
         _predicates.Add(new StubRequestPredicate(
-            $"query parameter '{name}' containing value '{value}'",
+            $"query parameter '{name}' containing value '{displayedValue}'",
             request => GetQueryParameterValues(request.RequestUri, name)
                 .Contains(value, StringComparer.Ordinal)));
         return this;
@@ -313,7 +317,8 @@ public sealed class StubHttpResponseBuilder
             if (responseIndex >= responses.Count)
             {
                 throw new StubHttpSequenceExhaustedException(
-                    $"The response sequence for {_method} {_requestUri} contains " +
+                    $"The response sequence for {_method} " +
+                    $"{UriDiagnosticFormatter.Format(_requestUri)} contains " +
                     $"{responses.Count} response(s), but call {responseIndex + 1} was received.");
             }
 

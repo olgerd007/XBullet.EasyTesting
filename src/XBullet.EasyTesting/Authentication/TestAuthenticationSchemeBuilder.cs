@@ -11,6 +11,8 @@ public sealed class TestAuthenticationSchemeBuilder
 
     internal bool PreserveApplicationDefaultScheme { get; private set; }
 
+    internal string? HybridDefaultTestScheme { get; private set; }
+
     internal string AzureAdScheme { get; private set; } = TestAuthenticationDefaults.AuthenticationScheme;
 
     internal string ApiKeyScheme { get; private set; } = TestAuthenticationDefaults.AuthenticationScheme;
@@ -95,6 +97,19 @@ public sealed class TestAuthenticationSchemeBuilder
     public TestAuthenticationSchemeBuilder PreserveDefaultAuthenticationScheme()
     {
         PreserveApplicationDefaultScheme = true;
+        return this;
+    }
+
+    /// <summary>
+    /// Uses a policy scheme that authenticates test-identity headers with the supplied simulated
+    /// scheme and otherwise forwards to the application's original default authentication scheme.
+    /// The application's original challenge and forbid schemes remain unchanged.
+    /// </summary>
+    public TestAuthenticationSchemeBuilder UseHybridDefaultAuthentication(
+        string testAuthenticationScheme)
+    {
+        PreserveApplicationDefaultScheme = true;
+        HybridDefaultTestScheme = AddScheme(testAuthenticationScheme);
         return this;
     }
 

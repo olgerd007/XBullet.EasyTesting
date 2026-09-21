@@ -8,6 +8,9 @@ namespace XBullet.EasyTesting.Tests;
 
 public sealed class AzureTestingTests
 {
+    private const string SasSignature = "sensitive-sas-signature";
+    private const string SasQuery = "sv=2024-11-04&sp=r&sig=" + SasSignature;
+
     [Fact]
     public void Response_exposes_content_headers_and_model_value()
     {
@@ -118,5 +121,82 @@ public sealed class AzureTestingTests
         Assert.DoesNotContain("secret", json, StringComparison.Ordinal);
         Assert.DoesNotContain("sig=", json, StringComparison.Ordinal);
         Assert.Contains("x-ms-version", json, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Failed_verification_redacts_actual_and_expected_SAS_query_values()
+    {
+        var transport = new StubAzureHttpPipelineTransport().Respond();
+        var client = CreateSasBlobClient(transport);
+
+        await client.ExistsAsync(TestContext.Current.CancellationToken);
+
+        var exactFailure = Assert.Throws<AzureTransportVerificationException>(() =>
+            transport.VerifyCalled(
+                RequestMethod.Head,
+                "https://other.test/expected?sig=expected-signature&comp=properties"));
+        var predicateFailure = Assert.Throws<AzureTransportVerificationException>(() =>
+            transport.Verify(_ => false, expectedCount: 1, "the expected blob request"));
+
+        Assert.DoesNotContain(SasSignature, exactFailure.Message);
+        Assert.DoesNotContain("expected-signature", exactFailure.Message);
+        Assert.DoesNotContain("https://storage.test", exactFailure.Message);
+        Assert.DoesNotContain("https://other.test", exactFailure.Message);
+        Assert.Contains(
+            "/expected?sig={Redacted}&comp=properties",
+            exactFailure.Message);
+        Assert.Contains("/container/blob?comp=metadata", exactFailure.Message);
+        Assert.Contains("sv={Redacted}", exactFailure.Message);
+        Assert.Contains("sp={Redacted}", exactFailure.Message);
+        Assert.Contains("comp=metadata", predicateFailure.Message);
+        Assert.DoesNotContain(SasSignature, predicateFailure.Message);
+    }
+
+    [Fact]
+    public async Task Unarranged_response_body_redacts_SAS_query_values()
+    {
+        var transport = new StubAzureHttpPipelineTransport();
+        var client = CreateSasBlobClient(transport);
+
+        var exception = await Assert.ThrowsAsync<RequestFailedException>(
+            async () => await client.ExistsAsync(TestContext.Current.CancellationToken));
+        var body = exception.Message;
+
+        Assert.Equal(501, exception.Status);
+        Assert.DoesNotContain(SasSignature, body);
+        Assert.DoesNotContain("https://storage.test", body);
+        Assert.Contains("/container/blob?comp=metadata", body);
+        Assert.Contains("sv={Redacted}", body);
+        Assert.Contains("sp={Redacted}", body);
+        Assert.Contains("sig={Redacted}", body);
+    }
+
+    [Fact]
+    public async Task SAS_query_parameters_still_participate_in_request_matching()
+    {
+        var transport = new StubAzureHttpPipelineTransport().Respond();
+        var client = CreateSasBlobClient(transport);
+
+        await client.ExistsAsync(TestContext.Current.CancellationToken);
+
+        transport.VerifyCalled(
+            RequestMethod.Head,
+            $"/container/blob?comp=metadata&{SasQuery}");
+        var recorded = Assert.Single(transport.Requests);
+        Assert.Contains(SasSignature, recorded.Uri.Query);
+        Assert.Contains("comp=metadata", recorded.Uri.Query);
+    }
+
+    private static BlobClient CreateSasBlobClient(StubAzureHttpPipelineTransport transport)
+    {
+        var options = new BlobClientOptions
+        {
+            Transport = transport,
+            Retry = { MaxRetries = 0 }
+        };
+        return new BlobClient(
+            new Uri("https://storage.test/container/blob?comp=metadata"),
+            new AzureSasCredential(SasQuery),
+            options);
     }
 }

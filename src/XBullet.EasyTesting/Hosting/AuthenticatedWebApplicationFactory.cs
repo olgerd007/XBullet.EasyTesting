@@ -112,15 +112,55 @@ public class AuthenticatedWebApplicationFactory<TEntryPoint> : WebApplicationFac
         {
             var defaultScheme = testAuthentication.DefaultEndToEndScheme
                 ?? TestAuthenticationDefaults.AuthenticationScheme;
-            var authentication = testAuthentication.PreserveApplicationDefaultScheme
-                ? services.AddAuthentication()
-                : services.AddAuthentication(options =>
+            string? originalAuthenticateScheme = null;
+            string? originalChallengeScheme = null;
+            string? originalForbidScheme = null;
+            AuthenticationBuilder authentication;
+            if (testAuthentication.HybridDefaultTestScheme is not null)
+            {
+                authentication = services.AddAuthentication(options =>
+                {
+                    originalAuthenticateScheme = options.DefaultAuthenticateScheme
+                        ?? options.DefaultScheme;
+                    originalChallengeScheme = options.DefaultChallengeScheme
+                        ?? options.DefaultScheme;
+                    originalForbidScheme = options.DefaultForbidScheme
+                        ?? options.DefaultScheme;
+                    options.DefaultAuthenticateScheme =
+                        TestAuthenticationDefaults.HybridAuthenticationScheme;
+                    options.DefaultScheme = TestAuthenticationDefaults.HybridAuthenticationScheme;
+                });
+                authentication.AddPolicyScheme(
+                    TestAuthenticationDefaults.HybridAuthenticationScheme,
+                    "XBullet hybrid test authentication",
+                    options =>
+                    {
+                        options.ForwardDefaultSelector = context =>
+                            context.Request.Headers.ContainsKey(
+                                TestAuthenticationDefaults.UserHeaderName)
+                                ? testAuthentication.HybridDefaultTestScheme
+                                : originalAuthenticateScheme
+                                    ?? throw new InvalidOperationException(
+                                        "Hybrid test authentication requires the application " +
+                                        "to configure a default authentication scheme.");
+                        options.ForwardChallenge = originalChallengeScheme;
+                        options.ForwardForbid = originalForbidScheme;
+                    });
+            }
+            else if (testAuthentication.PreserveApplicationDefaultScheme)
+            {
+                authentication = services.AddAuthentication();
+            }
+            else
+            {
+                authentication = services.AddAuthentication(options =>
                 {
                     options.DefaultAuthenticateScheme = defaultScheme;
                     options.DefaultChallengeScheme = defaultScheme;
                     options.DefaultForbidScheme = defaultScheme;
                     options.DefaultScheme = defaultScheme;
                 });
+            }
             authentication.AddScheme<TestAuthenticationOptions, TestAuthenticationHandler>(
                 TestAuthenticationDefaults.AuthenticationScheme,
                 _ => { });
