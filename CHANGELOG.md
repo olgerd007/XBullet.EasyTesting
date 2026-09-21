@@ -4,6 +4,27 @@ Notable changes to XBullet.EasyTesting are documented in this file.
 
 The project follows Semantic Versioning. Package versions are produced from GitHub Release tags.
 
+## [1.0.8] - 2026-09-21
+
+### Added
+
+- Opt-in hybrid default authentication for real application credentials and simulated XBullet
+  identities on the same default-authorized endpoint.
+- In-memory Durable orchestration activity dispatch with recorded activity calls for testing
+  orchestrators against real activity implementations.
+
+### Fixed
+
+- Identity principal creation now supports user stores that do not implement role or claim APIs,
+  including `AddIdentityApiEndpoints<TUser>()` applications without role services.
+- Azure Functions test invocations now resolve functions and middleware from a fresh asynchronous
+  dependency-injection scope and dispose that scope after each invocation.
+
+### Security
+
+- HTTP and Azure transport stub diagnostics now redact sensitive query-string values, including
+  access tokens, API keys, secrets, authorization codes, and Azure SAS fields.
+
 ## [1.0.7] - 2026-09-19
 
 ### Added

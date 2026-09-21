@@ -3,6 +3,8 @@ namespace XBullet.EasyTesting.Authentication;
 /// <summary>Constants used by the test authentication handler.</summary>
 public static class TestAuthenticationDefaults
 {
+    internal const string HybridAuthenticationScheme = "XBullet.EasyTesting.Hybrid";
+
     /// <summary>The authentication scheme installed in the test server.</summary>
     public const string AuthenticationScheme = "IntegrationTest";
 

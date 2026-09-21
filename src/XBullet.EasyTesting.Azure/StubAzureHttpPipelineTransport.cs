@@ -2,6 +2,7 @@ using System.Text.Json;
 using Azure;
 using Azure.Core;
 using Azure.Core.Pipeline;
+using XBullet.EasyTesting.Diagnostics;
 using XBullet.EasyTesting.Hosting;
 
 namespace XBullet.EasyTesting.Azure;
@@ -98,7 +99,7 @@ public sealed class StubAzureHttpPipelineTransport : HttpPipelineTransport, ITes
         return Verify(
             request => request.Method == method && MatchesUri(request.Uri, requestUri),
             expectedCount,
-            $"{method} {requestUri}");
+            $"{method} {UriDiagnosticFormatter.Format(requestUri)}");
     }
 
     /// <summary>Verifies the number of requests accepted by a custom predicate.</summary>
@@ -195,7 +196,8 @@ public sealed class StubAzureHttpPipelineTransport : HttpPipelineTransport, ITes
         return responseFactory?.Invoke(request)
             ?? new TestAzureResponse(501, "No Azure test response was arranged.")
                 .WithContent(BinaryData.FromString(
-                    $"No response was arranged for {request.Method} {request.Uri}."), "text/plain");
+                    $"No response was arranged for {request.Method} " +
+                    $"{UriDiagnosticFormatter.Format(request.Uri)}."), "text/plain");
     }
 
     private static RecordedAzureRequest CaptureRequest(
@@ -262,5 +264,6 @@ public sealed class StubAzureHttpPipelineTransport : HttpPipelineTransport, ITes
             ? "Recorded requests: none."
             : "Recorded requests:" + Environment.NewLine + string.Join(
                 Environment.NewLine,
-                requests.Select(request => $"- {request.Method} {request.Uri}"));
+                requests.Select(request =>
+                    $"- {request.Method} {UriDiagnosticFormatter.Format(request.Uri)}"));
 }

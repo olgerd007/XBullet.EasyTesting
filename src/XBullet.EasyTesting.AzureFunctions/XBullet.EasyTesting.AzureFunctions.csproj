@@ -3,13 +3,14 @@
     <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageId>XBullet.EasyTesting.AzureFunctions</PackageId>
-    <Description>Fluent test contexts and trigger data for .NET isolated Azure Functions.</Description>
+    <Description>Fluent test contexts, Durable orchestration activity dispatch, and trigger data for .NET isolated Azure Functions.</Description>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Core" Version="2.52.0" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http" Version="3.3.0" />
+    <PackageReference Include="Microsoft.DurableTask.Abstractions" Version="1.24.1" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Timer" Version="4.3.1" />
   </ItemGroup>
 

@@ -7,6 +7,7 @@ virtual XBullet.EasyTesting.Hosting.AuthenticatedWebApplicationFactory<TEntryPoi
 XBullet.EasyTesting.Authentication.IdentityTestingExtensions
 XBullet.EasyTesting.Authentication.TestAuthenticationSchemeBuilder.MapTestAuthentication(string! authenticationScheme) -> XBullet.EasyTesting.Authentication.TestAuthenticationSchemeBuilder!
 XBullet.EasyTesting.Authentication.TestAuthenticationSchemeBuilder.PreserveDefaultAuthenticationScheme() -> XBullet.EasyTesting.Authentication.TestAuthenticationSchemeBuilder!
+XBullet.EasyTesting.Authentication.TestAuthenticationSchemeBuilder.UseHybridDefaultAuthentication(string! testAuthenticationScheme) -> XBullet.EasyTesting.Authentication.TestAuthenticationSchemeBuilder!
 XBullet.EasyTesting.Hosting.EasyTestHostBuilder<TEntryPoint>.ConfigureHostSettings(System.Action<System.Collections.Generic.IDictionary<string!, string!>!>! configure) -> XBullet.EasyTesting.Hosting.EasyTestHostBuilder<TEntryPoint!>!
 XBullet.EasyTesting.Hosting.EasyTestHostBuilder<TEntryPoint>.UseSetting(string! key, string! value) -> XBullet.EasyTesting.Hosting.EasyTestHostBuilder<TEntryPoint!>!
 XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint>.AsUser(System.Action<XBullet.EasyTesting.Authentication.TestUserBuilder!>! configure, string! authenticationScheme) -> XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint!>!

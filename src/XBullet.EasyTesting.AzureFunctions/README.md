@@ -1,6 +1,6 @@
 # XBullet.EasyTesting.AzureFunctions
 
-In-memory test infrastructure for .NET isolated Azure Functions, including function contexts, middleware, bindings, retry state, and fluent trigger data.
+In-memory test infrastructure for .NET isolated Azure Functions, including function contexts, middleware, bindings, retry state, Durable orchestration activity dispatch, and fluent trigger data.
 
 The package targets .NET 8, .NET 9, and .NET 10.
 
@@ -26,5 +26,24 @@ var response = await function.RunAsync(request, request.FunctionContext);
 ```
 
 Builders are available for HTTP, timer, Kafka, Service Bus, Queue Storage, Blob, Event Grid, and Event Hubs triggers.
+
+Durable orchestrators can use `TestOrchestrationContext` to record activity scheduling and dispatch each call to a real activity instance:
+
+```csharp
+var activity = new CreateOrderActivity(dependency);
+var context = new TestOrchestrationContext(async call =>
+    call.ActivityName switch
+    {
+        nameof(CreateOrderActivity) =>
+            await activity.RunAsync((CreateOrderRequest)call.Input!),
+        _ => throw new InvalidOperationException($"Unexpected activity '{call.ActivityName}'."),
+    });
+
+var result = await orchestrator.RunAsync(context);
+
+Assert.Equal(nameof(CreateOrderActivity), context.ActivityCalls.Single().ActivityName);
+```
+
+Only `CallActivityAsync` is emulated; Durable runtime operations such as timers, external events, sub-orchestrators, and replay state throw `NotSupportedException`.
 
 See the [repository documentation](https://github.com/olgerd007/XBullet.EasyTesting) for invocation and binding examples.
