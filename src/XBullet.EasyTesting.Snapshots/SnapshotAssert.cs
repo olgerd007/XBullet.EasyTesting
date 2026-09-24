@@ -1,5 +1,4 @@
 using System.Runtime.CompilerServices;
-using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -23,7 +22,7 @@ public static class SnapshotAssert
         [CallerFilePath] string sourceFile = "",
         [CallerMemberName] string testName = "")
     {
-        settings ??= new SnapshotSettings();
+        settings ??= SnapshotSettingsDefaults.CreateGlobalOrDefault();
 
         var serialized = JsonSerializer.Serialize(actual, settings.JsonSerializerOptions);
         await MatchContentAsync(
@@ -47,7 +46,7 @@ public static class SnapshotAssert
         [CallerMemberName] string testName = "")
     {
         ArgumentNullException.ThrowIfNull(actualJson);
-        settings ??= new SnapshotSettings();
+        settings ??= SnapshotSettingsDefaults.CreateGlobalOrDefault();
 
         var json = JsonSnapshotContent.Parse(actualJson, settings.JsonSerializerOptions);
         var serialized = JsonSerializer.Serialize(
@@ -71,7 +70,7 @@ public static class SnapshotAssert
         string testName)
     {
         ArgumentNullException.ThrowIfNull(actualJson);
-        settings ??= new SnapshotSettings();
+        settings ??= SnapshotSettingsDefaults.CreateGlobalOrDefault();
 
         var json = await JsonSnapshotContent.ParseAsync(
             actualJson,
@@ -102,7 +101,7 @@ public static class SnapshotAssert
         [CallerMemberName] string testName = "")
     {
         ArgumentNullException.ThrowIfNull(actualText);
-        settings ??= new SnapshotSettings();
+        settings ??= SnapshotSettingsDefaults.CreateGlobalOrDefault();
         return MatchContentAsync(
             actualText,
             settings,
@@ -249,8 +248,7 @@ public static class SnapshotAssert
         string content,
         CancellationToken cancellationToken)
     {
-        var directory = Path.GetDirectoryName(path)
-            ?? throw new ArgumentException("The snapshot directory could not be determined.", nameof(path));
+        var directory = Path.GetDirectoryName(path)!;
         var temporaryPath = Path.Combine(
             directory,
             $".{Path.GetFileName(path)}.{Guid.NewGuid():N}.tmp");
@@ -281,9 +279,7 @@ public static class SnapshotAssert
             throw new ArgumentException("The calling source file could not be determined.", nameof(sourceFile));
         }
 
-        var sourceDirectory = Path.GetFullPath(
-            Path.GetDirectoryName(sourceFile)
-                ?? throw new ArgumentException("The calling source directory could not be determined.", nameof(sourceFile)));
+        var sourceDirectory = Path.GetFullPath(Path.GetDirectoryName(sourceFile)!);
         var requestedName = settings.SnapshotName ?? testName;
         var context = new SnapshotLocationContext(
             sourceFile,
@@ -334,15 +330,18 @@ public static class SnapshotAssert
         var byteBudget = MaximumSnapshotStemUtf8Bytes - Encoding.UTF8.GetByteCount(suffix);
         var builder = new StringBuilder(value.Length);
         var usedBytes = 0;
+        var acceptingRunes = true;
         foreach (var rune in value.EnumerateRunes())
         {
-            if (usedBytes + rune.Utf8SequenceLength > byteBudget)
+            if (acceptingRunes && usedBytes + rune.Utf8SequenceLength <= byteBudget)
             {
-                break;
+                builder.Append(rune);
+                usedBytes += rune.Utf8SequenceLength;
             }
-
-            builder.Append(rune);
-            usedBytes += rune.Utf8SequenceLength;
+            else
+            {
+                acceptingRunes = false;
+            }
         }
 
         return builder.Append(suffix).ToString();
@@ -405,27 +404,16 @@ public static class SnapshotAssert
         name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) &&
         name[^1] is >= '1' and <= '9';
 
-    private static string GetTargetFrameworkMoniker()
-    {
-        var frameworkName = typeof(SnapshotAssert).Assembly
-            .GetCustomAttributes(typeof(TargetFrameworkAttribute), inherit: false)
-            .OfType<TargetFrameworkAttribute>()
-            .SingleOrDefault()?.FrameworkName;
-        if (frameworkName is null)
-        {
-            return "runtime";
-        }
-
-        var framework = new FrameworkName(frameworkName);
-        return framework.Identifier switch
-        {
-            ".NETCoreApp" => $"net{framework.Version.Major}.{framework.Version.Minor}",
-            ".NETStandard" => $"netstandard{framework.Version.Major}.{framework.Version.Minor}",
-            ".NETFramework" => $"net{framework.Version.Major}{framework.Version.Minor}" +
-                (framework.Version.Build > 0 ? framework.Version.Build : string.Empty),
-            _ => SanitizeFileNameComponent(frameworkName)
-        };
-    }
+    private static string GetTargetFrameworkMoniker() =>
+#if NET8_0
+        "net8.0";
+#elif NET9_0
+        "net9.0";
+#elif NET10_0
+        "net10.0";
+#else
+#error Unsupported target framework.
+#endif
 
     private static void EnsureNoPortablePathCollision(SnapshotPaths paths)
     {

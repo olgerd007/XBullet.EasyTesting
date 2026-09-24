@@ -72,9 +72,9 @@ public sealed record StubHttpRequestSnapshot(
             return false;
         }
 
-        var mediaType = parsed.MediaType;
+        var mediaType = parsed.MediaType!;
         return string.Equals(mediaType, "application/json", StringComparison.OrdinalIgnoreCase) ||
-            mediaType?.EndsWith("+json", StringComparison.OrdinalIgnoreCase) is true;
+            mediaType.EndsWith("+json", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string? GetRelativeUrl(Uri? uri, ISet<string> redactedQueryParameters)

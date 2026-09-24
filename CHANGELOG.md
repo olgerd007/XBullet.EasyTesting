@@ -4,6 +4,16 @@ Notable changes to XBullet.EasyTesting are documented in this file.
 
 The project follows Semantic Versioning. Package versions are produced from GitHub Release tags.
 
+## [Unreleased]
+
+## [1.0.11] - 2026-09-24
+
+### Added
+
+- Optional project-wide snapshot defaults through `SnapshotSettingsDefaults.Global`, with an
+  independent settings copy created for every assertion and explicit per-test settings taking
+  precedence.
+
 ## [1.0.9] - 2026-09-24
 
 ### Added

@@ -105,14 +105,15 @@ public sealed record HttpExchangeSnapshot(
             return null;
         }
 
-        if (JsonSnapshotContent.IsJson(content.Headers.ContentType))
+        var contentType = content.Headers.ContentType;
+        if (JsonSnapshotContent.IsJson(contentType))
         {
             return JsonSnapshotContent.Parse(bytes);
         }
 
-        if (IsText(content.Headers.ContentType))
+        if (IsText(contentType))
         {
-            return GetEncoding(content.Headers.ContentType?.CharSet).GetString(bytes);
+            return GetEncoding(contentType!.CharSet).GetString(bytes);
         }
 
         return new ControllerBinaryBodySnapshot("base64", Convert.ToBase64String(bytes));
@@ -149,9 +150,16 @@ public sealed record HttpExchangeSnapshot(
         return $"{value[..(queryIndex + 1)]}{string.Join('&', redacted)}{fragment}";
     }
 
-    private static bool IsText(MediaTypeHeaderValue? contentType) =>
-        contentType?.MediaType?.StartsWith("text/", StringComparison.OrdinalIgnoreCase) is true ||
-        !string.IsNullOrWhiteSpace(contentType?.CharSet);
+    private static bool IsText(MediaTypeHeaderValue? contentType)
+    {
+        if (contentType is null)
+        {
+            return false;
+        }
+
+        return contentType.MediaType!.StartsWith("text/", StringComparison.OrdinalIgnoreCase) ||
+            !string.IsNullOrWhiteSpace(contentType.CharSet);
+    }
 
     private static Encoding GetEncoding(string? charset) =>
         string.IsNullOrWhiteSpace(charset)
@@ -180,7 +188,7 @@ public sealed record HttpExchangeFailureSnapshot(string Type, string Message)
     {
         var root = exception.GetBaseException();
         return new HttpExchangeFailureSnapshot(
-            root.GetType().FullName ?? root.GetType().Name,
+            root.GetType().FullName!,
             root.Message);
     }
 }

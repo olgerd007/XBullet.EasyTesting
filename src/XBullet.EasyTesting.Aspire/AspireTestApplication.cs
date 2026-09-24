@@ -124,13 +124,27 @@ public sealed class AspireTestApplication<TAppHost> : IAsyncDisposable
             Application.ResourceNotifications.TryGetCurrentState(
                 resource.Name,
                 out var resourceEvent);
+            if (resourceEvent is null)
+            {
+                resources.Add(new AspireResourceDiagnostics(
+                    resource.Name,
+                    resourceId: null,
+                    resourceType: null,
+                    state: null,
+                    healthStatus: null,
+                    exitCode: null,
+                    logs.ToArray()));
+                continue;
+            }
+
+            var snapshot = resourceEvent.Snapshot;
             resources.Add(new AspireResourceDiagnostics(
                 resource.Name,
-                resourceEvent?.ResourceId,
-                resourceEvent?.Snapshot.ResourceType,
-                resourceEvent?.Snapshot.State?.Text,
-                resourceEvent?.Snapshot.HealthStatus?.ToString(),
-                resourceEvent?.Snapshot.ExitCode,
+                resourceEvent.ResourceId,
+                snapshot.ResourceType,
+                snapshot.State?.Text,
+                snapshot.HealthStatus?.ToString(),
+                snapshot.ExitCode,
                 logs.ToArray()));
         }
 
@@ -162,8 +176,7 @@ public sealed class AspireTestApplication<TAppHost> : IAsyncDisposable
         }
         catch (Exception exception)
         {
-            failures ??= [];
-            failures.Add(exception);
+            failures = AddCleanupFailure(failures, exception);
         }
 
         if (failures is not null)
@@ -172,6 +185,15 @@ public sealed class AspireTestApplication<TAppHost> : IAsyncDisposable
                 "One or more Aspire test application resources failed to clean up.",
                 failures);
         }
+    }
+
+    internal static List<Exception> AddCleanupFailure(
+        List<Exception>? failures,
+        Exception exception)
+    {
+        failures ??= [];
+        failures.Add(exception);
+        return failures;
     }
 
     private void EnsureNotDisposed() => ObjectDisposedException.ThrowIf(_disposed, this);

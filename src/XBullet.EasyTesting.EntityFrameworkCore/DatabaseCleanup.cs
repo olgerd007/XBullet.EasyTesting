@@ -18,12 +18,29 @@ internal static class DatabaseCleanup
         }
 
         var dataSource = GetSqliteDataSource(database);
+        await EnsureDeletedSqliteAsync(
+            database.Database.ProviderName,
+            dataSource,
+            async () =>
+            {
+                ClearSqlitePools(database);
+                await database.Database.EnsureDeletedAsync(cancellationToken);
+            },
+            cancellationToken);
+    }
+
+    internal static async Task EnsureDeletedSqliteAsync(
+        string? providerName,
+        string? dataSource,
+        Func<Task> ensureDeleted,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(ensureDeleted);
         for (var attempt = 1; attempt <= MaximumAttempts; attempt++)
         {
-            ClearSqlitePools(database);
             try
             {
-                await database.Database.EnsureDeletedAsync(cancellationToken);
+                await ensureDeleted();
                 return;
             }
             catch (Exception exception) when (
@@ -35,7 +52,7 @@ internal static class DatabaseCleanup
             {
                 exception.Data[SqliteDatabaseCleanupDiagnostics.ExceptionDataKey] =
                     new SqliteDatabaseCleanupDiagnostics(
-                        database.Database.ProviderName,
+                        providerName,
                         dataSource,
                         attempt,
                         exception.GetType().FullName ?? exception.GetType().Name,

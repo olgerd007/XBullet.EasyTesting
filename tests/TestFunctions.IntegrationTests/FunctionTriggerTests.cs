@@ -351,6 +351,56 @@ public sealed class FunctionTriggerTests
         Assert.Equal(
             "blobOutput",
             invocation.Context.FunctionDefinition.OutputBindings["BlobDocument"].Type);
+
+        var bindings = invocation.Context.Bindings;
+        bindings.Should().Contain("QueueMessage").NotContain("missing");
+        Assert.Throws<TestOutputBindingVerificationException>(() => bindings.Should().HaveCount(3));
+        Assert.Throws<TestOutputBindingVerificationException>(() => bindings.Should().Contain("missing"));
+        Assert.Throws<TestOutputBindingVerificationException>(() =>
+            bindings.Should().HaveValue("QueueMessage", "different"));
+        Assert.Throws<TestOutputBindingVerificationException>(() =>
+            bindings.Should().NotContain("QueueMessage"));
+        Assert.Throws<ArgumentException>(() => bindings.Should().Contain(" "));
+        Assert.Throws<ArgumentException>(() => bindings.Should().NotContain(" "));
+        Assert.Throws<KeyNotFoundException>(() => bindings.GetOutput<string>("missing"));
+        Assert.Throws<InvalidCastException>(() => bindings.GetOutput<int>("QueueMessage"));
+    }
+
+    [Fact]
+    public void Function_bindings_capture_null_scalar_and_composite_invocation_results()
+    {
+        var nullBindings = new TestFunctionBindings();
+        nullBindings.CaptureInput("nullable", null);
+        nullBindings.CaptureOutput("nullable", null);
+        nullBindings.CaptureInvocationResult(null);
+        Assert.Null(nullBindings.GetInput<string>("nullable"));
+        Assert.Null(nullBindings.GetOutput<string>("nullable"));
+        nullBindings.Should().HaveValue<string?>("nullable", null);
+
+        object[] scalars =
+        [
+            1,
+            DayOfWeek.Monday,
+            "text",
+            1.5m,
+            Guid.Empty,
+            DateTime.UnixEpoch,
+            DateTimeOffset.UnixEpoch,
+            TimeSpan.Zero
+        ];
+        foreach (var scalar in scalars)
+        {
+            var bindings = new TestFunctionBindings();
+            bindings.CaptureInvocationResult(scalar);
+            Assert.Same(scalar, bindings.Outputs["$return"]);
+            Assert.Equal("return", bindings.OutputTypes["$return"]);
+        }
+
+        var composite = new TestFunctionBindings();
+        composite.CaptureInvocationResult(new { Value = 42, Text = "answer" });
+        Assert.Equal(42, composite.GetOutput<int>("Value"));
+        Assert.Equal("answer", composite.GetOutput<string>("Text"));
+        Assert.Throws<ArgumentException>(() => composite.GetOutput<int>(" "));
     }
 
     private static AzureFunctionTestHost CreateHost(RecordingTriggerInvocationSink recorder) =>

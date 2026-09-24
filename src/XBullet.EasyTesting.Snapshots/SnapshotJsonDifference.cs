@@ -57,28 +57,31 @@ internal sealed record SnapshotJsonDifference(
             return Difference(path, expected, actual);
         }
 
-        switch (expected.ValueKind)
+        if (expected.ValueKind == JsonValueKind.Object)
         {
-            case JsonValueKind.Object:
-                return CompareObjects(expected, actual, path);
-            case JsonValueKind.Array:
-                return CompareArrays(expected, actual, path);
-            case JsonValueKind.String:
-                return string.Equals(expected.GetString(), actual.GetString(), StringComparison.Ordinal)
-                    ? null
-                    : Difference(path, expected, actual);
-            case JsonValueKind.Number:
-                return string.Equals(expected.GetRawText(), actual.GetRawText(), StringComparison.Ordinal)
-                    ? null
-                    : Difference(path, expected, actual);
-            case JsonValueKind.True:
-            case JsonValueKind.False:
-            case JsonValueKind.Null:
-            case JsonValueKind.Undefined:
-                return null;
-            default:
-                return Difference(path, expected, actual);
+            return CompareObjects(expected, actual, path);
         }
+
+        if (expected.ValueKind == JsonValueKind.Array)
+        {
+            return CompareArrays(expected, actual, path);
+        }
+
+        if (expected.ValueKind == JsonValueKind.String)
+        {
+            return string.Equals(expected.GetString(), actual.GetString(), StringComparison.Ordinal)
+                ? null
+                : Difference(path, expected, actual);
+        }
+
+        if (expected.ValueKind == JsonValueKind.Number)
+        {
+            return string.Equals(expected.GetRawText(), actual.GetRawText(), StringComparison.Ordinal)
+                ? null
+                : Difference(path, expected, actual);
+        }
+
+        return null;
     }
 
     private static SnapshotJsonDifference? CompareObjects(

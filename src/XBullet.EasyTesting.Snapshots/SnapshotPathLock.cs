@@ -12,21 +12,15 @@ internal static class SnapshotPathLock
     public static IDisposable Acquire(string path)
     {
         var entry = AddReference(path);
-        var semaphoreAcquired = false;
+        entry.Semaphore.Wait();
         try
         {
-            entry.Semaphore.Wait();
-            semaphoreAcquired = true;
             var processLock = AcquireProcessLock(path);
             return new Releaser(path, entry, processLock);
         }
         catch
         {
-            if (semaphoreAcquired)
-            {
-                entry.Semaphore.Release();
-            }
-
+            entry.Semaphore.Release();
             RemoveReference(path, entry);
             throw;
         }
@@ -37,21 +31,24 @@ internal static class SnapshotPathLock
         CancellationToken cancellationToken)
     {
         var entry = AddReference(path);
-        var semaphoreAcquired = false;
         try
         {
             await entry.Semaphore.WaitAsync(cancellationToken);
-            semaphoreAcquired = true;
+        }
+        catch
+        {
+            RemoveReference(path, entry);
+            throw;
+        }
+
+        try
+        {
             var processLock = await AcquireProcessLockAsync(path, cancellationToken);
             return new Releaser(path, entry, processLock);
         }
         catch
         {
-            if (semaphoreAcquired)
-            {
-                entry.Semaphore.Release();
-            }
-
+            entry.Semaphore.Release();
             RemoveReference(path, entry);
             throw;
         }

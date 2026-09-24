@@ -146,13 +146,13 @@ public sealed class StubHttpResponseSnapshot
             }
             catch (JsonException)
             {
-                return GetEncoding(contentType?.CharSet).GetString(bytes);
+                return GetEncoding(contentType!.CharSet).GetString(bytes);
             }
         }
 
         if (IsText(contentType))
         {
-            return GetEncoding(contentType?.CharSet).GetString(bytes);
+            return GetEncoding(contentType!.CharSet).GetString(bytes);
         }
 
         return new ControllerBinaryBodySnapshot("base64", Convert.ToBase64String(bytes));
@@ -171,13 +171,24 @@ public sealed class StubHttpResponseSnapshot
             .FirstOrDefault(value => value is not null);
     }
 
-    private static bool IsJson(MediaTypeHeaderValue? contentType) =>
-        string.Equals(contentType?.MediaType, "application/json", StringComparison.OrdinalIgnoreCase) ||
-        contentType?.MediaType?.EndsWith("+json", StringComparison.OrdinalIgnoreCase) is true;
+    private static bool IsJson(MediaTypeHeaderValue? contentType)
+    {
+        var mediaType = contentType?.MediaType;
+        return mediaType is not null &&
+            (mediaType.Equals("application/json", StringComparison.OrdinalIgnoreCase) ||
+             mediaType.EndsWith("+json", StringComparison.OrdinalIgnoreCase));
+    }
 
-    private static bool IsText(MediaTypeHeaderValue? contentType) =>
-        contentType?.MediaType?.StartsWith("text/", StringComparison.OrdinalIgnoreCase) is true ||
-        !string.IsNullOrWhiteSpace(contentType?.CharSet);
+    private static bool IsText(MediaTypeHeaderValue? contentType)
+    {
+        if (contentType is null)
+        {
+            return false;
+        }
+
+        return contentType.MediaType!.StartsWith("text/", StringComparison.OrdinalIgnoreCase) ||
+            !string.IsNullOrWhiteSpace(contentType.CharSet);
+    }
 
     private static Encoding GetEncoding(string? charset) =>
         string.IsNullOrWhiteSpace(charset)

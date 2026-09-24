@@ -36,6 +36,21 @@ public sealed class DurableFunctionTests
         Assert.Throws<NotSupportedException>(() => context.NewGuid());
     }
 
+    [Fact]
+    public async Task Activity_dispatch_validates_handlers_nullable_results_and_result_types()
+    {
+        Assert.Throws<ArgumentNullException>(() => new TestOrchestrationContext(null!));
+        var context = new TestOrchestrationContext(_ => Task.FromResult<object?>(null));
+        Assert.Throws<ArgumentNullException>(() => context.ActivityHandler = null!);
+        Assert.Null(await context.CallActivityAsync<string?>(new TaskName("nullable")));
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            context.CallActivityAsync<int>(new TaskName("null-value-type")));
+
+        context.ActivityHandler = _ => Task.FromResult<object?>("wrong");
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            context.CallActivityAsync<int>(new TaskName("wrong-type")));
+    }
+
     private static class GreetingOrchestrator
     {
         public static Task<string> RunAsync(TaskOrchestrationContext context) =>

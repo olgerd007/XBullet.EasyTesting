@@ -59,25 +59,24 @@ internal static class StructuredSnapshotScrubber
 
         foreach (var location in locations)
         {
-            switch (rule.Kind)
+            if (rule.Kind == JsonSnapshotPathRuleKind.Scrub)
             {
-                case JsonSnapshotPathRuleKind.Scrub:
-                    root = ReplaceLocation(root, location, JsonValue.Create("{Scrubbed}"));
-                    break;
-                case JsonSnapshotPathRuleKind.Replace:
-                    root = ReplaceLocation(
-                        root,
-                        location,
-                        SerializeReplacement(rule.Replacement, settings.JsonSerializerOptions));
-                    break;
-                case JsonSnapshotPathRuleKind.Hash:
-                    root = ReplaceLocation(root, location, JsonValue.Create(Hash(location.Value)));
-                    break;
-                case JsonSnapshotPathRuleKind.SortArray:
-                    SortArray(location, rule);
-                    break;
-                default:
-                    throw new InvalidOperationException($"Unsupported snapshot path rule '{rule.Kind}'.");
+                root = ReplaceLocation(root, location, JsonValue.Create("{Scrubbed}"));
+            }
+            else if (rule.Kind == JsonSnapshotPathRuleKind.Replace)
+            {
+                root = ReplaceLocation(
+                    root,
+                    location,
+                    SerializeReplacement(rule.Replacement, settings.JsonSerializerOptions));
+            }
+            else if (rule.Kind == JsonSnapshotPathRuleKind.Hash)
+            {
+                root = ReplaceLocation(root, location, JsonValue.Create(Hash(location.Value)));
+            }
+            else
+            {
+                SortArray(location, rule);
             }
         }
 
@@ -210,16 +209,18 @@ internal static class StructuredSnapshotScrubber
         NodeLocation location,
         JsonNode? replacement)
     {
-        switch (location.Parent)
+        if (location.Parent is null)
         {
-            case null:
-                return replacement;
-            case JsonObject jsonObject:
-                jsonObject[location.PropertyName!] = replacement;
-                break;
-            case JsonArray jsonArray:
-                jsonArray[location.ArrayIndex!.Value] = replacement;
-                break;
+            return replacement;
+        }
+
+        if (location.Parent is JsonObject jsonObject)
+        {
+            jsonObject[location.PropertyName!] = replacement;
+        }
+        else
+        {
+            ((JsonArray)location.Parent)[location.ArrayIndex!.Value] = replacement;
         }
 
         return root;

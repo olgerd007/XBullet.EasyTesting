@@ -187,4 +187,63 @@ public sealed class ObservabilityTests
             .ContainMessage("Second")
             .ContainMessage("Third");
     }
+
+    [Fact]
+    public void Fluent_assertions_cover_success_failure_filters_and_empty_diagnostics()
+    {
+        using var logs = new TestLogCollector();
+        logs.Should().HaveCount(0).NotContainMessage("missing");
+        Assert.Throws<ArgumentOutOfRangeException>(() => logs.Should().HaveCount(-1));
+        Assert.Throws<TestLogVerificationException>(() => logs.Should().HaveCount(1));
+        Assert.Throws<ArgumentException>(() => logs.Should().ContainMessage(" "));
+        Assert.Throws<TestLogVerificationException>(() => logs.Should().ContainMessage("missing"));
+        logs.CreateLogger("Coverage").LogWarning("Covered message {Value}", 42);
+        logs.Should().ContainMessage("Covered message 42", LogLevel.Warning, "Coverage");
+        Assert.Throws<TestLogVerificationException>(() =>
+            logs.Should().ContainMessage("Covered", LogLevel.Error, "Coverage"));
+        Assert.Throws<TestLogVerificationException>(() =>
+            logs.Should().NotContainMessage("Covered", LogLevel.Warning, "Coverage"));
+        logs.Should().NotContainMessage("Covered", category: "Other");
+
+        const string sourceName = "Coverage.Activity";
+        using var activities = new TestActivityCollector([sourceName]);
+        activities.Should().HaveCount(0).NotContainActivity("missing");
+        Assert.Throws<ArgumentOutOfRangeException>(() => activities.Should().HaveCount(-1));
+        Assert.Throws<TestActivityVerificationException>(() => activities.Should().HaveCount(1));
+        Assert.Throws<ArgumentException>(() => activities.Should().ContainActivity(" "));
+        Assert.Throws<TestActivityVerificationException>(() =>
+            activities.Should().ContainActivity("missing"));
+        using (var source = new ActivitySource(sourceName))
+        using (var activity = source.StartActivity("covered"))
+        {
+            activity!.SetStatus(ActivityStatusCode.Ok);
+        }
+
+        activities.Should().ContainActivity("covered", ActivityStatusCode.Ok, sourceName);
+        Assert.Throws<TestActivityVerificationException>(() =>
+            activities.Should().ContainActivity("covered", ActivityStatusCode.Error, sourceName));
+        Assert.Throws<TestActivityVerificationException>(() =>
+            activities.Should().NotContainActivity("covered", sourceName));
+        activities.Should().NotContainActivity("covered", "Other");
+
+        const string meterName = "Coverage.Meter";
+        using var metrics = new TestMetricCollector(meterNames: [meterName]);
+        metrics.Should().HaveCount(0).NotContainMeasurement("missing");
+        Assert.Throws<ArgumentOutOfRangeException>(() => metrics.Should().HaveCount(-1));
+        Assert.Throws<TestMetricVerificationException>(() => metrics.Should().HaveCount(1));
+        Assert.Throws<ArgumentException>(() => metrics.Should().ContainMeasurement(" ", 1));
+        Assert.Throws<TestMetricVerificationException>(() =>
+            metrics.Should().ContainMeasurement("missing", 1));
+        using (var meter = new Meter(meterName))
+        {
+            meter.CreateCounter<int>("covered").Add(7);
+        }
+
+        metrics.Should().ContainMeasurement("covered", 7, meterName);
+        Assert.Throws<TestMetricVerificationException>(() =>
+            metrics.Should().ContainMeasurement("covered", 8, meterName));
+        Assert.Throws<TestMetricVerificationException>(() =>
+            metrics.Should().NotContainMeasurement("covered", meterName));
+        metrics.Should().NotContainMeasurement("covered", "Other");
+    }
 }
