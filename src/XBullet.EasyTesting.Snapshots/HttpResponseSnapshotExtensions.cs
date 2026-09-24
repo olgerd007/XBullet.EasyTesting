@@ -87,4 +87,48 @@ public static class HttpResponseSnapshotExtensions
             sourceFile,
             testName);
     }
+
+    /// <summary>
+    /// Asserts that the complete request and response represented by an HTTP response match their
+    /// committed JSON snapshot.
+    /// </summary>
+    public static async Task ShouldMatchHttpExchangeSnapshot(
+        this HttpResponseMessage response,
+        HttpExchangeSnapshotOptions? exchangeOptions = null,
+        SnapshotSettings? snapshotSettings = null,
+        CancellationToken cancellationToken = default,
+        [CallerFilePath] string sourceFile = "",
+        [CallerMemberName] string testName = "")
+    {
+        var snapshot = await HttpExchangeSnapshot.FromResponseAsync(
+            response,
+            exchangeOptions,
+            cancellationToken);
+
+        await SnapshotAssert.MatchAsync(
+            snapshot,
+            snapshotSettings,
+            cancellationToken,
+            sourceFile,
+            testName);
+    }
+
+    /// <summary>Asserts that all exchanges captured by a recorder match their committed snapshot.</summary>
+    public static async Task ShouldMatchHttpExchangesSnapshot(
+        this HttpExchangeRecorder recorder,
+        SnapshotSettings? snapshotSettings = null,
+        CancellationToken cancellationToken = default,
+        [CallerFilePath] string sourceFile = "",
+        [CallerMemberName] string testName = "")
+    {
+        ArgumentNullException.ThrowIfNull(recorder);
+        var snapshots = await recorder.CreateSnapshotsAsync(cancellationToken);
+
+        await SnapshotAssert.MatchAsync(
+            snapshots,
+            snapshotSettings,
+            cancellationToken,
+            sourceFile,
+            testName);
+    }
 }

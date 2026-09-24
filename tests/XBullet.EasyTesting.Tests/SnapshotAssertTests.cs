@@ -22,6 +22,9 @@ public sealed class SnapshotAssertTests
         Assert.Contains(typeof(SnapshotAssert), forwardedTypes);
         Assert.Contains(typeof(SnapshotLocationContext), forwardedTypes);
         Assert.Contains(typeof(StubHttpRequestSnapshot), forwardedTypes);
+        Assert.Contains(typeof(StubHttpExchangeSnapshot), forwardedTypes);
+        Assert.Contains(typeof(HttpExchangeRecorder), forwardedTypes);
+        Assert.Contains(typeof(HttpExchangeFailureSnapshot), forwardedTypes);
         Assert.Equal(
             "XBullet.EasyTesting.Snapshots.Core",
             typeof(SnapshotAssert).Assembly.GetName().Name);
@@ -1211,6 +1214,322 @@ public sealed class SnapshotAssertTests
     }
 
     [Fact]
+    public async Task Captured_exchange_snapshot_contains_structural_request_and_response_data()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var handler = new StubHttpMessageHandler();
+        handler
+            .When(HttpMethod.Post, "/orders?token=secret")
+            .Respond(request => new HttpResponseMessage(HttpStatusCode.Created)
+            {
+                Headers = { { "X-Session", "secret-session" } },
+                Content = JsonContent.Create(new { Accepted = true, request.Body })
+            });
+        using var client = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("https://external.example.test/")
+        };
+
+        using var response = await client.PostAsJsonAsync(
+            "/orders?token=secret",
+            new { OrderId = 42 },
+            cancellationToken);
+        await response.Content.ReadAsStringAsync(cancellationToken);
+
+        var options = new StubHttpExchangeSnapshotOptions();
+        options.Response.RedactingHeader("X-Session");
+        var snapshot = StubHttpExchangeSnapshot.FromExchange(
+            Assert.Single(handler.Exchanges),
+            options);
+
+        Assert.Equal("POST", snapshot.Request.Method);
+        Assert.Equal("/orders?token={Redacted}", snapshot.Request.Url);
+        Assert.Equal(42, Assert.IsType<JsonElement>(snapshot.Request.Body)
+            .GetProperty("orderId")
+            .GetInt32());
+        Assert.Equal((int)HttpStatusCode.Created, snapshot.Response?.StatusCode);
+        Assert.NotNull(snapshot.Response?.Headers);
+        Assert.Equal(["{Redacted}"], snapshot.Response.Headers["X-Session"]);
+        Assert.True(Assert.IsType<JsonElement>(snapshot.Response?.Body)
+            .GetProperty("accepted")
+            .GetBoolean());
+        Assert.Null(snapshot.Failure);
+    }
+
+    [Fact]
+    public void Captured_response_options_coordinate_header_rules()
+    {
+        var options = new StubHttpResponseSnapshotOptions()
+            .WithoutHeaders()
+            .WithoutBody()
+            .IgnoringHeaders("X-First", "X-Second")
+            .RedactingHeaders("X-Second", "X-Third")
+            .IncludingHeader("X-Third");
+
+        Assert.False(options.IncludeHeaders);
+        Assert.False(options.IncludeBody);
+        Assert.Contains("X-First", options.IgnoredHeaders);
+        Assert.DoesNotContain("X-Second", options.IgnoredHeaders);
+        Assert.Contains("X-Second", options.RedactedHeaders);
+        Assert.DoesNotContain("X-Third", options.RedactedHeaders);
+    }
+
+    [Fact]
+    public void Captured_response_snapshot_handles_all_body_content_types()
+    {
+        var notRead = StubHttpResponseSnapshot.FromResponse(CreateStubResponse(
+            bodyCaptured: false,
+            body: Encoding.UTF8.GetBytes("not read")));
+        var empty = StubHttpResponseSnapshot.FromResponse(CreateStubResponse(
+            bodyCaptured: true,
+            body: []));
+        var malformedJson = StubHttpResponseSnapshot.FromResponse(CreateStubResponse(
+            bodyCaptured: true,
+            body: Encoding.UTF8.GetBytes("{ invalid"),
+            contentTypes: ["invalid content type", "application/problem+json"]));
+        var text = StubHttpResponseSnapshot.FromResponse(CreateStubResponse(
+            bodyCaptured: true,
+            body: Encoding.UTF8.GetBytes("plain text"),
+            contentTypes: ["text/plain"]));
+        var charsetText = StubHttpResponseSnapshot.FromResponse(CreateStubResponse(
+            bodyCaptured: true,
+            body: Encoding.Unicode.GetBytes("café"),
+            contentTypes: ["application/x-custom; charset=utf-16"]));
+        var binary = StubHttpResponseSnapshot.FromResponse(CreateStubResponse(
+            bodyCaptured: true,
+            body: [0, 1, 255]));
+
+        Assert.Equal("{NotRead}", notRead.Body);
+        Assert.Null(empty.Body);
+        Assert.Equal("{ invalid", malformedJson.Body);
+        Assert.Equal("plain text", text.Body);
+        Assert.Equal("café", charsetText.Body);
+        Assert.Equal(
+            new ControllerBinaryBodySnapshot("base64", "AAH/"),
+            Assert.IsType<ControllerBinaryBodySnapshot>(binary.Body));
+    }
+
+    [Fact]
+    public void Http_exchange_options_accept_empty_sets_and_reject_invalid_names()
+    {
+        var request = new HttpExchangeRequestSnapshotOptions();
+        var response = new HttpExchangeResponseSnapshotOptions();
+        var stubResponse = new StubHttpResponseSnapshotOptions();
+
+        Assert.Same(request, request.IgnoringHeaders());
+        Assert.Same(request, request.RedactingHeaders());
+        Assert.Same(request, request.RedactingQueryParameters());
+        Assert.Same(response, response.IgnoringHeaders());
+        Assert.Same(response, response.RedactingHeaders());
+        Assert.Same(stubResponse, stubResponse.IgnoringHeaders());
+        Assert.Same(stubResponse, stubResponse.RedactingHeaders());
+
+        Assert.Throws<ArgumentNullException>(() => request.IgnoringHeaders(null!));
+        Assert.Throws<ArgumentException>(() => request.RedactingHeaders(" "));
+        Assert.Throws<ArgumentException>(() => request.RedactingQueryParameters(""));
+        Assert.Throws<ArgumentException>(() => request.IncludingHeader(""));
+        Assert.Throws<ArgumentException>(() => request.IncludingQueryParameter(" "));
+        Assert.Throws<ArgumentNullException>(() => response.RedactingHeaders(null!));
+        Assert.Throws<ArgumentException>(() => response.IgnoringHeaders(""));
+        Assert.Throws<ArgumentException>(() => response.IncludingHeader(" "));
+        Assert.Throws<ArgumentNullException>(() => stubResponse.IgnoringHeaders(null!));
+        Assert.Throws<ArgumentException>(() => stubResponse.RedactingHeaders(""));
+        Assert.Throws<ArgumentException>(() => stubResponse.IncludingHeader(" "));
+    }
+
+    [Fact]
+    public async Task Http_response_exchange_snapshot_captures_request_and_response()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var request = new HttpRequestMessage(
+            HttpMethod.Post,
+            "https://orders.example.test/orders?api_key=secret")
+        {
+            Content = JsonContent.Create(new { OrderId = 42 })
+        };
+        request.Headers.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", "secret");
+        request.Headers.Add("X-Tenant", "tenant-42");
+        using var response = new HttpResponseMessage(HttpStatusCode.Created)
+        {
+            RequestMessage = request,
+            Content = JsonContent.Create(new { Id = 42, Status = "accepted" })
+        };
+        response.Headers.Add("X-Session", "secret-session");
+
+        var options = new HttpExchangeSnapshotOptions();
+        options.Request.RedactingHeader("Authorization");
+        options.Response.RedactingHeader("X-Session");
+        var snapshot = await HttpExchangeSnapshot.FromResponseAsync(
+            response,
+            options,
+            cancellationToken);
+
+        Assert.NotNull(snapshot.Request);
+        Assert.NotNull(snapshot.Request.Headers);
+        Assert.Equal("POST", snapshot.Request.Method);
+        Assert.Equal("/orders?api_key={Redacted}", snapshot.Request.Url);
+        Assert.Equal(["{Redacted}"], snapshot.Request.Headers["Authorization"]);
+        Assert.Equal(["tenant-42"], snapshot.Request.Headers["X-Tenant"]);
+        Assert.Equal(42, Assert.IsType<JsonElement>(snapshot.Request.Body)
+            .GetProperty("orderId")
+            .GetInt32());
+        Assert.NotNull(snapshot.Response);
+        Assert.Equal((int)HttpStatusCode.Created, snapshot.Response.StatusCode);
+        Assert.NotNull(snapshot.Response.Headers);
+        Assert.Equal(["{Redacted}"], snapshot.Response.Headers["X-Session"]);
+        Assert.Equal("accepted", Assert.IsType<JsonElement>(snapshot.Response.Body)
+            .GetProperty("status")
+            .GetString());
+    }
+
+    [Fact]
+    public async Task Http_response_exchange_snapshot_handles_body_content_types_and_omissions()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var emptyResponse = new HttpResponseMessage(HttpStatusCode.NoContent)
+        {
+            Content = new ByteArrayContent([])
+        };
+        using var textResponse = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            RequestMessage = new HttpRequestMessage(HttpMethod.Post, "/text")
+            {
+                Content = new StringContent("request body", Encoding.UTF8, "text/plain")
+            },
+            Content = new StringContent("plain text", Encoding.UTF8, "text/plain")
+        };
+        using var charsetResponse = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("café", Encoding.Unicode, "application/x-custom")
+        };
+        using var binaryResponse = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            RequestMessage = new HttpRequestMessage(HttpMethod.Post, (Uri?)null),
+            Content = new ByteArrayContent([0, 1, 255])
+        };
+
+        var empty = await HttpExchangeSnapshot.FromResponseAsync(
+            emptyResponse,
+            cancellationToken: cancellationToken);
+        var text = await HttpExchangeSnapshot.FromResponseAsync(
+            textResponse,
+            cancellationToken: cancellationToken);
+        var charsetText = await HttpExchangeSnapshot.FromResponseAsync(
+            charsetResponse,
+            cancellationToken: cancellationToken);
+        var binary = await HttpExchangeSnapshot.FromResponseAsync(
+            binaryResponse,
+            cancellationToken: cancellationToken);
+        var omitted = await HttpExchangeSnapshot.FromResponseAsync(
+            textResponse,
+            new HttpExchangeSnapshotOptions
+            {
+                Request = { IncludeHeaders = false, IncludeBody = false },
+                Response = { IncludeHeaders = false, IncludeBody = false }
+            },
+            cancellationToken);
+
+        Assert.Null(empty.Response!.Body);
+        Assert.Equal("plain text", text.Response!.Body);
+        Assert.Equal("café", charsetText.Response!.Body);
+        Assert.Null(binary.Request!.Url);
+        Assert.Equal(
+            new ControllerBinaryBodySnapshot("base64", "AAH/"),
+            Assert.IsType<ControllerBinaryBodySnapshot>(binary.Response!.Body));
+        Assert.NotNull(omitted.Request);
+        Assert.Null(omitted.Request.Headers);
+        Assert.Null(omitted.Request.Body);
+        Assert.Null(omitted.Response!.Headers);
+        Assert.Null(omitted.Response.Body);
+    }
+
+    [Fact]
+    public async Task Http_exchange_recorder_captures_body_before_transport_consumes_it()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var options = new HttpExchangeSnapshotOptions();
+        options.Response.RedactingHeader("X-Session");
+        using var recorder = new HttpExchangeRecorder(options)
+        {
+            InnerHandler = new CallbackHttpMessageHandler(async (request, token) =>
+            {
+                _ = await request.Content!.ReadAsStringAsync(token);
+                request.Content = null;
+                var response = new HttpResponseMessage(HttpStatusCode.Created)
+                {
+                    Content = JsonContent.Create(new { Id = 42, Status = "accepted" }),
+                    RequestMessage = request
+                };
+                response.Headers.Add("X-Session", "secret-session");
+                return response;
+            })
+        };
+        using var client = new HttpClient(recorder)
+        {
+            BaseAddress = new Uri("https://orders.example.test/")
+        };
+        client.DefaultRequestHeaders.Add("X-Integration-Test-User", "secret-identity");
+
+        using var response = await client.PostAsJsonAsync(
+            "/orders",
+            new { OrderId = 42 },
+            cancellationToken);
+        var snapshots = await recorder.CreateSnapshotsAsync(cancellationToken);
+        var responseSnapshot = await HttpExchangeSnapshot.FromResponseAsync(
+            response,
+            cancellationToken: cancellationToken);
+
+        var snapshot = Assert.Single(snapshots);
+        Assert.Same(snapshot, responseSnapshot);
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            HttpExchangeSnapshot.FromResponseAsync(
+                response,
+                new HttpExchangeSnapshotOptions(),
+                cancellationToken));
+        Assert.Equal(1, recorder.CallCount);
+        Assert.NotNull(snapshot.Request);
+        Assert.DoesNotContain("X-Integration-Test-User", snapshot.Request.Headers!);
+        Assert.Equal(42, Assert.IsType<JsonElement>(snapshot.Request.Body)
+            .GetProperty("orderId")
+            .GetInt32());
+        Assert.NotNull(snapshot.Response);
+        Assert.Equal((int)HttpStatusCode.Created, snapshot.Response.StatusCode);
+        Assert.Equal(["{Redacted}"], snapshot.Response.Headers!["X-Session"]);
+
+        Assert.Same(recorder, recorder.Reset());
+        Assert.Equal(0, recorder.CallCount);
+    }
+
+    [Fact]
+    public async Task Http_exchange_recorder_captures_send_failures()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var recorder = new HttpExchangeRecorder
+        {
+            InnerHandler = new CallbackHttpMessageHandler((_, _) =>
+                Task.FromException<HttpResponseMessage>(
+                    new HttpRequestException("send failed", new IOException("connection lost"))))
+        };
+        using var client = new HttpClient(recorder)
+        {
+            BaseAddress = new Uri("https://orders.example.test/")
+        };
+
+        await Assert.ThrowsAsync<HttpRequestException>(() =>
+            client.GetAsync("/orders/42", cancellationToken));
+        var snapshots = await recorder.CreateSnapshotsAsync(cancellationToken);
+
+        var snapshot = Assert.Single(snapshots);
+        Assert.NotNull(snapshot.Request);
+        Assert.Equal("/orders/42", snapshot.Request.Url);
+        Assert.Null(snapshot.Response);
+        Assert.NotNull(snapshot.Failure);
+        Assert.Equal(typeof(IOException).FullName, snapshot.Failure.Type);
+        Assert.Equal("connection lost", snapshot.Failure.Message);
+    }
+
+    [Fact]
     public async Task Snapshot_location_and_acceptance_failures_are_explicit()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
@@ -1816,10 +2135,16 @@ public sealed class SnapshotAssertTests
             .Updating(SnapshotUpdateMode.Missing)
             .AllowingUpdatesInContinuousIntegration()
             .WithoutDiffTool();
+        var exchangeSettings = new SnapshotSettings()
+            .InDirectory(snapshotDirectory)
+            .Named("outbound-exchanges")
+            .Updating(SnapshotUpdateMode.Missing)
+            .AllowingUpdatesInContinuousIntegration()
+            .WithoutDiffTool();
         using var handler = new StubHttpMessageHandler();
         handler
             .When(HttpMethod.Post, "/orders?notify=true")
-            .Respond(HttpStatusCode.Created);
+            .RespondJson(new { Accepted = true }, HttpStatusCode.Created);
         using var client = new HttpClient(handler)
         {
             BaseAddress = new Uri("https://external.example.test/")
@@ -1838,15 +2163,28 @@ public sealed class SnapshotAssertTests
             await handler.ShouldMatchRequestsSnapshot(
                 snapshotSettings: settings,
                 cancellationToken: cancellationToken);
+            await handler.ShouldMatchExchangesSnapshot(
+                snapshotSettings: exchangeSettings,
+                cancellationToken: cancellationToken);
 
-            var verifiedPath = Directory.EnumerateFiles(snapshotDirectory, "*.verified.json").Single();
-            var verified = await File.ReadAllTextAsync(verifiedPath, cancellationToken);
-            Assert.Contains("\"Method\": \"POST\"", verified);
-            Assert.Contains("\"Url\": \"/orders?notify=true\"", verified);
-            Assert.Contains("\"orderId\": 42", verified);
-            Assert.Contains("\"X-Tenant\"", verified);
-            Assert.DoesNotContain("Authorization", verified);
-            Assert.DoesNotContain("secret-token", verified);
+            var verifiedPaths = Directory
+                .EnumerateFiles(snapshotDirectory, "*.verified.json")
+                .ToArray();
+            var requestsVerified = await File.ReadAllTextAsync(
+                verifiedPaths.Single(path => path.Contains("outbound-requests")),
+                cancellationToken);
+            var exchangesVerified = await File.ReadAllTextAsync(
+                verifiedPaths.Single(path => path.Contains("outbound-exchanges")),
+                cancellationToken);
+            Assert.Contains("\"Method\": \"POST\"", requestsVerified);
+            Assert.Contains("\"Url\": \"/orders?notify=true\"", requestsVerified);
+            Assert.Contains("\"orderId\": 42", requestsVerified);
+            Assert.Contains("\"X-Tenant\"", requestsVerified);
+            Assert.DoesNotContain("Authorization", requestsVerified);
+            Assert.DoesNotContain("secret-token", requestsVerified);
+            Assert.Contains("\"Response\"", exchangesVerified);
+            Assert.Contains("\"StatusCode\": 201", exchangesVerified);
+            Assert.Contains("\"accepted\": true", exchangesVerified);
         }
         finally
         {
@@ -1866,6 +2204,20 @@ public sealed class SnapshotAssertTests
             .Updating(SnapshotUpdateMode.Missing)
             .AllowingUpdatesInContinuousIntegration()
             .WithoutDiffTool();
+
+    private static StubHttpResponse CreateStubResponse(
+        bool bodyCaptured,
+        byte[] body,
+        string[]? contentTypes = null) =>
+        new(
+            StatusCode: 200,
+            ReasonPhrase: "OK",
+            Headers: contentTypes is null
+                ? new Dictionary<string, string[]>()
+                : new Dictionary<string, string[]> { ["Content-Type"] = contentTypes },
+            BodyCaptured: bodyCaptured,
+            Body: body,
+            BodyFailure: null);
 
     private static async Task<string> ReadSingleVerifiedSnapshotAsync(
         string snapshotDirectory,
@@ -1946,5 +2298,14 @@ public sealed class SnapshotAssertTests
 
             base.Dispose(disposing);
         }
+    }
+
+    private sealed class CallbackHttpMessageHandler(
+        Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> callback)
+        : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken) => callback(request, cancellationToken);
     }
 }

@@ -37,7 +37,9 @@ public sealed class AnonymousControllerTests : IClassFixture<TestApiFactory>
             using var client = scope.CreateAnonymousClient();
             using var response = await client.GetAsync("/health", cancellationToken);
 
-            await response.ShouldMatchControllerSnapshot(cancellationToken: cancellationToken);
+            await response.ShouldMatchControllerSnapshot(
+                snapshotSettings: BuiltInSnapshotAudit.CreateSettings(),
+                cancellationToken: cancellationToken);
         });
 
     private Task Run(Func<TestScenarioScope<Program>, CancellationToken, Task> test) =>

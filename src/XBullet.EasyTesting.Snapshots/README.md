@@ -129,6 +129,44 @@ including `access_token`, `api_key`, `client_secret`, `sig`, and `token`, are re
 Call `WithoutHeaders()` to omit the entire header collection, or `IncludingHeader(name)` and
 `IncludingQueryParameter(name)` to explicitly include a value known to be safe.
 
+### Complete HTTP exchanges
+
+Use `HttpExchangeRecorder` when a snapshot must contain the complete request and response,
+including the request body. It is a delegating handler, not a stub, so the request still reaches
+the real server or ASP.NET Core TestServer. With XBullet's test-client builder:
+
+```csharp
+var exchangeOptions = new HttpExchangeSnapshotOptions();
+exchangeOptions.Response.IgnoringHeaders("Location");
+
+var recorder = new HttpExchangeRecorder(exchangeOptions);
+using var client = scope.Client()
+    .AsUser(user => user.WithName("snapshot tester"))
+    .WithHandler(recorder)
+    .Build();
+
+using var response = await client.PostAsJsonAsync(
+    "/api/products",
+    new { name = "Webcam", price = 79.95m });
+
+await response.ShouldMatchHttpExchangeSnapshot(
+    snapshotSettings: new SnapshotSettings().ScrubMember("id"));
+```
+
+The recorder captures requests before transport consumption and buffers response content before
+returning it to the caller. JSON is stored structurally; text stays text; binary bodies use base64.
+Authorization, cookies, API keys, XBullet's test identity and client-certificate transport
+headers, correlation identifiers, and tracing headers are excluded by default. Configure request
+and response headers independently through `HttpExchangeSnapshotOptions`. A test factory or client
+helper can attach a fresh recorder to each client, so individual tests only need the response
+extension shown above.
+
+Without a recorder, the same response extension falls back to `HttpResponseMessage.RequestMessage`.
+That is sufficient when its content remains readable; attach a recorder for TestServer and other
+pipelines that may consume or replace the request content. Use
+`recorder.ShouldMatchHttpExchangesSnapshot()` when one snapshot should contain every call made by
+the client.
+
 ### Multiple snapshots and parameterized tests
 
 Use a variant when one test method produces multiple snapshots or when each parameterized case

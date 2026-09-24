@@ -1,0 +1,40 @@
+{
+  "Request": {
+    "Method": "PUT",
+    "Url": "/api/products/{id}",
+    "Headers": {
+      "Content-Type": [
+        "application/json; charset=utf-8"
+      ],
+      "X-Request-Secret": [
+        "{Redacted}"
+      ]
+    },
+    "Body": {
+      "name": "Updated with nested metadata",
+      "price": 27.50,
+      "customer": {
+        "id": "{Scrubbed}",
+        "contact": {
+          "email": "{Scrubbed}",
+          "locale": "en-US"
+        }
+      }
+    }
+  },
+  "Response": {
+    "StatusCode": 200,
+    "ReasonPhrase": "OK",
+    "Headers": {
+      "Content-Type": [
+        "application/json; charset=utf-8"
+      ]
+    },
+    "Body": {
+      "id": 922,
+      "name": "Updated with nested metadata",
+      "price": 27.50
+    }
+  },
+  "Failure": null
+}

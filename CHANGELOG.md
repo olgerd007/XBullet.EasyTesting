@@ -4,6 +4,25 @@ Notable changes to XBullet.EasyTesting are documented in this file.
 
 The project follows Semantic Versioning. Package versions are produced from GitHub Release tags.
 
+## [1.0.9] - 2026-09-24
+
+### Added
+
+- Complete outbound HTTP exchange recording, including responses, send failures, partial response
+  bodies, and content-read failures.
+- Snapshot assertions for one or all recorded outbound HTTP exchanges with structural JSON bodies
+  and independent request and response header filtering and redaction.
+- Transport-independent exchange recording for real `HttpClient`, TestServer, and
+  `WebApplicationFactory` clients through `HttpExchangeRecorder` and `TestClientBuilder.WithHandler`.
+- Response-based full-exchange verification with `response.ShouldMatchHttpExchangeSnapshot()` and
+  `response.VerifyHttpExchangeSnapshot()`. Recorder captures are associated with returned responses,
+  preserving request bodies even when TestServer consumes or replaces request content.
+- Per-client and factory-helper recorder setup, allowing tests to verify a response without retaining
+  the recorder while keeping recorded state isolated between parallel test scenarios.
+- Request snapshot customization for header and query-value redaction, nested request-body member
+  and JSON-path scrubbing, and dynamic URL normalization. Authentication, API-key, cookie, tracing,
+  and XBullet test-transport headers are excluded by default.
+
 ## [1.0.8] - 2026-09-21
 
 ### Added

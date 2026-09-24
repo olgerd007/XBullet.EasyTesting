@@ -12,5 +12,6 @@ XBullet.EasyTesting.Hosting.EasyTestHostBuilder<TEntryPoint>.ConfigureHostSettin
 XBullet.EasyTesting.Hosting.EasyTestHostBuilder<TEntryPoint>.UseSetting(string! key, string! value) -> XBullet.EasyTesting.Hosting.EasyTestHostBuilder<TEntryPoint!>!
 XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint>.AsUser(System.Action<XBullet.EasyTesting.Authentication.TestUserBuilder!>! configure, string! authenticationScheme) -> XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint!>!
 XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint>.WithBearerToken(string! token) -> XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint>.WithHandler(System.Net.Http.DelegatingHandler! handler) -> XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint!>!
 XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.AsUser(System.Action<XBullet.EasyTesting.Authentication.TestUserBuilder!>! configure, string! authenticationScheme) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
 XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.WithBearerToken(string! token) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!

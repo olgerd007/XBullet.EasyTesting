@@ -24,8 +24,14 @@ var client = new HttpClient(stub)
 
 using var response = await client.GetAsync("/products/42");
 stub.VerifyCalled(HttpMethod.Get, "/products/42");
+
+var exchange = Assert.Single(stub.Exchanges);
+Assert.Equal(200, exchange.Response?.StatusCode);
 ```
 
-Rules can match queries, headers, text or JSON bodies, and custom predicates. Response sequences, timeouts, cancellation, malformed payloads, and recorded-request assertions are also supported.
+Rules can match queries, headers, text or JSON bodies, and custom predicates. Response sequences,
+timeouts, cancellation, malformed payloads, and recorded-request assertions are also supported.
+`Exchanges` records each request together with its response or failure; response bytes and content
+read failures are observed without eagerly consuming the body.
 
 See the [repository documentation](https://github.com/olgerd007/XBullet.EasyTesting) for complete examples.
