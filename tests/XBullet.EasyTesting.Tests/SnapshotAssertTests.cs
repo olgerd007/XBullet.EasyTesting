@@ -1275,6 +1275,69 @@ public sealed class SnapshotAssertTests
     }
 
     [Fact]
+    public void Captured_response_snapshot_handles_all_body_content_types()
+    {
+        var notRead = StubHttpResponseSnapshot.FromResponse(CreateStubResponse(
+            bodyCaptured: false,
+            body: Encoding.UTF8.GetBytes("not read")));
+        var empty = StubHttpResponseSnapshot.FromResponse(CreateStubResponse(
+            bodyCaptured: true,
+            body: []));
+        var malformedJson = StubHttpResponseSnapshot.FromResponse(CreateStubResponse(
+            bodyCaptured: true,
+            body: Encoding.UTF8.GetBytes("{ invalid"),
+            contentTypes: ["invalid content type", "application/problem+json"]));
+        var text = StubHttpResponseSnapshot.FromResponse(CreateStubResponse(
+            bodyCaptured: true,
+            body: Encoding.UTF8.GetBytes("plain text"),
+            contentTypes: ["text/plain"]));
+        var charsetText = StubHttpResponseSnapshot.FromResponse(CreateStubResponse(
+            bodyCaptured: true,
+            body: Encoding.Unicode.GetBytes("café"),
+            contentTypes: ["application/x-custom; charset=utf-16"]));
+        var binary = StubHttpResponseSnapshot.FromResponse(CreateStubResponse(
+            bodyCaptured: true,
+            body: [0, 1, 255]));
+
+        Assert.Equal("{NotRead}", notRead.Body);
+        Assert.Null(empty.Body);
+        Assert.Equal("{ invalid", malformedJson.Body);
+        Assert.Equal("plain text", text.Body);
+        Assert.Equal("café", charsetText.Body);
+        Assert.Equal(
+            new ControllerBinaryBodySnapshot("base64", "AAH/"),
+            Assert.IsType<ControllerBinaryBodySnapshot>(binary.Body));
+    }
+
+    [Fact]
+    public void Http_exchange_options_accept_empty_sets_and_reject_invalid_names()
+    {
+        var request = new HttpExchangeRequestSnapshotOptions();
+        var response = new HttpExchangeResponseSnapshotOptions();
+        var stubResponse = new StubHttpResponseSnapshotOptions();
+
+        Assert.Same(request, request.IgnoringHeaders());
+        Assert.Same(request, request.RedactingHeaders());
+        Assert.Same(request, request.RedactingQueryParameters());
+        Assert.Same(response, response.IgnoringHeaders());
+        Assert.Same(response, response.RedactingHeaders());
+        Assert.Same(stubResponse, stubResponse.IgnoringHeaders());
+        Assert.Same(stubResponse, stubResponse.RedactingHeaders());
+
+        Assert.Throws<ArgumentNullException>(() => request.IgnoringHeaders(null!));
+        Assert.Throws<ArgumentException>(() => request.RedactingHeaders(" "));
+        Assert.Throws<ArgumentException>(() => request.RedactingQueryParameters(""));
+        Assert.Throws<ArgumentException>(() => request.IncludingHeader(""));
+        Assert.Throws<ArgumentException>(() => request.IncludingQueryParameter(" "));
+        Assert.Throws<ArgumentNullException>(() => response.RedactingHeaders(null!));
+        Assert.Throws<ArgumentException>(() => response.IgnoringHeaders(""));
+        Assert.Throws<ArgumentException>(() => response.IncludingHeader(" "));
+        Assert.Throws<ArgumentNullException>(() => stubResponse.IgnoringHeaders(null!));
+        Assert.Throws<ArgumentException>(() => stubResponse.RedactingHeaders(""));
+        Assert.Throws<ArgumentException>(() => stubResponse.IncludingHeader(" "));
+    }
+
+    [Fact]
     public async Task Http_response_exchange_snapshot_captures_request_and_response()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
@@ -1318,6 +1381,67 @@ public sealed class SnapshotAssertTests
         Assert.Equal("accepted", Assert.IsType<JsonElement>(snapshot.Response.Body)
             .GetProperty("status")
             .GetString());
+    }
+
+    [Fact]
+    public async Task Http_response_exchange_snapshot_handles_body_content_types_and_omissions()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var emptyResponse = new HttpResponseMessage(HttpStatusCode.NoContent)
+        {
+            Content = new ByteArrayContent([])
+        };
+        using var textResponse = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            RequestMessage = new HttpRequestMessage(HttpMethod.Post, "/text")
+            {
+                Content = new StringContent("request body", Encoding.UTF8, "text/plain")
+            },
+            Content = new StringContent("plain text", Encoding.UTF8, "text/plain")
+        };
+        using var charsetResponse = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("café", Encoding.Unicode, "application/x-custom")
+        };
+        using var binaryResponse = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            RequestMessage = new HttpRequestMessage(HttpMethod.Post, (Uri?)null),
+            Content = new ByteArrayContent([0, 1, 255])
+        };
+
+        var empty = await HttpExchangeSnapshot.FromResponseAsync(
+            emptyResponse,
+            cancellationToken: cancellationToken);
+        var text = await HttpExchangeSnapshot.FromResponseAsync(
+            textResponse,
+            cancellationToken: cancellationToken);
+        var charsetText = await HttpExchangeSnapshot.FromResponseAsync(
+            charsetResponse,
+            cancellationToken: cancellationToken);
+        var binary = await HttpExchangeSnapshot.FromResponseAsync(
+            binaryResponse,
+            cancellationToken: cancellationToken);
+        var omitted = await HttpExchangeSnapshot.FromResponseAsync(
+            textResponse,
+            new HttpExchangeSnapshotOptions
+            {
+                Request = { IncludeHeaders = false, IncludeBody = false },
+                Response = { IncludeHeaders = false, IncludeBody = false }
+            },
+            cancellationToken);
+
+        Assert.Null(empty.Response!.Body);
+        Assert.Equal("plain text", text.Response!.Body);
+        Assert.Equal("café", charsetText.Response!.Body);
+        Assert.Null(binary.Request!.Url);
+        Assert.Equal(
+            new ControllerBinaryBodySnapshot("base64", "AAH/"),
+            Assert.IsType<ControllerBinaryBodySnapshot>(binary.Response!.Body));
+        Assert.NotNull(omitted.Request);
+        Assert.Null(omitted.Request.Headers);
+        Assert.Null(omitted.Request.Body);
+        Assert.Null(omitted.Response!.Headers);
+        Assert.Null(omitted.Response.Body);
     }
 
     [Fact]
@@ -2080,6 +2204,20 @@ public sealed class SnapshotAssertTests
             .Updating(SnapshotUpdateMode.Missing)
             .AllowingUpdatesInContinuousIntegration()
             .WithoutDiffTool();
+
+    private static StubHttpResponse CreateStubResponse(
+        bool bodyCaptured,
+        byte[] body,
+        string[]? contentTypes = null) =>
+        new(
+            StatusCode: 200,
+            ReasonPhrase: "OK",
+            Headers: contentTypes is null
+                ? new Dictionary<string, string[]>()
+                : new Dictionary<string, string[]> { ["Content-Type"] = contentTypes },
+            BodyCaptured: bodyCaptured,
+            Body: body,
+            BodyFailure: null);
 
     private static async Task<string> ReadSingleVerifiedSnapshotAsync(
         string snapshotDirectory,
