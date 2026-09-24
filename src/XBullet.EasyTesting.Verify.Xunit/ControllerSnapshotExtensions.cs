@@ -101,7 +101,7 @@ public static class ControllerSnapshotExtensions
         return snapshots.Select(ToVerifyExchangeSnapshot).ToArray();
     }
 
-    private static HttpExchangeSnapshot ToVerifyExchangeSnapshot(HttpExchangeSnapshot snapshot)
+    internal static HttpExchangeSnapshot ToVerifyExchangeSnapshot(HttpExchangeSnapshot snapshot)
     {
         var request = snapshot.Request?.Body is JsonElement requestJson
             ? snapshot.Request with { Body = ToVerifyValue(requestJson) }
@@ -113,7 +113,7 @@ public static class ControllerSnapshotExtensions
         return snapshot with { Request = request, Response = response };
     }
 
-    private static object? ToVerifyValue(JsonElement element) =>
+    internal static object? ToVerifyValue(JsonElement element) =>
         element.ValueKind switch
         {
             JsonValueKind.Object => element.EnumerateObject().ToDictionary(

@@ -7,6 +7,18 @@ namespace XBullet.EasyTesting.Snapshots;
 /// <summary>Controls snapshot naming, storage, serialization, and scrubbing.</summary>
 public sealed class SnapshotSettings
 {
+    private static readonly IReadOnlyDictionary<string, SnapshotUpdateMode> UpdateModes =
+        new Dictionary<string, SnapshotUpdateMode>(StringComparer.Ordinal)
+        {
+            ["none"] = SnapshotUpdateMode.None,
+            ["false"] = SnapshotUpdateMode.None,
+            ["0"] = SnapshotUpdateMode.None,
+            ["missing"] = SnapshotUpdateMode.Missing,
+            ["all"] = SnapshotUpdateMode.All,
+            ["true"] = SnapshotUpdateMode.All,
+            ["1"] = SnapshotUpdateMode.All
+        };
+
     private readonly HashSet<string> _scrubbedMembers = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _ignoredMembers = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<JsonSnapshotPathRule> _pathRules = new();
@@ -355,14 +367,17 @@ public sealed class SnapshotSettings
 
     private static SnapshotUpdateMode ReadUpdateMode()
     {
-        var value = Environment.GetEnvironmentVariable(UpdateModeEnvironmentVariable);
-        return value?.Trim().ToLowerInvariant() switch
+        var value = Environment.GetEnvironmentVariable(UpdateModeEnvironmentVariable)?
+            .Trim()
+            .ToLowerInvariant();
+        if (string.IsNullOrEmpty(value))
         {
-            null or "" or "none" or "false" or "0" => SnapshotUpdateMode.None,
-            "missing" => SnapshotUpdateMode.Missing,
-            "all" or "true" or "1" => SnapshotUpdateMode.All,
-            _ => throw new InvalidOperationException(
-                $"Environment variable {UpdateModeEnvironmentVariable} must be 'none', 'missing', or 'all'.")
-        };
+            return SnapshotUpdateMode.None;
+        }
+
+        return UpdateModes.TryGetValue(value, out var mode)
+            ? mode
+            : throw new InvalidOperationException(
+                $"Environment variable {UpdateModeEnvironmentVariable} must be 'none', 'missing', or 'all'.");
     }
 }

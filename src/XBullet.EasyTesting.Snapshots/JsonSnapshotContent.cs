@@ -5,7 +5,7 @@ namespace XBullet.EasyTesting.Snapshots;
 
 internal static class JsonSnapshotContent
 {
-    public static JsonElement Parse(string json, JsonSerializerOptions? serializerOptions = null)
+    public static JsonElement Parse(string json, JsonSerializerOptions serializerOptions)
     {
         using var document = JsonDocument.Parse(json, CreateDocumentOptions(serializerOptions));
         return document.RootElement.Clone();
@@ -37,13 +37,10 @@ internal static class JsonSnapshotContent
              mediaType.EndsWith("+json", StringComparison.OrdinalIgnoreCase));
     }
 
-    public static bool IsJson(string contentType) =>
-        MediaTypeHeaderValue.TryParse(contentType, out var parsed) && IsJson(parsed);
-
-    private static JsonDocumentOptions CreateDocumentOptions(JsonSerializerOptions? options) => new()
+    private static JsonDocumentOptions CreateDocumentOptions(JsonSerializerOptions options) => new()
     {
-        AllowTrailingCommas = options?.AllowTrailingCommas ?? false,
-        CommentHandling = options?.ReadCommentHandling ?? JsonCommentHandling.Disallow,
-        MaxDepth = options?.MaxDepth ?? 0
+        AllowTrailingCommas = options.AllowTrailingCommas,
+        CommentHandling = options.ReadCommentHandling,
+        MaxDepth = options.MaxDepth
     };
 }

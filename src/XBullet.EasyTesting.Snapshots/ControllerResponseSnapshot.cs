@@ -100,23 +100,31 @@ public sealed record ControllerResponseSnapshot(
             return null;
         }
 
-        if (JsonSnapshotContent.IsJson(content.Headers.ContentType))
+        var contentType = content.Headers.ContentType;
+        if (JsonSnapshotContent.IsJson(contentType))
         {
             return JsonSnapshotContent.Parse(bytes);
         }
 
-        if (IsText(content.Headers.ContentType))
+        if (IsText(contentType))
         {
-            var encoding = GetEncoding(content.Headers.ContentType?.CharSet);
+            var encoding = GetEncoding(contentType!.CharSet);
             return encoding.GetString(bytes);
         }
 
         return new ControllerBinaryBodySnapshot("base64", Convert.ToBase64String(bytes));
     }
 
-    private static bool IsText(MediaTypeHeaderValue? contentType) =>
-        contentType?.MediaType?.StartsWith("text/", StringComparison.OrdinalIgnoreCase) is true ||
-        !string.IsNullOrWhiteSpace(contentType?.CharSet);
+    private static bool IsText(MediaTypeHeaderValue? contentType)
+    {
+        if (contentType is null)
+        {
+            return false;
+        }
+
+        return contentType.MediaType!.StartsWith("text/", StringComparison.OrdinalIgnoreCase) ||
+            !string.IsNullOrWhiteSpace(contentType.CharSet);
+    }
 
     private static Encoding GetEncoding(string? charset)
     {

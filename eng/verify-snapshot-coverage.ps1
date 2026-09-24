@@ -6,48 +6,76 @@ param(
     [double] $MinimumLineCoverage = 90,
 
     [Parameter(Mandatory = $false)]
-    [double] $MinimumBranchCoverage = 80
+    [double] $MinimumBranchCoverage = 81
 )
 
 $ErrorActionPreference = "Stop"
 
-$reports = Get-ChildItem -LiteralPath $ResultsDirectory -Filter "*.cobertura.xml" -File -Recurse
+$projectPackages = [ordered]@{
+    "XBullet.EasyTesting" = "XBullet.EasyTesting"
+    "XBullet.EasyTesting.Aspire" = "XBullet.EasyTesting.Aspire"
+    "XBullet.EasyTesting.Azure" = "XBullet.EasyTesting.Azure"
+    "XBullet.EasyTesting.AzureFunctions" = "XBullet.EasyTesting.AzureFunctions"
+    "XBullet.EasyTesting.EntityFrameworkCore" = "XBullet.EasyTesting.EntityFrameworkCore"
+    "XBullet.EasyTesting.Http" = "XBullet.EasyTesting.Http"
+    "XBullet.EasyTesting.Messaging" = "XBullet.EasyTesting.Messaging"
+    "XBullet.EasyTesting.Observability" = "XBullet.EasyTesting.Observability"
+    "XBullet.EasyTesting.Snapshots" = "XBullet.EasyTesting.Snapshots.Core"
+    "XBullet.EasyTesting.Snapshots.Http" = "XBullet.EasyTesting.Snapshots.Http"
+    "XBullet.EasyTesting.Testcontainers" = "XBullet.EasyTesting.Testcontainers"
+    "XBullet.EasyTesting.Verify.Xunit" = "XBullet.EasyTesting.Verify.Xunit"
+}
+
+$reports = @(Get-ChildItem -LiteralPath $ResultsDirectory -Filter "*.cobertura.xml" -File -Recurse)
 if ($reports.Count -eq 0) {
     throw "No Cobertura coverage reports were found below '$ResultsDirectory'."
 }
 
-$lineHits = @{}
-$branchHits = @{}
+$coverageByProject = @{}
+foreach ($project in $projectPackages.Keys) {
+    $coverageByProject[$project] = [pscustomobject]@{
+        Lines = @{}
+        Branches = @{}
+    }
+}
 
 foreach ($report in $reports) {
     [xml] $coverage = Get-Content -LiteralPath $report.FullName
-    $classes = $coverage.coverage.packages.package.classes.class | Where-Object {
-        $source = [string] $_.filename
-        if ([string]::IsNullOrWhiteSpace($source)) {
-            return $false
+    foreach ($class in $coverage.coverage.packages.package.classes.class) {
+        $source = ([string] $class.filename).Replace("\", "/")
+        if ([string]::IsNullOrWhiteSpace($source) -or
+            $source.Contains("/obj/", [StringComparison]::Ordinal) -or
+            $source.EndsWith("/SnapshotDiffLauncher.cs", [StringComparison]::Ordinal)) {
+            continue
         }
 
-        $source = $source.Replace("\", "/")
-        $source.Contains("/src/XBullet.EasyTesting.Snapshots", [StringComparison]::Ordinal) -and
-            -not $source.EndsWith("/SnapshotDiffLauncher.cs", [StringComparison]::Ordinal)
-    }
+        if ($source -notmatch "/src/(?<Project>XBullet[.]EasyTesting(?:[.][^/]+)?)/") {
+            continue
+        }
 
-    foreach ($class in $classes) {
-        $source = $class.filename.Replace("\", "/")
+        $project = $Matches.Project
+        if (-not $coverageByProject.ContainsKey($project)) {
+            continue
+        }
+
+        $projectCoverage = $coverageByProject[$project]
         foreach ($line in $class.lines.line) {
             $key = "$source|$($line.number)"
             $hits = [int] $line.hits
-            if (-not $lineHits.ContainsKey($key) -or $hits -gt $lineHits[$key]) {
-                $lineHits[$key] = $hits
+            if (-not $projectCoverage.Lines.ContainsKey($key) -or
+                $hits -gt $projectCoverage.Lines[$key]) {
+                $projectCoverage.Lines[$key] = $hits
             }
 
-            if ($line.branch -eq "true" -and $line.'condition-coverage' -match '\((\d+)/(\d+)\)') {
+            if ($line.branch -eq "true" -and
+                $line.'condition-coverage' -match '\((\d+)/(\d+)\)') {
                 $covered = [int] $Matches[1]
                 $total = [int] $Matches[2]
-                if (-not $branchHits.ContainsKey($key) -or
-                    $total -gt $branchHits[$key].Total -or
-                    ($total -eq $branchHits[$key].Total -and $covered -gt $branchHits[$key].Covered)) {
-                    $branchHits[$key] = [pscustomobject]@{
+                if (-not $projectCoverage.Branches.ContainsKey($key) -or
+                    $total -gt $projectCoverage.Branches[$key].Total -or
+                    ($total -eq $projectCoverage.Branches[$key].Total -and
+                        $covered -gt $projectCoverage.Branches[$key].Covered)) {
+                    $projectCoverage.Branches[$key] = [pscustomobject]@{
                         Covered = $covered
                         Total = $total
                     }
@@ -57,39 +85,52 @@ foreach ($report in $reports) {
     }
 }
 
-if ($lineHits.Count -eq 0) {
-    throw "The reports did not contain snapshot source coverage."
-}
-
-$coveredLines = @($lineHits.Values | Where-Object { $_ -gt 0 }).Count
-$totalLines = $lineHits.Count
-$coveredBranches = 0
-$totalBranches = 0
-foreach ($branch in $branchHits.Values) {
-    $coveredBranches += $branch.Covered
-    $totalBranches += $branch.Total
-}
-
-$lineCoverage = 100 * $coveredLines / $totalLines
-$branchCoverage = if ($totalBranches -eq 0) { 100 } else { 100 * $coveredBranches / $totalBranches }
-
-Write-Host ("Snapshot coverage: lines {0:N1}% ({1}/{2}), branches {3:N1}% ({4}/{5})" -f
-    $lineCoverage,
-    $coveredLines,
-    $totalLines,
-    $branchCoverage,
-    $coveredBranches,
-    $totalBranches)
-
 $failures = @()
-if ($lineCoverage -lt $MinimumLineCoverage) {
-    $failures += "line coverage is below $MinimumLineCoverage%"
-}
+foreach ($project in $projectPackages.Keys) {
+    $package = $projectPackages[$project]
+    $projectCoverage = $coverageByProject[$project]
+    if ($projectCoverage.Lines.Count -eq 0) {
+        $failures += "$package has no source coverage"
+        Write-Host "$package coverage: no source coverage"
+        continue
+    }
 
-if ($branchCoverage -lt $MinimumBranchCoverage) {
-    $failures += "branch coverage is below $MinimumBranchCoverage%"
+    $coveredLines = @($projectCoverage.Lines.Values | Where-Object { $_ -gt 0 }).Count
+    $totalLines = $projectCoverage.Lines.Count
+    $coveredBranches = 0
+    $totalBranches = 0
+    foreach ($branch in $projectCoverage.Branches.Values) {
+        $coveredBranches += $branch.Covered
+        $totalBranches += $branch.Total
+    }
+
+    $lineCoverage = 100 * $coveredLines / $totalLines
+    $branchCoverage = if ($totalBranches -eq 0) {
+        100
+    }
+    else {
+        100 * $coveredBranches / $totalBranches
+    }
+
+    Write-Host ("{0} coverage: lines {1:N1}% ({2}/{3}), branches {4:N1}% ({5}/{6})" -f
+        $package,
+        $lineCoverage,
+        $coveredLines,
+        $totalLines,
+        $branchCoverage,
+        $coveredBranches,
+        $totalBranches)
+
+    if ($branchCoverage -lt $MinimumBranchCoverage) {
+        $failures += "$package branch coverage is below $MinimumBranchCoverage%"
+    }
+
+    if ($project -eq "XBullet.EasyTesting.Snapshots" -and
+        $lineCoverage -lt $MinimumLineCoverage) {
+        $failures += "$package line coverage is below $MinimumLineCoverage%"
+    }
 }
 
 if ($failures.Count -gt 0) {
-    throw "Snapshot coverage check failed: $($failures -join '; ')."
+    throw "Package coverage check failed: $($failures -join '; ')."
 }

@@ -1037,10 +1037,65 @@ Snapshot mismatch messages report the first structural difference as JSONPath wi
 expected and actual values. The same details are available through `DifferencePath`,
 `ExpectedValue`, and `ActualValue` on `SnapshotMismatchException`.
 
-### Snapshot defaults and obsolete-file detection
+### Project-wide snapshot defaults
 
-Use an instance-scoped defaults template to keep project conventions consistent without mutable
-global settings. Each call to `Create` returns an independent settings instance:
+Set `SnapshotSettingsDefaults.Global` once during test-assembly initialization to apply the same
+snapshot conventions whenever an assertion omits `snapshotSettings`. A module initializer runs
+before the test framework discovers or executes tests, so it is a convenient place for this setup.
+Add a file such as `SnapshotConfiguration.cs` to the test project:
+
+```csharp
+using System.Runtime.CompilerServices;
+using XBullet.EasyTesting.Snapshots;
+
+internal static class SnapshotConfiguration
+{
+    [ModuleInitializer]
+    internal static void Initialize()
+    {
+        SnapshotSettingsDefaults.Global = new(settings => settings
+            .BesideSourceFile()
+            .ScrubGuids()
+            .ScrubDateTimes()
+            .ScrubMembers("RequestId", "CorrelationId")
+            .IgnoreMembers("AccessToken")
+            .CanonicalizeJson()
+            .WithoutDiffTool());
+    }
+}
+```
+
+Parameterless assertions now use those defaults, including complete HTTP exchange assertions:
+
+```csharp
+await SnapshotAssert.MatchAsync(result);
+
+using var response = await client.GetAsync("/api/products");
+await response.ShouldMatchHttpExchangeSnapshot();
+```
+
+The configured object is a template, not a shared mutable settings instance. Every assertion gets
+an independent copy, so scrubbers and local changes are safe when tests run in parallel. Explicit
+settings always take precedence over the global template:
+
+```csharp
+var settings = SnapshotSettingsDefaults.Global!.Create(settings => settings
+    .Named("products")
+    .ForVariant($"case-{caseId}"));
+
+await response.ShouldMatchHttpExchangeSnapshot(snapshotSettings: settings);
+```
+
+Configure `Global` once before tests start. Assign `null` to restore package defaults, which is
+primarily useful for test-host isolation. Request/response header filtering and query redaction are
+capture concerns and remain configured through `HttpExchangeSnapshotOptions` or the
+`HttpExchangeRecorder`; the global template controls snapshot naming, placement, serialization,
+scrubbing, update behavior, catalogs, and diff tools.
+
+### Reusable snapshot defaults and obsolete-file detection
+
+Use an instance-scoped defaults template when conventions should be shared only by a particular
+test suite or fixture. Each call to `Create` returns an independent settings instance:
 
 ```csharp
 private static readonly SnapshotCatalog SnapshotCatalog = new();

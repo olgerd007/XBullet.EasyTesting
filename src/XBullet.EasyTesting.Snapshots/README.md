@@ -225,8 +225,56 @@ Assert.Equal("$.orders[0].status", exception.DifferencePath);
 Console.WriteLine($"{exception.ExpectedValue} -> {exception.ActualValue}");
 ```
 
-Track the snapshots exercised by a complete test scope to find obsolete verified files. The
-catalog is explicit and instance-scoped, so parallel projects do not share mutable global state:
+Configure project-wide defaults once before test discovery by adding a module initializer to the
+test project:
+
+```csharp
+using System.Runtime.CompilerServices;
+using XBullet.EasyTesting.Snapshots;
+
+internal static class SnapshotConfiguration
+{
+    [ModuleInitializer]
+    internal static void Initialize()
+    {
+        SnapshotSettingsDefaults.Global = new(settings => settings
+            .BesideSourceFile()
+            .ScrubGuids()
+            .ScrubDateTimes()
+            .ScrubMembers("RequestId", "CorrelationId")
+            .IgnoreMembers("AccessToken")
+            .CanonicalizeJson()
+            .WithoutDiffTool());
+    }
+}
+```
+
+Assertions that omit `snapshotSettings` now use the global template:
+
+```csharp
+await SnapshotAssert.MatchAsync(result);
+
+using var response = await client.GetAsync("/api/products");
+await response.ShouldMatchHttpExchangeSnapshot();
+```
+
+Each assertion receives an independent settings copy. Explicit settings take precedence, and a
+locally customized copy can be created without changing other tests:
+
+```csharp
+var settings = SnapshotSettingsDefaults.Global!.Create(settings => settings
+    .Named("products")
+    .ForVariant($"case-{caseId}"));
+
+await response.ShouldMatchHttpExchangeSnapshot(snapshotSettings: settings);
+```
+
+Configure `Global` once before tests start. Assign `null` to restore package defaults. HTTP
+request/response header filtering and query redaction remain capture settings configured through
+`HttpExchangeSnapshotOptions` or `HttpExchangeRecorder`.
+
+Track the snapshots exercised by a complete test scope to find obsolete verified files. A catalog
+can remain explicit and instance-scoped so parallel projects do not share its observed-file state:
 
 ```csharp
 var catalog = new SnapshotCatalog();

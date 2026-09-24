@@ -234,6 +234,20 @@ public sealed class SnapshotAssertTests
             Content = new ByteArrayContent([0, 1, 255])
         };
         binaryResponse.Content.Headers.ContentType = new("application/octet-stream");
+        using var charsetResponse = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("café", Encoding.Unicode, "application/x-custom")
+        };
+        using var untypedBinaryResponse = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent([0, 1, 255])
+        };
+        using var utf8TextResponse = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            RequestMessage = new HttpRequestMessage(HttpMethod.Get, (Uri?)null),
+            Content = new ByteArrayContent(Encoding.UTF8.GetBytes("UTF-8 text"))
+        };
+        utf8TextResponse.Content.Headers.ContentType = new("text/plain");
 
         var emptySnapshot = await ControllerResponseSnapshot.FromResponseAsync(
             emptyResponse,
@@ -244,12 +258,27 @@ public sealed class SnapshotAssertTests
         var binarySnapshot = await ControllerResponseSnapshot.FromResponseAsync(
             binaryResponse,
             cancellationToken: cancellationToken);
+        var charsetSnapshot = await ControllerResponseSnapshot.FromResponseAsync(
+            charsetResponse,
+            cancellationToken: cancellationToken);
+        var untypedBinarySnapshot = await ControllerResponseSnapshot.FromResponseAsync(
+            untypedBinaryResponse,
+            cancellationToken: cancellationToken);
+        var utf8TextSnapshot = await ControllerResponseSnapshot.FromResponseAsync(
+            utf8TextResponse,
+            cancellationToken: cancellationToken);
 
         Assert.Null(emptySnapshot.Body);
         Assert.Equal("café", textSnapshot.Body);
+        Assert.Equal("café", charsetSnapshot.Body);
+        Assert.Null(utf8TextSnapshot.Request?.Url);
+        Assert.Equal("UTF-8 text", utf8TextSnapshot.Body);
         Assert.Equal(
             new ControllerBinaryBodySnapshot("base64", "AAH/"),
             Assert.IsType<ControllerBinaryBodySnapshot>(binarySnapshot.Body));
+        Assert.Equal(
+            new ControllerBinaryBodySnapshot("base64", "AAH/"),
+            Assert.IsType<ControllerBinaryBodySnapshot>(untypedBinarySnapshot.Body));
     }
 
     [Fact]
@@ -442,6 +471,51 @@ public sealed class SnapshotAssertTests
     }
 
     [Fact]
+    public async Task Snapshot_names_cover_all_reserved_windows_device_name_forms()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var names = new Dictionary<string, string>
+        {
+            ["PRN"] = "%0050RN",
+            ["AUX"] = "%0041UX",
+            ["NUL"] = "%004EUL",
+            ["COM1"] = "%0043OM1",
+            ["LPT9"] = "%004CPT9",
+            ["COM0"] = "COM0",
+            ["COM10"] = "COM10",
+            ["ABC1"] = "ABC1",
+            ["LPTA"] = "LPTA"
+        };
+
+        try
+        {
+            foreach (var name in names.Keys)
+            {
+                await SnapshotAssert.MatchAsync(
+                    new { Name = name },
+                    CreateUpdatingSettings(snapshotDirectory).Named(name),
+                    cancellationToken);
+            }
+
+            var fileNames = Directory.EnumerateFiles(snapshotDirectory, "*.verified.json")
+                .Select(Path.GetFileName)
+                .ToArray();
+            Assert.Equal(names.Count, fileNames.Length);
+            foreach (var expectedName in names.Values)
+            {
+                Assert.Contains(fileNames, fileName => fileName!.Contains(
+                    $".{expectedName}.verified.json",
+                    StringComparison.Ordinal));
+            }
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
     public async Task Case_only_snapshot_path_collisions_fail_clearly_on_every_platform()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
@@ -585,6 +659,66 @@ public sealed class SnapshotAssertTests
             Assert.True(
                 verified.IndexOf("\"id\": \"1\"", StringComparison.Ordinal) <
                 verified.IndexOf("\"id\": \"2\"", StringComparison.Ordinal));
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task Root_and_array_path_rules_cover_null_and_primitive_values()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+
+        try
+        {
+            await SnapshotAssert.MatchJsonAsync(
+                """{"dynamic":42}""",
+                CreateUpdatingSettings(snapshotDirectory)
+                    .Named("root-replacement")
+                    .ReplacePath("", new { Stable = true }),
+                cancellationToken);
+            await SnapshotAssert.MatchJsonAsync(
+                "[1,2]",
+                CreateUpdatingSettings(snapshotDirectory)
+                    .Named("array-child-replacement")
+                    .ReplacePath("/0", null),
+                cancellationToken);
+            await SnapshotAssert.MatchJsonAsync(
+                "null",
+                CreateUpdatingSettings(snapshotDirectory)
+                    .Named("null-root-hash")
+                    .HashPath(""),
+                cancellationToken);
+            await SnapshotAssert.MatchJsonAsync(
+                "[2,null,1]",
+                CreateUpdatingSettings(snapshotDirectory)
+                    .Named("primitive-root-sort")
+                    .SortArray(""),
+                cancellationToken);
+            await SnapshotAssert.MatchJsonAsync(
+                """["00000000-0000-0000-0000-000000000000","stable",42]""",
+                CreateUpdatingSettings(snapshotDirectory)
+                    .Named("array-value-scrubbing")
+                    .ScrubGuids(),
+                cancellationToken);
+            await SnapshotAssert.MatchJsonAsync(
+                """{"a~b":"dynamic"}""",
+                CreateUpdatingSettings(snapshotDirectory)
+                    .Named("tilde-path-escape")
+                    .ReplacePath("/a~0b", "stable"),
+                cancellationToken);
+
+            var snapshots = Directory.EnumerateFiles(snapshotDirectory, "*.verified.json")
+                .Select(File.ReadAllText)
+                .ToArray();
+            Assert.Equal(6, snapshots.Length);
+            Assert.Contains(snapshots, snapshot => snapshot.Contains("\"Stable\": true"));
+            Assert.Contains(snapshots, snapshot => snapshot.Contains("sha256:"));
+            Assert.Contains(snapshots, snapshot => snapshot.Contains("{Guid}"));
+            Assert.Contains(snapshots, snapshot => snapshot.Contains("\"a~b\": \"stable\""));
         }
         finally
         {
@@ -1257,6 +1391,62 @@ public sealed class SnapshotAssertTests
     }
 
     [Fact]
+    public async Task Captured_exchange_snapshot_can_describe_a_response_that_is_still_pending()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var handler = new StubHttpMessageHandler();
+        handler
+            .When(HttpMethod.Get, "/pending")
+            .RespondAsync(async (_, token) =>
+            {
+                entered.SetResult();
+                await release.Task.WaitAsync(token);
+                return new HttpResponseMessage(HttpStatusCode.OK);
+            });
+        using var client = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("https://external.example.test/")
+        };
+        var send = client.GetAsync("/pending", cancellationToken);
+
+        await entered.Task.WaitAsync(cancellationToken);
+        var snapshot = StubHttpExchangeSnapshot.FromExchange(
+            Assert.Single(handler.Exchanges));
+        release.SetResult();
+        using var response = await send;
+
+        Assert.Equal("GET", snapshot.Request.Method);
+        Assert.Null(snapshot.Response);
+        Assert.Null(snapshot.Failure);
+    }
+
+    [Fact]
+    public async Task Captured_exchange_snapshot_describes_send_failures()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var handler = new StubHttpMessageHandler();
+        handler
+            .When(HttpMethod.Get, "/failure")
+            .Throw(_ => new IOException("connection lost"));
+        using var client = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("https://external.example.test/")
+        };
+
+        await Assert.ThrowsAsync<IOException>(() =>
+            client.GetAsync("/failure", cancellationToken));
+        var snapshot = StubHttpExchangeSnapshot.FromExchange(
+            Assert.Single(handler.Exchanges));
+
+        Assert.Null(snapshot.Response);
+        Assert.NotNull(snapshot.Failure);
+        Assert.Equal(typeof(IOException).FullName, snapshot.Failure.Type);
+        Assert.Equal("connection lost", snapshot.Failure.Message);
+    }
+
+    [Fact]
     public void Captured_response_options_coordinate_header_rules()
     {
         var options = new StubHttpResponseSnapshotOptions()
@@ -1298,6 +1488,19 @@ public sealed class SnapshotAssertTests
         var binary = StubHttpResponseSnapshot.FromResponse(CreateStubResponse(
             bodyCaptured: true,
             body: [0, 1, 255]));
+        var excluded = StubHttpResponseSnapshot.FromResponse(
+            CreateStubResponse(
+                bodyCaptured: true,
+                body: Encoding.UTF8.GetBytes("excluded"),
+                contentTypes: ["text/plain"]),
+            new StubHttpResponseSnapshotOptions().WithoutHeaders().WithoutBody());
+        var failed = StubHttpResponseSnapshot.FromResponse(new StubHttpResponse(
+            StatusCode: 200,
+            ReasonPhrase: "OK",
+            Headers: new Dictionary<string, string[]>(),
+            BodyCaptured: true,
+            Body: ReadOnlyMemory<byte>.Empty,
+            BodyFailure: new StubHttpFailure("System.IO.IOException", "read failed")));
 
         Assert.Equal("{NotRead}", notRead.Body);
         Assert.Null(empty.Body);
@@ -1307,6 +1510,10 @@ public sealed class SnapshotAssertTests
         Assert.Equal(
             new ControllerBinaryBodySnapshot("base64", "AAH/"),
             Assert.IsType<ControllerBinaryBodySnapshot>(binary.Body));
+        Assert.Null(excluded.Headers);
+        Assert.Null(excluded.Body);
+        Assert.Equal("System.IO.IOException", failed.BodyFailure!.Type);
+        Assert.Equal("read failed", failed.BodyFailure.Message);
     }
 
     [Fact]
@@ -1323,6 +1530,8 @@ public sealed class SnapshotAssertTests
         Assert.Same(response, response.RedactingHeaders());
         Assert.Same(stubResponse, stubResponse.IgnoringHeaders());
         Assert.Same(stubResponse, stubResponse.RedactingHeaders());
+        Assert.Same(request, request.IgnoringHeaders("X-Test"));
+        Assert.Contains("X-Test", request.IgnoredHeaders);
 
         Assert.Throws<ArgumentNullException>(() => request.IgnoringHeaders(null!));
         Assert.Throws<ArgumentException>(() => request.RedactingHeaders(" "));
@@ -1408,6 +1617,11 @@ public sealed class SnapshotAssertTests
             RequestMessage = new HttpRequestMessage(HttpMethod.Post, (Uri?)null),
             Content = new ByteArrayContent([0, 1, 255])
         };
+        using var utf8TextResponse = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent(Encoding.UTF8.GetBytes("UTF-8 text"))
+        };
+        utf8TextResponse.Content.Headers.ContentType = new("text/plain");
 
         var empty = await HttpExchangeSnapshot.FromResponseAsync(
             emptyResponse,
@@ -1421,6 +1635,9 @@ public sealed class SnapshotAssertTests
         var binary = await HttpExchangeSnapshot.FromResponseAsync(
             binaryResponse,
             cancellationToken: cancellationToken);
+        var utf8Text = await HttpExchangeSnapshot.FromResponseAsync(
+            utf8TextResponse,
+            cancellationToken: cancellationToken);
         var omitted = await HttpExchangeSnapshot.FromResponseAsync(
             textResponse,
             new HttpExchangeSnapshotOptions
@@ -1433,6 +1650,7 @@ public sealed class SnapshotAssertTests
         Assert.Null(empty.Response!.Body);
         Assert.Equal("plain text", text.Response!.Body);
         Assert.Equal("café", charsetText.Response!.Body);
+        Assert.Equal("UTF-8 text", utf8Text.Response!.Body);
         Assert.Null(binary.Request!.Url);
         Assert.Equal(
             new ControllerBinaryBodySnapshot("base64", "AAH/"),
@@ -1442,6 +1660,39 @@ public sealed class SnapshotAssertTests
         Assert.Null(omitted.Request.Body);
         Assert.Null(omitted.Response!.Headers);
         Assert.Null(omitted.Response.Body);
+    }
+
+    [Fact]
+    public async Task Http_exchange_url_redaction_handles_fragments_flags_and_empty_rules()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var flaggedResponse = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            RequestMessage = new HttpRequestMessage(
+                HttpMethod.Get,
+                new Uri("/orders?token&name=visible#details", UriKind.Relative)),
+            Content = new ByteArrayContent([])
+        };
+        using var unredactedResponse = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            RequestMessage = new HttpRequestMessage(
+                HttpMethod.Get,
+                new Uri("/orders?token=visible", UriKind.Relative)),
+            Content = new ByteArrayContent([])
+        };
+        var unredactedOptions = new HttpExchangeSnapshotOptions();
+        unredactedOptions.Request.RedactedQueryParameters.Clear();
+
+        var flagged = await HttpExchangeSnapshot.FromResponseAsync(
+            flaggedResponse,
+            cancellationToken: cancellationToken);
+        var unredacted = await HttpExchangeSnapshot.FromResponseAsync(
+            unredactedResponse,
+            unredactedOptions,
+            cancellationToken);
+
+        Assert.Equal("/orders?token={Redacted}&name=visible#details", flagged.Request!.Url);
+        Assert.Equal("/orders?token=visible", unredacted.Request!.Url);
     }
 
     [Fact]
@@ -1527,6 +1778,34 @@ public sealed class SnapshotAssertTests
         Assert.NotNull(snapshot.Failure);
         Assert.Equal(typeof(IOException).FullName, snapshot.Failure.Type);
         Assert.Equal("connection lost", snapshot.Failure.Message);
+    }
+
+    [Fact]
+    public async Task Http_exchange_recorder_rejects_snapshots_while_a_send_is_in_progress()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var recorder = new HttpExchangeRecorder
+        {
+            InnerHandler = new CallbackHttpMessageHandler(async (request, token) =>
+            {
+                entered.SetResult();
+                await release.Task.WaitAsync(token);
+                return new HttpResponseMessage(HttpStatusCode.OK) { RequestMessage = request };
+            })
+        };
+        using var client = new HttpClient(recorder);
+        var send = client.GetAsync("https://orders.example.test/orders", cancellationToken);
+
+        await entered.Task.WaitAsync(cancellationToken);
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            recorder.CreateSnapshotsAsync(cancellationToken));
+        release.SetResult();
+        using var response = await send;
+
+        Assert.Contains("still in progress", exception.Message);
+        Assert.Single(await recorder.CreateSnapshotsAsync(cancellationToken));
     }
 
     [Fact]
@@ -1659,6 +1938,62 @@ public sealed class SnapshotAssertTests
         }
     }
 
+    [Theory]
+    [InlineData(null, SnapshotUpdateMode.None)]
+    [InlineData("", SnapshotUpdateMode.None)]
+    [InlineData("none", SnapshotUpdateMode.None)]
+    [InlineData("false", SnapshotUpdateMode.None)]
+    [InlineData("0", SnapshotUpdateMode.None)]
+    [InlineData("missing", SnapshotUpdateMode.Missing)]
+    [InlineData("all", SnapshotUpdateMode.All)]
+    [InlineData(" true ", SnapshotUpdateMode.All)]
+    [InlineData("1", SnapshotUpdateMode.All)]
+    public void Snapshot_update_mode_supports_every_environment_alias(
+        string? value,
+        SnapshotUpdateMode expected)
+    {
+        var original = Environment.GetEnvironmentVariable(
+            SnapshotSettings.UpdateModeEnvironmentVariable);
+
+        try
+        {
+            Environment.SetEnvironmentVariable(
+                SnapshotSettings.UpdateModeEnvironmentVariable,
+                value);
+
+            Assert.Equal(expected, new SnapshotSettings().UpdateMode);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(
+                SnapshotSettings.UpdateModeEnvironmentVariable,
+                original);
+        }
+    }
+
+    [Fact]
+    public void Snapshot_update_mode_rejects_unknown_environment_values()
+    {
+        var original = Environment.GetEnvironmentVariable(
+            SnapshotSettings.UpdateModeEnvironmentVariable);
+
+        try
+        {
+            Environment.SetEnvironmentVariable(
+                SnapshotSettings.UpdateModeEnvironmentVariable,
+                "sometimes");
+
+            var exception = Assert.Throws<InvalidOperationException>(() => new SnapshotSettings());
+            Assert.Contains(SnapshotSettings.UpdateModeEnvironmentVariable, exception.Message);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(
+                SnapshotSettings.UpdateModeEnvironmentVariable,
+                original);
+        }
+    }
+
     [Fact]
     public async Task Mismatch_reports_first_structural_json_path_and_values()
     {
@@ -1685,6 +2020,91 @@ public sealed class SnapshotAssertTests
             Assert.Equal("2", exception.ActualValue);
             Assert.Contains("$.Order.Items[0].Id", exception.Message);
             Assert.Contains("expected 1; actual 2", exception.Message);
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task Mismatch_diagnostics_cover_structural_json_difference_forms()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+
+        async Task<SnapshotMismatchException> CompareAsync(
+            string name,
+            string expected,
+            string actual)
+        {
+            var settings = CreateUpdatingSettings(snapshotDirectory).Named(name);
+            await SnapshotAssert.MatchJsonAsync(expected, settings, cancellationToken);
+            settings.Updating(SnapshotUpdateMode.None);
+            return await Assert.ThrowsAsync<SnapshotMismatchException>(() =>
+                SnapshotAssert.MatchJsonAsync(actual, settings, cancellationToken));
+        }
+
+        try
+        {
+            var kind = await CompareAsync("kind", "\"text\"", "42");
+            var strings = await CompareAsync(
+                "strings",
+                """{"same":"value","different":"before"}""",
+                """{"same":"value","different":"after"}""");
+            var numbers = await CompareAsync(
+                "numbers",
+                """{"same":1,"different":2}""",
+                """{"same":1,"different":3}""");
+            var propertyName = await CompareAsync(
+                "property-name",
+                """{"before":1}""",
+                """{"after":1}""");
+            var missingExpectedProperty = await CompareAsync(
+                "missing-expected-property",
+                """{"value":1}""",
+                """{"value":1,"extra":2}""");
+            var missingActualProperty = await CompareAsync(
+                "missing-actual-property",
+                """{"value":1,"extra":2}""",
+                """{"value":1}""");
+            var missingExpectedItem = await CompareAsync(
+                "missing-expected-item",
+                "[true]",
+                "[true,false]");
+            var missingActualItem = await CompareAsync(
+                "missing-actual-item",
+                "[null,false]",
+                "[null]");
+            var escapedProperty = await CompareAsync(
+                "escaped-property",
+                """{"a-b":1}""",
+                """{"a-b":2}""");
+            var emptyProperty = await CompareAsync(
+                "empty-property",
+                """{"":1}""",
+                """{"":2}""");
+            var underscoreProperty = await CompareAsync(
+                "underscore-property",
+                """{"_private":1}""",
+                """{"_private":2}""");
+            var digitProperty = await CompareAsync(
+                "digit-property",
+                """{"1value":1}""",
+                """{"1value":2}""");
+
+            Assert.Equal("$", kind.DifferencePath);
+            Assert.Equal("$.different", strings.DifferencePath);
+            Assert.Equal("$.different", numbers.DifferencePath);
+            Assert.Equal("$", propertyName.DifferencePath);
+            Assert.Equal("$.extra", missingExpectedProperty.DifferencePath);
+            Assert.Equal("$.extra", missingActualProperty.DifferencePath);
+            Assert.Equal("$[1]", missingExpectedItem.DifferencePath);
+            Assert.Equal("$[1]", missingActualItem.DifferencePath);
+            Assert.Equal("$['a-b']", escapedProperty.DifferencePath);
+            Assert.Equal("$['']", emptyProperty.DifferencePath);
+            Assert.Equal("$._private", underscoreProperty.DifferencePath);
+            Assert.Equal("$['1value']", digitProperty.DifferencePath);
         }
         finally
         {
@@ -1851,6 +2271,138 @@ public sealed class SnapshotAssertTests
         }
         finally
         {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task Global_defaults_apply_implicitly_and_explicit_settings_take_precedence()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var globalDirectory = CreateTemporarySnapshotDirectory();
+        var explicitDirectory = CreateTemporarySnapshotDirectory();
+        var originalDefaults = SnapshotSettingsDefaults.Global;
+
+        try
+        {
+            SnapshotSettingsDefaults.Global = new(settings => settings
+                .InDirectory(globalDirectory)
+                .Named("global-defaults")
+                .ScrubMember("Id")
+                .Updating(SnapshotUpdateMode.Missing)
+                .AllowingUpdatesInContinuousIntegration()
+                .WithoutDiffTool());
+
+            await SnapshotAssert.MatchAsync(
+                new { Id = 123, Name = "global" },
+                cancellationToken: cancellationToken);
+            await SnapshotAssert.MatchAsync(
+                new { Id = 456, Name = "explicit" },
+                new SnapshotSettings()
+                    .InDirectory(explicitDirectory)
+                    .Named("explicit-settings")
+                    .Updating(SnapshotUpdateMode.Missing)
+                    .AllowingUpdatesInContinuousIntegration()
+                    .WithoutDiffTool(),
+                cancellationToken);
+
+            var globalSnapshot = await ReadSingleVerifiedSnapshotAsync(
+                globalDirectory,
+                cancellationToken);
+            var explicitSnapshot = await ReadSingleVerifiedSnapshotAsync(
+                explicitDirectory,
+                cancellationToken);
+
+            Assert.Contains("{Scrubbed}", globalSnapshot);
+            Assert.DoesNotContain("123", globalSnapshot);
+            Assert.Contains("456", explicitSnapshot);
+            Assert.DoesNotContain("{Scrubbed}", explicitSnapshot);
+        }
+        finally
+        {
+            SnapshotSettingsDefaults.Global = originalDefaults;
+            DeleteTemporarySnapshotDirectory(globalDirectory);
+            DeleteTemporarySnapshotDirectory(explicitDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task Global_defaults_apply_to_parameterless_http_exchange_assertions()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var originalDefaults = SnapshotSettingsDefaults.Global;
+
+        try
+        {
+            SnapshotSettingsDefaults.Global = new(settings => settings
+                .InDirectory(snapshotDirectory)
+                .Named("global-http-exchange")
+                .ScrubMember("Id")
+                .Updating(SnapshotUpdateMode.Missing)
+                .AllowingUpdatesInContinuousIntegration()
+                .WithoutDiffTool());
+            using var response = new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                RequestMessage = new HttpRequestMessage(HttpMethod.Get, "/api/products/42"),
+                Content = JsonContent.Create(new { Id = 42, Name = "Keyboard" })
+            };
+
+            await response.ShouldMatchHttpExchangeSnapshot(
+                cancellationToken: cancellationToken);
+
+            var snapshot = await ReadSingleVerifiedSnapshotAsync(
+                snapshotDirectory,
+                cancellationToken);
+            Assert.Contains("/api/products/42", snapshot);
+            Assert.Contains("{Scrubbed}", snapshot);
+            Assert.DoesNotContain("\"id\": 42", snapshot);
+        }
+        finally
+        {
+            SnapshotSettingsDefaults.Global = originalDefaults;
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task Global_defaults_apply_to_json_text_and_http_content_assertions()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var originalDefaults = SnapshotSettingsDefaults.Global;
+
+        SnapshotSettingsDefaults CreateDefaults(string name) => new(settings => settings
+            .InDirectory(snapshotDirectory)
+            .Named(name)
+            .Scrub(serialized => serialized)
+            .Updating(SnapshotUpdateMode.Missing)
+            .AllowingUpdatesInContinuousIntegration()
+            .WithoutDiffTool());
+
+        try
+        {
+            SnapshotSettingsDefaults.Global = CreateDefaults("global-json");
+            await SnapshotAssert.MatchJsonAsync(
+                """{"value":42}""",
+                cancellationToken: cancellationToken);
+
+            SnapshotSettingsDefaults.Global = CreateDefaults("global-text");
+            await SnapshotAssert.MatchTextAsync(
+                "plain text",
+                cancellationToken: cancellationToken);
+
+            SnapshotSettingsDefaults.Global = CreateDefaults("global-http-content");
+            using var content = JsonContent.Create(new { Value = 43 });
+            await content.ShouldMatchJsonSnapshot(cancellationToken: cancellationToken);
+
+            Assert.Equal(
+                3,
+                Directory.EnumerateFiles(snapshotDirectory, "*.verified.*").Count());
+        }
+        finally
+        {
+            SnapshotSettingsDefaults.Global = originalDefaults;
             DeleteTemporarySnapshotDirectory(snapshotDirectory);
         }
     }
@@ -2046,6 +2598,12 @@ public sealed class SnapshotAssertTests
                     .Named("null-descent")
                     .ScrubPath("/items/*/value"),
                 cancellationToken);
+            await SnapshotAssert.MatchJsonAsync(
+                """{"value":42}""",
+                CreateUpdatingSettings(snapshotDirectory)
+                    .Named("primitive-descent")
+                    .ScrubPath("/value/child"),
+                cancellationToken);
 
             var snapshots = Directory.EnumerateFiles(snapshotDirectory, "*.verified.json")
                 .ToDictionary(path => Path.GetFileName(path)!, File.ReadAllText);
@@ -2185,6 +2743,89 @@ public sealed class SnapshotAssertTests
             Assert.Contains("\"Response\"", exchangesVerified);
             Assert.Contains("\"StatusCode\": 201", exchangesVerified);
             Assert.Contains("\"accepted\": true", exchangesVerified);
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task Semantically_equal_json_reports_the_root_when_text_formatting_differs()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var sourceFile = Path.Combine(snapshotDirectory, "Diagnostics.cs");
+        var settings = new SnapshotSettings()
+            .InDirectory(snapshotDirectory)
+            .Named("formatting-only")
+            .WithoutDiffTool();
+        Directory.CreateDirectory(snapshotDirectory);
+        await File.WriteAllTextAsync(
+            Path.Combine(snapshotDirectory, "Diagnostics.formatting-only.verified.json"),
+            """{"items":[1,2]}""",
+            cancellationToken);
+
+        try
+        {
+            var exception = await Assert.ThrowsAsync<SnapshotMismatchException>(() =>
+                SnapshotAssert.MatchJsonAsync(
+                    """{ "items": [1, 2] }""",
+                    settings,
+                    cancellationToken,
+                    sourceFile,
+                    "Diagnostics"));
+
+            Assert.Equal("$", exception.DifferencePath);
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task Parameterless_text_snapshot_uses_default_directory_and_reports_missing_text()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var sourceDirectory = CreateTemporarySnapshotDirectory();
+        var sourceFile = Path.Combine(sourceDirectory, "DefaultDirectory.cs");
+        var originalDefaults = SnapshotSettingsDefaults.Global;
+
+        try
+        {
+            SnapshotSettingsDefaults.Global = null;
+            var exception = await Assert.ThrowsAsync<SnapshotMismatchException>(() =>
+                SnapshotAssert.MatchTextAsync(
+                    "plain text",
+                    cancellationToken: cancellationToken,
+                    sourceFile: sourceFile,
+                    testName: "MissingText"));
+
+            Assert.Equal("$text", exception.DifferencePath);
+            Assert.Contains(
+                Path.Combine(sourceDirectory, "__snapshots__"),
+                exception.ReceivedPath,
+                StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            SnapshotSettingsDefaults.Global = originalDefaults;
+            DeleteTemporarySnapshotDirectory(sourceDirectory);
+        }
+    }
+
+    [Fact]
+    public void Snapshot_path_lock_release_is_idempotent()
+    {
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var path = Path.Combine(snapshotDirectory, "idempotent.verified.json");
+
+        try
+        {
+            var pathLock = SnapshotPathLock.Acquire(path);
+            pathLock.Dispose();
+            pathLock.Dispose();
         }
         finally
         {

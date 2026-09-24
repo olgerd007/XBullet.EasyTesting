@@ -75,6 +75,66 @@ public sealed class AzureTestingTests
     }
 
     [Fact]
+    public async Task Azure_helpers_cover_optional_values_validation_and_reset_paths()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new TestAzureResponse(99));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new TestAzureResponse(600));
+        Assert.Throws<ArgumentException>(() => new TestAzureResponse().WithHeader(" ", "value"));
+        Assert.Throws<ArgumentNullException>(() =>
+            new TestAzureResponse().WithHeader("name", (string[])null!));
+        Assert.Throws<ArgumentException>(() =>
+            new TestAzureResponse().WithHeader("name", ["value", null!]));
+
+        using var raw = new TestAzureResponse(299)
+            .WithHeader("X-Multi", "one", "two")
+            .WithContent(BinaryData.FromString("body"));
+        Assert.Equal(string.Empty, raw.ReasonPhrase);
+        Assert.True(raw.Headers.TryGetValue("X-Multi", out var joined));
+        Assert.Equal("one,two", joined);
+        Assert.True(raw.Headers.TryGetValues("X-Multi", out var values));
+        Assert.Equal(["one", "two"], values);
+        Assert.False(raw.Headers.TryGetValue("missing", out _));
+        Assert.False(raw.Headers.TryGetValues("missing", out _));
+        Assert.True(raw.Headers.Contains("X-Multi"));
+        Assert.Contains(raw.Headers, header => header.Name == "X-Multi");
+
+        var configured = false;
+        var model = AzureTestData.ModelResponse(
+            42,
+            configure: response =>
+            {
+                configured = true;
+                response.WithHeader("X-Test", "yes");
+            });
+        Assert.True(configured);
+        Assert.Equal(42, model.Value);
+        Assert.Equal(43, AzureTestData.ModelResponse(43).Value);
+
+        var credential = new TestTokenCredential();
+        var context = new TokenRequestContext(["scope"]);
+        var testCancellation = TestContext.Current.CancellationToken;
+        Assert.Equal("xbullet-test-token", credential.GetToken(context, testCancellation).Token);
+        credential.SucceedWith("next-token");
+        Assert.Equal("next-token", credential.GetToken(context, testCancellation).Token);
+        credential.SucceedWith("expiring", DateTimeOffset.UtcNow.AddMinutes(1));
+        Assert.Same(credential, credential.Reset());
+        Assert.Equal(0, credential.RequestCount);
+        Assert.NotNull(await credential.CaptureDiagnosticsAsync(testCancellation));
+        await credential.ResetAsync(testCancellation);
+
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        Assert.Throws<OperationCanceledException>(() =>
+            credential.GetToken(context, cancellation.Token));
+        await Assert.ThrowsAsync<OperationCanceledException>(async () =>
+            await credential.GetTokenAsync(context, cancellation.Token));
+        await Assert.ThrowsAsync<OperationCanceledException>(async () =>
+            await credential.ResetAsync(cancellation.Token));
+        await Assert.ThrowsAsync<OperationCanceledException>(async () =>
+            await credential.CaptureDiagnosticsAsync(cancellation.Token));
+    }
+
+    [Fact]
     public async Task Transport_exercises_real_blob_client_and_records_retries()
     {
         var transport = new StubAzureHttpPipelineTransport()

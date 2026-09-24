@@ -103,6 +103,102 @@ public sealed class TestcontainerTests
         Assert.Same(builder, builder.UseRabbitMq());
         Assert.Same(builder, builder.UseAzurite());
         Assert.Same(builder, builder.UseServiceBusEmulator(acceptLicenseAgreement: true));
+
+        var hostBuilder = TestApiHostSettings.CreateBuilder();
+        Assert.Same(hostBuilder, hostBuilder.UsePostgreSql());
+        Assert.Same(hostBuilder, hostBuilder.UseSqlServer());
+        Assert.Same(hostBuilder, hostBuilder.UseKafka());
+        Assert.Same(hostBuilder, hostBuilder.UseRedis());
+        Assert.Same(hostBuilder, hostBuilder.UseRabbitMq());
+        Assert.Same(hostBuilder, hostBuilder.UseAzurite());
+        Assert.Same(hostBuilder, hostBuilder.UseServiceBusEmulator(acceptLicenseAgreement: true));
+    }
+
+    [Fact]
+    public async Task Module_options_and_resources_validate_lifecycle_and_failure_paths()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            new TestcontainerModuleOptions<object>(" ", "key"));
+        Assert.Throws<ArgumentException>(() =>
+            new TestcontainerModuleOptions<object>("resource", " "));
+        Assert.Throws<ArgumentNullException>(() =>
+            new TestcontainerModuleOptions<object>("resource", "key").ConfigureBuilder(null!));
+
+        var options = new TestcontainerModuleOptions<object>("resource", "key");
+        var unconfigured = new object();
+        Assert.Same(unconfigured, options.Apply(unconfigured));
+        var order = new List<int>();
+        options.ConfigureBuilder(value => { order.Add(1); return value; });
+        options.ConfigureBuilder(value => { order.Add(2); return value; });
+        var native = new object();
+        Assert.Same(native, options.Apply(native));
+        Assert.Equal([1, 2], order);
+        options.ResourceName = " ";
+        Assert.Throws<ArgumentException>(options.Validate);
+        options.ResourceName = "resource";
+        options.ConfigurationKey = " ";
+        Assert.Throws<ArgumentException>(options.Validate);
+
+        var container = CreateContainer(out var proxy);
+        Assert.Throws<ArgumentNullException>(() => new TestcontainerResource<IContainer>(null!));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new TestcontainerResource<IContainer>(container, maximumDiagnosticCharacters: -1));
+        var resource = new TestcontainerResource<IContainer>(container);
+        Assert.Contains("false", JsonSerializer.Serialize(await resource.CaptureDiagnosticsAsync(
+            TestContext.Current.CancellationToken)));
+        Assert.Throws<ArgumentNullException>(() => resource.ConfigureConfiguration(null!));
+        Assert.Throws<ArgumentNullException>(() => resource.ConfigureServices(null!));
+        await resource.StartAsync(TestContext.Current.CancellationToken);
+        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await resource.StartAsync(TestContext.Current.CancellationToken));
+        resource.ConfigureConfiguration(new ConfigurationBuilder());
+        resource.ConfigureServices(new ServiceCollection());
+        await resource.DisposeAsync();
+        await Assert.ThrowsAsync<ObjectDisposedException>(async () =>
+            await resource.StartAsync(TestContext.Current.CancellationToken));
+        Assert.Throws<ObjectDisposedException>(() =>
+            resource.ConfigureServices(new ServiceCollection()));
+
+        var nullValues = new TestcontainerResource<IContainer>(
+            CreateContainer(out _),
+            _ => null!);
+        await nullValues.StartAsync(TestContext.Current.CancellationToken);
+        Assert.Throws<InvalidOperationException>(() =>
+            nullValues.ConfigureConfiguration(new ConfigurationBuilder()));
+        await nullValues.DisposeAsync();
+
+        var invalidKey = new TestcontainerResource<IContainer>(
+            CreateContainer(out _),
+            _ => new Dictionary<string, string?> { [" "] = "value" });
+        await invalidKey.StartAsync(TestContext.Current.CancellationToken);
+        Assert.Throws<ArgumentException>(() =>
+            invalidKey.ConfigureConfiguration(new ConfigurationBuilder()));
+        await invalidKey.DisposeAsync();
+
+        var failingContainer = CreateContainer(out var failingProxy);
+        failingProxy.LogException = new InvalidOperationException("logs unavailable");
+        var failingLogs = new TestcontainerResource<IContainer>(failingContainer);
+        await failingLogs.StartAsync(TestContext.Current.CancellationToken);
+        var diagnostics = JsonSerializer.Serialize(await failingLogs.CaptureDiagnosticsAsync(
+            TestContext.Current.CancellationToken));
+        Assert.Contains("logs unavailable", diagnostics);
+        await failingLogs.DisposeAsync();
+
+        var cancellationContainer = CreateContainer(out var cancellationProxy);
+        cancellationProxy.LogException = new OperationCanceledException("cancelled");
+        var cancelledLogs = new TestcontainerResource<IContainer>(cancellationContainer);
+        await cancelledLogs.StartAsync(TestContext.Current.CancellationToken);
+        await Assert.ThrowsAsync<OperationCanceledException>(async () =>
+            await cancelledLogs.CaptureDiagnosticsAsync(TestContext.Current.CancellationToken));
+        await cancelledLogs.DisposeAsync();
+
+        var shortLogs = new TestcontainerResource<IContainer>(
+            CreateContainer(out _),
+            maximumDiagnosticCharacters: 100);
+        await shortLogs.StartAsync(TestContext.Current.CancellationToken);
+        Assert.Contains("abcdefgh", JsonSerializer.Serialize(
+            await shortLogs.CaptureDiagnosticsAsync(TestContext.Current.CancellationToken)));
+        await shortLogs.DisposeAsync();
     }
 
     private static IContainer CreateContainer(out ContainerProxy proxy)
@@ -120,6 +216,8 @@ public sealed class TestcontainerTests
 
         public int DisposeCount { get; private set; }
 
+        public Exception? LogException { get; set; }
+
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
         {
             ArgumentNullException.ThrowIfNull(targetMethod);
@@ -127,7 +225,9 @@ public sealed class TestcontainerTests
             {
                 "StartAsync" => Start(),
                 "DisposeAsync" => Dispose(),
-                "GetLogsAsync" => Task.FromResult(("abcdefgh", "stderr-data")),
+                "GetLogsAsync" => LogException is null
+                    ? Task.FromResult(("abcdefgh", "stderr-data"))
+                    : Task.FromException<(string Stdout, string Stderr)>(LogException),
                 "GetMappedPublicPorts" => new Dictionary<ushort, ushort> { [5432] = 54321 },
                 "get_Id" => "container-id",
                 "get_Name" => "easy-testing",
