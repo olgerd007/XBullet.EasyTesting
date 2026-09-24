@@ -17,7 +17,7 @@ public sealed class BuiltInSnapshotAudit : IDisposable
 
     public void Dispose()
     {
-        if (!IsContinuousIntegration())
+        if (IsEnabled("XBULLET_SKIP_SNAPSHOT_AUDIT") || !IsContinuousIntegration())
         {
             return;
         }

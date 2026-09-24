@@ -66,6 +66,8 @@ jobs:
           --coverage-output-format cobertura
 
       - name: Test Aspire application integration
+        env:
+          XBULLET_SKIP_SNAPSHOT_AUDIT: true
         run: >-
           dotnet test tests/TestApi.IntegrationTests/TestApi.IntegrationTests.csproj
           --configuration Release
