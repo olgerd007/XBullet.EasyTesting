@@ -1,12 +1,43 @@
 # XBullet.EasyTesting.Snapshots.Http
 
-Snapshot adapters for requests captured by `XBullet.EasyTesting.Http`. The package references
+Snapshot adapters for requests and complete exchanges captured by `XBullet.EasyTesting.Http`. The package references
 `XBullet.EasyTesting.Snapshots.Core` and keeps the existing
 `XBullet.EasyTesting.Snapshots` namespace.
 
 ```shell
 dotnet add package XBullet.EasyTesting.Snapshots.Http
 ```
+
+```csharp
+using var response = await client.PostAsJsonAsync("/orders", order);
+
+await handler.ShouldMatchExchangesSnapshot();
+```
+
+Exchange snapshots contain each request and its response status, stable headers, and normalized
+body. Send failures and response-body read failures are captured as stable exception type/message
+pairs. JSON request and response bodies are captured structurally; text remains text and binary
+content is stored as base64. Response content that has not been consumed is represented as
+`{NotRead}` rather than being read eagerly by the recorder.
+
+Request and response capture can be customized independently:
+
+```csharp
+var options = new StubHttpExchangeSnapshotOptions();
+options.Request
+    .IgnoringHeaders("X-Retry-Count")
+    .RedactingHeader("X-Session")
+    .RedactingQueryParameter("tenant_secret");
+options.Response
+    .IgnoringHeaders("ETag")
+    .RedactingHeader("Set-Cookie");
+
+await handler.ShouldMatchExchangesSnapshot(
+    options,
+    new SnapshotSettings().ScrubMembers("timestamp", "requestId"));
+```
+
+Request-only snapshots remain available:
 
 ```csharp
 await handler.ShouldMatchRequestsSnapshot(

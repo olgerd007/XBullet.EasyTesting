@@ -28,7 +28,9 @@ public sealed class CrudControllerSnapshotTests : IClassFixture<TestApiFactory>
 
             using var response = await client.GetAsync("/api/products", cancellationToken);
 
-            await response.ShouldMatchControllerSnapshot(cancellationToken: cancellationToken);
+            await response.ShouldMatchControllerSnapshot(
+                snapshotSettings: BuiltInSnapshotAudit.CreateSettings(),
+                cancellationToken: cancellationToken);
         });
 
     [Fact]
@@ -44,7 +46,7 @@ public sealed class CrudControllerSnapshotTests : IClassFixture<TestApiFactory>
 
             await response.ShouldMatchControllerSnapshot(
                 new ControllerSnapshotOptions().IgnoringHeaders("Location"),
-                new SnapshotSettings().ScrubMember("id"),
+                BuiltInSnapshotAudit.CreateSettings(settings => settings.ScrubMember("id")),
                 cancellationToken);
         });
 
@@ -62,7 +64,9 @@ public sealed class CrudControllerSnapshotTests : IClassFixture<TestApiFactory>
                 new ProductRequest("Updated name", 25.50m),
                 cancellationToken);
 
-            await response.ShouldMatchControllerSnapshot(cancellationToken: cancellationToken);
+            await response.ShouldMatchControllerSnapshot(
+                snapshotSettings: BuiltInSnapshotAudit.CreateSettings(),
+                cancellationToken: cancellationToken);
         });
 
     [Fact]
@@ -78,7 +82,9 @@ public sealed class CrudControllerSnapshotTests : IClassFixture<TestApiFactory>
                 "/api/products/931",
                 cancellationToken);
 
-            await response.ShouldMatchControllerSnapshot(cancellationToken: cancellationToken);
+            await response.ShouldMatchControllerSnapshot(
+                snapshotSettings: BuiltInSnapshotAudit.CreateSettings(),
+                cancellationToken: cancellationToken);
         });
 
     private Task Run(Func<TestScenarioScope<Program>, CancellationToken, Task> test) =>

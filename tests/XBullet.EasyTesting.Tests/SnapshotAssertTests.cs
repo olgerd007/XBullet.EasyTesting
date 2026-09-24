@@ -22,6 +22,7 @@ public sealed class SnapshotAssertTests
         Assert.Contains(typeof(SnapshotAssert), forwardedTypes);
         Assert.Contains(typeof(SnapshotLocationContext), forwardedTypes);
         Assert.Contains(typeof(StubHttpRequestSnapshot), forwardedTypes);
+        Assert.Contains(typeof(StubHttpExchangeSnapshot), forwardedTypes);
         Assert.Equal(
             "XBullet.EasyTesting.Snapshots.Core",
             typeof(SnapshotAssert).Assembly.GetName().Name);
@@ -1211,6 +1212,67 @@ public sealed class SnapshotAssertTests
     }
 
     [Fact]
+    public async Task Captured_exchange_snapshot_contains_structural_request_and_response_data()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var handler = new StubHttpMessageHandler();
+        handler
+            .When(HttpMethod.Post, "/orders?token=secret")
+            .Respond(request => new HttpResponseMessage(HttpStatusCode.Created)
+            {
+                Headers = { { "X-Session", "secret-session" } },
+                Content = JsonContent.Create(new { Accepted = true, request.Body })
+            });
+        using var client = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("https://external.example.test/")
+        };
+
+        using var response = await client.PostAsJsonAsync(
+            "/orders?token=secret",
+            new { OrderId = 42 },
+            cancellationToken);
+        await response.Content.ReadAsStringAsync(cancellationToken);
+
+        var options = new StubHttpExchangeSnapshotOptions();
+        options.Response.RedactingHeader("X-Session");
+        var snapshot = StubHttpExchangeSnapshot.FromExchange(
+            Assert.Single(handler.Exchanges),
+            options);
+
+        Assert.Equal("POST", snapshot.Request.Method);
+        Assert.Equal("/orders?token={Redacted}", snapshot.Request.Url);
+        Assert.Equal(42, Assert.IsType<JsonElement>(snapshot.Request.Body)
+            .GetProperty("orderId")
+            .GetInt32());
+        Assert.Equal((int)HttpStatusCode.Created, snapshot.Response?.StatusCode);
+        Assert.NotNull(snapshot.Response?.Headers);
+        Assert.Equal(["{Redacted}"], snapshot.Response.Headers["X-Session"]);
+        Assert.True(Assert.IsType<JsonElement>(snapshot.Response?.Body)
+            .GetProperty("accepted")
+            .GetBoolean());
+        Assert.Null(snapshot.Failure);
+    }
+
+    [Fact]
+    public void Captured_response_options_coordinate_header_rules()
+    {
+        var options = new StubHttpResponseSnapshotOptions()
+            .WithoutHeaders()
+            .WithoutBody()
+            .IgnoringHeaders("X-First", "X-Second")
+            .RedactingHeaders("X-Second", "X-Third")
+            .IncludingHeader("X-Third");
+
+        Assert.False(options.IncludeHeaders);
+        Assert.False(options.IncludeBody);
+        Assert.Contains("X-First", options.IgnoredHeaders);
+        Assert.DoesNotContain("X-Second", options.IgnoredHeaders);
+        Assert.Contains("X-Second", options.RedactedHeaders);
+        Assert.DoesNotContain("X-Third", options.RedactedHeaders);
+    }
+
+    [Fact]
     public async Task Snapshot_location_and_acceptance_failures_are_explicit()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
@@ -1816,10 +1878,16 @@ public sealed class SnapshotAssertTests
             .Updating(SnapshotUpdateMode.Missing)
             .AllowingUpdatesInContinuousIntegration()
             .WithoutDiffTool();
+        var exchangeSettings = new SnapshotSettings()
+            .InDirectory(snapshotDirectory)
+            .Named("outbound-exchanges")
+            .Updating(SnapshotUpdateMode.Missing)
+            .AllowingUpdatesInContinuousIntegration()
+            .WithoutDiffTool();
         using var handler = new StubHttpMessageHandler();
         handler
             .When(HttpMethod.Post, "/orders?notify=true")
-            .Respond(HttpStatusCode.Created);
+            .RespondJson(new { Accepted = true }, HttpStatusCode.Created);
         using var client = new HttpClient(handler)
         {
             BaseAddress = new Uri("https://external.example.test/")
@@ -1838,15 +1906,28 @@ public sealed class SnapshotAssertTests
             await handler.ShouldMatchRequestsSnapshot(
                 snapshotSettings: settings,
                 cancellationToken: cancellationToken);
+            await handler.ShouldMatchExchangesSnapshot(
+                snapshotSettings: exchangeSettings,
+                cancellationToken: cancellationToken);
 
-            var verifiedPath = Directory.EnumerateFiles(snapshotDirectory, "*.verified.json").Single();
-            var verified = await File.ReadAllTextAsync(verifiedPath, cancellationToken);
-            Assert.Contains("\"Method\": \"POST\"", verified);
-            Assert.Contains("\"Url\": \"/orders?notify=true\"", verified);
-            Assert.Contains("\"orderId\": 42", verified);
-            Assert.Contains("\"X-Tenant\"", verified);
-            Assert.DoesNotContain("Authorization", verified);
-            Assert.DoesNotContain("secret-token", verified);
+            var verifiedPaths = Directory
+                .EnumerateFiles(snapshotDirectory, "*.verified.json")
+                .ToArray();
+            var requestsVerified = await File.ReadAllTextAsync(
+                verifiedPaths.Single(path => path.Contains("outbound-requests")),
+                cancellationToken);
+            var exchangesVerified = await File.ReadAllTextAsync(
+                verifiedPaths.Single(path => path.Contains("outbound-exchanges")),
+                cancellationToken);
+            Assert.Contains("\"Method\": \"POST\"", requestsVerified);
+            Assert.Contains("\"Url\": \"/orders?notify=true\"", requestsVerified);
+            Assert.Contains("\"orderId\": 42", requestsVerified);
+            Assert.Contains("\"X-Tenant\"", requestsVerified);
+            Assert.DoesNotContain("Authorization", requestsVerified);
+            Assert.DoesNotContain("secret-token", requestsVerified);
+            Assert.Contains("\"Response\"", exchangesVerified);
+            Assert.Contains("\"StatusCode\": 201", exchangesVerified);
+            Assert.Contains("\"accepted\": true", exchangesVerified);
         }
         finally
         {

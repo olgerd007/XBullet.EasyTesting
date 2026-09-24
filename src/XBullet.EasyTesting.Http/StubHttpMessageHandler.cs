@@ -12,6 +12,7 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
     private readonly object _gate = new();
     private readonly List<StubRule> _rules = [];
     private readonly List<StubHttpRequest> _requests = [];
+    private readonly List<StubHttpExchange> _exchanges = [];
 
     /// <summary>Gets a stable copy of the requests received by this handler.</summary>
     public IReadOnlyList<StubHttpRequest> Requests
@@ -21,6 +22,18 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
             lock (_gate)
             {
                 return _requests.ToArray();
+            }
+        }
+    }
+
+    /// <summary>Gets a stable copy of the request/response exchanges observed by this handler.</summary>
+    public IReadOnlyList<StubHttpExchange> Exchanges
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _exchanges.ToArray();
             }
         }
     }
@@ -115,6 +128,7 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
         {
             _rules.Clear();
             _requests.Clear();
+            _exchanges.Clear();
         }
 
         return this;
@@ -190,11 +204,13 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
                 StringComparer.OrdinalIgnoreCase);
 
         var capturedRequest = new StubHttpRequest(request.Method, request.RequestUri, headers, body);
+        var exchange = new StubHttpExchange(capturedRequest);
         Func<StubHttpRequest, CancellationToken, Task<HttpResponseMessage>>? responseFactory;
         StubRuleMatchResult[] matchResults;
         lock (_gate)
         {
             _requests.Add(capturedRequest);
+            _exchanges.Add(exchange);
             matchResults = _rules
                 .Select(rule => rule.Evaluate(capturedRequest))
                 .ToArray();
@@ -203,16 +219,50 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
                 ?.Rule.ResponseFactory;
         }
 
-        var response = responseFactory is null
-            ? new HttpResponseMessage(HttpStatusCode.NotImplemented)
+        try
+        {
+            var response = responseFactory is null
+                ? new HttpResponseMessage(HttpStatusCode.NotImplemented)
+                {
+                    Content = new StringContent(
+                        FormatMatchFailure(capturedRequest, matchResults))
+                }
+                : await responseFactory(capturedRequest, cancellationToken)
+                    ?? throw new InvalidOperationException(
+                        "The outbound HTTP response factory returned null.");
+            response.RequestMessage ??= request;
+
+            var responseHeaders = response.Headers
+                .Concat(
+                    response.Content?.Headers ??
+                    Enumerable.Empty<KeyValuePair<string, IEnumerable<string>>>())
+                .GroupBy(header => header.Key, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group.SelectMany(header => header.Value).ToArray(),
+                    StringComparer.OrdinalIgnoreCase);
+            exchange.SetResponse(new StubHttpResponse(
+                (int)response.StatusCode,
+                response.ReasonPhrase,
+                responseHeaders,
+                response.Content is null,
+                ReadOnlyMemory<byte>.Empty,
+                null));
+
+            if (response.Content is not null)
             {
-                Content = new StringContent(
-                    FormatMatchFailure(capturedRequest, matchResults))
+                response.Content = new RecordingHttpContent(
+                    response.Content,
+                    exchange.SetResponseBody);
             }
-            : await responseFactory(capturedRequest, cancellationToken)
-                ?? throw new InvalidOperationException("The outbound HTTP response factory returned null.");
-        response.RequestMessage ??= request;
-        return response;
+
+            return response;
+        }
+        catch (Exception exception)
+        {
+            exchange.SetFailure(exception);
+            throw;
+        }
     }
 
     private sealed record StubRule(

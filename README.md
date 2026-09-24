@@ -666,7 +666,22 @@ stub.When(HttpMethod.Get, "/truncated")
 
 An unmatched request receives `501 Not Implemented` with diagnostics for every configured rule, including method and URI differences, failed query/header/body predicates, and exceptions thrown by custom predicates.
 
-When `XBullet.EasyTesting.Snapshots.Http` is referenced, snapshot one request or every request captured by the handler with the same update, scrubber, acceptance, and diff-viewer workflow used by controller snapshots:
+When `XBullet.EasyTesting.Snapshots.Http` is referenced, snapshot every complete request/response
+exchange captured by the handler with the same update, scrubber, acceptance, and diff-viewer
+workflow used by controller snapshots:
+
+```csharp
+await stub.ShouldMatchExchangesSnapshot();
+```
+
+Exchange snapshots contain response status, stable headers, and structural JSON, text, or binary
+bodies in addition to the request. Send failures, partial content, and content-read failures are
+also recorded. Response bodies are observed as the application reads them rather than consumed
+eagerly; unread content appears as `{NotRead}`.
+
+Request and response capture options can be customized independently through
+`StubHttpExchangeSnapshotOptions`. Request-only snapshots remain available when response behavior
+does not belong in the assertion:
 
 ```csharp
 await stub.ShouldMatchRequestsSnapshot(

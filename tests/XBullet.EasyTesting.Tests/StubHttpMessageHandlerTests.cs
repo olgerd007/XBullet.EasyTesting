@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text;
 using XBullet.EasyTesting.Http;
 using Xunit;
 
@@ -35,6 +36,37 @@ public sealed class StubHttpMessageHandlerTests
         Assert.Equal("/orders?notify=true", request.RequestUri!.PathAndQuery);
         Assert.Equal(["tenant-42"], request.Headers["X-Tenant"]);
         Assert.Contains("\"orderId\":42", request.Body);
+
+        var exchange = Assert.Single(handler.Exchanges);
+        Assert.Same(request, exchange.Request);
+        Assert.Null(exchange.Failure);
+        Assert.NotNull(exchange.Response);
+        Assert.Equal((int)HttpStatusCode.Accepted, exchange.Response.StatusCode);
+        Assert.True(exchange.Response.BodyCaptured);
+        Assert.Contains("\"accepted\":true", Encoding.UTF8.GetString(exchange.Response.Body.Span));
+        Assert.Null(exchange.Response.BodyFailure);
+    }
+
+    [Fact]
+    public async Task Failed_send_is_recorded_as_an_exchange()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var handler = new StubHttpMessageHandler();
+        handler
+            .When(HttpMethod.Get, "/unavailable")
+            .Throw(_ => new InvalidOperationException("dependency unavailable"));
+        using var client = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("https://external.example.test/")
+        };
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            client.GetAsync("/unavailable", cancellationToken));
+
+        var exchange = Assert.Single(handler.Exchanges);
+        Assert.Null(exchange.Response);
+        Assert.Equal(typeof(InvalidOperationException).FullName, exchange.Failure?.Type);
+        Assert.Equal("dependency unavailable", exchange.Failure?.Message);
     }
 
     [Fact]
@@ -790,6 +822,15 @@ public sealed class StubHttpMessageHandlerTests
 
         Assert.NotNull(exception);
         Assert.Contains("ended before its content was complete", exception.ToString());
+        var exchange = Assert.Single(handler.Exchanges);
+        Assert.NotNull(exchange.Response);
+        Assert.True(exchange.Response.BodyCaptured);
+        Assert.Equal("{\"ready\":", Encoding.UTF8.GetString(exchange.Response.Body.Span));
+        Assert.NotNull(exchange.Response.BodyFailure);
+        Assert.Equal(typeof(IOException).FullName, exchange.Response.BodyFailure.Type);
+        Assert.Contains(
+            "ended before its content was complete",
+            exchange.Response.BodyFailure.Message);
     }
 
     private sealed record Response(bool Accepted);

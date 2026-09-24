@@ -25,8 +25,8 @@ public sealed class JsonSnapshotExamples : IClassFixture<TestApiFactory>
               "correlationId": "{{Guid.NewGuid()}}"
             }
             """;
-        var settings = new SnapshotSettings()
-            .ScrubGuids();
+        var settings = BuiltInSnapshotAudit.CreateSettings(snapshotSettings =>
+            snapshotSettings.ScrubGuids());
 
         await SnapshotAssert.MatchJsonAsync(json, settings, cancellationToken);
     }
@@ -46,6 +46,7 @@ public sealed class JsonSnapshotExamples : IClassFixture<TestApiFactory>
 
                 response.EnsureSuccessStatusCode();
                 await response.Content.ShouldMatchJsonSnapshot(
+                    BuiltInSnapshotAudit.CreateSettings(),
                     cancellationToken: cancellationToken);
             },
             cancellationToken: TestContext.Current.CancellationToken);

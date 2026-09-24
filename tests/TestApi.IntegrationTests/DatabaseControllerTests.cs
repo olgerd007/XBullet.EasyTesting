@@ -64,7 +64,9 @@ public sealed class DatabaseControllerTests : IClassFixture<TestApiFactory>
             using var client = scope.CreateAuthenticatedClient(TestUser.Create());
             using var response = await client.GetAsync("/api/products/202", cancellationToken);
 
-            await response.ShouldMatchControllerSnapshot(cancellationToken: cancellationToken);
+            await response.ShouldMatchControllerSnapshot(
+                snapshotSettings: BuiltInSnapshotAudit.CreateSettings(),
+                cancellationToken: cancellationToken);
         });
 
     [Fact]

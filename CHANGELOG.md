@@ -4,6 +4,15 @@ Notable changes to XBullet.EasyTesting are documented in this file.
 
 The project follows Semantic Versioning. Package versions are produced from GitHub Release tags.
 
+## [1.0.9] - 2026-09-24
+
+### Added
+
+- Complete outbound HTTP exchange recording, including responses, send failures, partial response
+  bodies, and content-read failures.
+- Snapshot assertions for one or all recorded outbound HTTP exchanges with structural JSON bodies
+  and independent request and response header filtering and redaction.
+
 ## [1.0.8] - 2026-09-21
 
 ### Added
