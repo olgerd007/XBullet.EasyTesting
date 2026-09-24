@@ -1,18 +1,30 @@
 {
   "Request": {
     "Method": "POST",
-    "Url": "/api/products"
+    "Url": "/api/products",
+    "Headers": {
+      "Content-Type": [
+        "application/json; charset=utf-8"
+      ]
+    },
+    "Body": {
+      "name": "Webcam",
+      "price": 79.95
+    }
   },
-  "StatusCode": 201,
-  "ReasonPhrase": "Created",
-  "Headers": {
-    "Content-Type": [
-      "application/json; charset=utf-8"
-    ]
+  "Response": {
+    "StatusCode": 201,
+    "ReasonPhrase": "Created",
+    "Headers": {
+      "Content-Type": [
+        "application/json; charset=utf-8"
+      ]
+    },
+    "Body": {
+      "id": "{Scrubbed}",
+      "name": "Webcam",
+      "price": 79.95
+    }
   },
-  "Body": {
-    "id": "{Scrubbed}",
-    "name": "Webcam",
-    "price": 79.95
-  }
+  "Failure": null
 }

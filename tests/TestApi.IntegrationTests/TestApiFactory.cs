@@ -3,6 +3,7 @@ using XBullet.EasyTesting.EntityFrameworkCore;
 using XBullet.EasyTesting.Hosting;
 using XBullet.EasyTesting.Http;
 using XBullet.EasyTesting.Messaging;
+using XBullet.EasyTesting.Snapshots;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -33,6 +34,15 @@ public class TestApiFactory : EntityFrameworkWebApplicationFactory<Program, Test
     public StubHttpMessageHandler ExternalCatalog { get; } = new();
 
     public RecordedMessageBus PublishedMessages { get; } = new();
+
+    public TestClientBuilder<Program> SnapshotClient(
+        TestScenarioScope<Program> scope,
+        Action<HttpExchangeSnapshotOptions>? configure = null)
+    {
+        var options = new HttpExchangeSnapshotOptions();
+        configure?.Invoke(options);
+        return scope.Client().WithHandler(new HttpExchangeRecorder(options));
+    }
 
     protected override void ConfigureDatabaseServices(IServiceCollection services)
     {

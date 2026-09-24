@@ -241,6 +241,21 @@ public sealed class TestClientBuilder<TEntryPoint>
         return this;
     }
 
+    /// <summary>Adds a delegating handler to the test client's HTTP pipeline.</summary>
+    public TestClientBuilder<TEntryPoint> WithHandler(DelegatingHandler handler)
+    {
+        ArgumentNullException.ThrowIfNull(handler);
+        if (handler.InnerHandler is not null)
+        {
+            throw new ArgumentException(
+                "The delegating handler must not already have an inner handler.",
+                nameof(handler));
+        }
+
+        _handlers.Add(handler);
+        return this;
+    }
+
     /// <summary>Creates the configured client.</summary>
     public HttpClient Build()
     {

@@ -952,6 +952,39 @@ same behavior when only the content is in scope. Buffered or seekable content is
 assertion and its original position is restored. Use `ShouldMatchControllerSnapshot` when request
 metadata, status, and stable headers should be included too.
 
+To snapshot the complete request and response from a real controller call, add an
+`HttpExchangeRecorder` to the TestServer client. This is a delegating handler, not an HTTP stub:
+
+```csharp
+var exchangeOptions = new HttpExchangeSnapshotOptions();
+exchangeOptions.Response.IgnoringHeaders("Location");
+
+var recorder = new HttpExchangeRecorder(exchangeOptions);
+using var client = scope.Client()
+    .AsUser(user => user.WithName("snapshot tester"))
+    .WithHandler(recorder)
+    .Build();
+
+using var response = await client.PostAsJsonAsync(
+    "/api/products",
+    new { name = "Webcam", price = 79.95m });
+
+await response.ShouldMatchHttpExchangeSnapshot(
+    snapshotSettings: new SnapshotSettings().ScrubMember("id"));
+```
+
+The recorder captures the request before TestServer can consume its body and records the response
+before returning it to the test. It associates that capture with the response, so a factory or
+client helper can install a fresh recorder and tests only need the response extension. The verified
+file contains `Request`, `Response`, and `Failure`. JSON bodies are structural, and request and
+response header filtering/redaction are configured independently. Authentication, XBullet
+test-transport, cookie, API-key, correlation, and tracing headers are excluded by default.
+
+Without a recorder, `response.ShouldMatchHttpExchangeSnapshot(options)` falls back to
+`response.RequestMessage`. Attach a recorder for TestServer and other pipelines that may consume or
+replace request content. Use `recorder.ShouldMatchHttpExchangesSnapshot()` to snapshot every call
+made by one client as an ordered array.
+
 Controller snapshots exclude volatile and sensitive headers by default, including `Date`, tracing
 identifiers, `Set-Cookie`, `Authentication-Info`, and `Proxy-Authentication-Info`. Preserve a
 header's presence without exposing its value, or omit all headers:
@@ -1117,6 +1150,21 @@ settings.ScrubMember("createdAt");
 
 await response.VerifyControllerSnapshot(options, settings);
 ```
+
+For the full request body plus response, attach an `HttpExchangeRecorder` with
+`scope.Client().WithHandler(recorder)` as shown in the built-in snapshot section, then verify every
+captured exchange in request order:
+
+```csharp
+var settings = new VerifySettings();
+settings.ScrubMember("id");
+
+await response.VerifyHttpExchangeSnapshot(settings: settings);
+```
+
+The recorder continues through the real TestServer pipeline; it is not a stub. Use
+`recorder.VerifyHttpExchangesSnapshot(settings)` instead when one Verify file should contain all
+captured calls in request order.
 
 Commit each accepted `*.verified.txt` file. Unaccepted `*.received.*` files are ignored by this repository.
 

@@ -23,6 +23,8 @@ public sealed class SnapshotAssertTests
         Assert.Contains(typeof(SnapshotLocationContext), forwardedTypes);
         Assert.Contains(typeof(StubHttpRequestSnapshot), forwardedTypes);
         Assert.Contains(typeof(StubHttpExchangeSnapshot), forwardedTypes);
+        Assert.Contains(typeof(HttpExchangeRecorder), forwardedTypes);
+        Assert.Contains(typeof(HttpExchangeFailureSnapshot), forwardedTypes);
         Assert.Equal(
             "XBullet.EasyTesting.Snapshots.Core",
             typeof(SnapshotAssert).Assembly.GetName().Name);
@@ -1273,6 +1275,137 @@ public sealed class SnapshotAssertTests
     }
 
     [Fact]
+    public async Task Http_response_exchange_snapshot_captures_request_and_response()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var request = new HttpRequestMessage(
+            HttpMethod.Post,
+            "https://orders.example.test/orders?api_key=secret")
+        {
+            Content = JsonContent.Create(new { OrderId = 42 })
+        };
+        request.Headers.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", "secret");
+        request.Headers.Add("X-Tenant", "tenant-42");
+        using var response = new HttpResponseMessage(HttpStatusCode.Created)
+        {
+            RequestMessage = request,
+            Content = JsonContent.Create(new { Id = 42, Status = "accepted" })
+        };
+        response.Headers.Add("X-Session", "secret-session");
+
+        var options = new HttpExchangeSnapshotOptions();
+        options.Request.RedactingHeader("Authorization");
+        options.Response.RedactingHeader("X-Session");
+        var snapshot = await HttpExchangeSnapshot.FromResponseAsync(
+            response,
+            options,
+            cancellationToken);
+
+        Assert.NotNull(snapshot.Request);
+        Assert.NotNull(snapshot.Request.Headers);
+        Assert.Equal("POST", snapshot.Request.Method);
+        Assert.Equal("/orders?api_key={Redacted}", snapshot.Request.Url);
+        Assert.Equal(["{Redacted}"], snapshot.Request.Headers["Authorization"]);
+        Assert.Equal(["tenant-42"], snapshot.Request.Headers["X-Tenant"]);
+        Assert.Equal(42, Assert.IsType<JsonElement>(snapshot.Request.Body)
+            .GetProperty("orderId")
+            .GetInt32());
+        Assert.NotNull(snapshot.Response);
+        Assert.Equal((int)HttpStatusCode.Created, snapshot.Response.StatusCode);
+        Assert.NotNull(snapshot.Response.Headers);
+        Assert.Equal(["{Redacted}"], snapshot.Response.Headers["X-Session"]);
+        Assert.Equal("accepted", Assert.IsType<JsonElement>(snapshot.Response.Body)
+            .GetProperty("status")
+            .GetString());
+    }
+
+    [Fact]
+    public async Task Http_exchange_recorder_captures_body_before_transport_consumes_it()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var options = new HttpExchangeSnapshotOptions();
+        options.Response.RedactingHeader("X-Session");
+        using var recorder = new HttpExchangeRecorder(options)
+        {
+            InnerHandler = new CallbackHttpMessageHandler(async (request, token) =>
+            {
+                _ = await request.Content!.ReadAsStringAsync(token);
+                request.Content = null;
+                var response = new HttpResponseMessage(HttpStatusCode.Created)
+                {
+                    Content = JsonContent.Create(new { Id = 42, Status = "accepted" }),
+                    RequestMessage = request
+                };
+                response.Headers.Add("X-Session", "secret-session");
+                return response;
+            })
+        };
+        using var client = new HttpClient(recorder)
+        {
+            BaseAddress = new Uri("https://orders.example.test/")
+        };
+        client.DefaultRequestHeaders.Add("X-Integration-Test-User", "secret-identity");
+
+        using var response = await client.PostAsJsonAsync(
+            "/orders",
+            new { OrderId = 42 },
+            cancellationToken);
+        var snapshots = await recorder.CreateSnapshotsAsync(cancellationToken);
+        var responseSnapshot = await HttpExchangeSnapshot.FromResponseAsync(
+            response,
+            cancellationToken: cancellationToken);
+
+        var snapshot = Assert.Single(snapshots);
+        Assert.Same(snapshot, responseSnapshot);
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            HttpExchangeSnapshot.FromResponseAsync(
+                response,
+                new HttpExchangeSnapshotOptions(),
+                cancellationToken));
+        Assert.Equal(1, recorder.CallCount);
+        Assert.NotNull(snapshot.Request);
+        Assert.DoesNotContain("X-Integration-Test-User", snapshot.Request.Headers!);
+        Assert.Equal(42, Assert.IsType<JsonElement>(snapshot.Request.Body)
+            .GetProperty("orderId")
+            .GetInt32());
+        Assert.NotNull(snapshot.Response);
+        Assert.Equal((int)HttpStatusCode.Created, snapshot.Response.StatusCode);
+        Assert.Equal(["{Redacted}"], snapshot.Response.Headers!["X-Session"]);
+
+        Assert.Same(recorder, recorder.Reset());
+        Assert.Equal(0, recorder.CallCount);
+    }
+
+    [Fact]
+    public async Task Http_exchange_recorder_captures_send_failures()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var recorder = new HttpExchangeRecorder
+        {
+            InnerHandler = new CallbackHttpMessageHandler((_, _) =>
+                Task.FromException<HttpResponseMessage>(
+                    new HttpRequestException("send failed", new IOException("connection lost"))))
+        };
+        using var client = new HttpClient(recorder)
+        {
+            BaseAddress = new Uri("https://orders.example.test/")
+        };
+
+        await Assert.ThrowsAsync<HttpRequestException>(() =>
+            client.GetAsync("/orders/42", cancellationToken));
+        var snapshots = await recorder.CreateSnapshotsAsync(cancellationToken);
+
+        var snapshot = Assert.Single(snapshots);
+        Assert.NotNull(snapshot.Request);
+        Assert.Equal("/orders/42", snapshot.Request.Url);
+        Assert.Null(snapshot.Response);
+        Assert.NotNull(snapshot.Failure);
+        Assert.Equal(typeof(IOException).FullName, snapshot.Failure.Type);
+        Assert.Equal("connection lost", snapshot.Failure.Message);
+    }
+
+    [Fact]
     public async Task Snapshot_location_and_acceptance_failures_are_explicit()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
@@ -2027,5 +2160,14 @@ public sealed class SnapshotAssertTests
 
             base.Dispose(disposing);
         }
+    }
+
+    private sealed class CallbackHttpMessageHandler(
+        Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> callback)
+        : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken) => callback(request, cancellationToken);
     }
 }

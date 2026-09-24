@@ -30,6 +30,42 @@ public static class ControllerSnapshotExtensions
         return Verifier.Verify(snapshot, settings, sourceFile);
     }
 
+    /// <summary>
+    /// Verifies the complete request and response represented by an HTTP response.
+    /// JSON bodies are compared structurally rather than as formatting-sensitive strings.
+    /// </summary>
+    public static SettingsTask VerifyHttpExchangeSnapshot(
+        this HttpResponseMessage response,
+        HttpExchangeSnapshotOptions? options = null,
+        VerifySettings? settings = null,
+        CancellationToken cancellationToken = default,
+        [CallerFilePath] string sourceFile = "")
+    {
+        ArgumentNullException.ThrowIfNull(response);
+
+        var snapshot = CreateVerifyExchangeSnapshotAsync(
+            response,
+            options,
+            cancellationToken);
+
+        return Verifier.Verify(snapshot, settings, sourceFile);
+    }
+
+    /// <summary>
+    /// Verifies every complete request/response exchange captured by an HTTP exchange recorder.
+    /// </summary>
+    public static SettingsTask VerifyHttpExchangesSnapshot(
+        this HttpExchangeRecorder recorder,
+        VerifySettings? settings = null,
+        CancellationToken cancellationToken = default,
+        [CallerFilePath] string sourceFile = "")
+    {
+        ArgumentNullException.ThrowIfNull(recorder);
+
+        var snapshots = CreateVerifyExchangeSnapshotsAsync(recorder, cancellationToken);
+        return Verifier.Verify(snapshots, settings, sourceFile);
+    }
+
     private static async Task<ControllerResponseSnapshot> CreateVerifySnapshotAsync(
         HttpResponseMessage response,
         ControllerSnapshotOptions? options,
@@ -43,6 +79,38 @@ public static class ControllerSnapshotExtensions
         return snapshot.Body is JsonElement json
             ? snapshot with { Body = ToVerifyValue(json) }
             : snapshot;
+    }
+
+    private static async Task<HttpExchangeSnapshot> CreateVerifyExchangeSnapshotAsync(
+        HttpResponseMessage response,
+        HttpExchangeSnapshotOptions? options,
+        CancellationToken cancellationToken)
+    {
+        var snapshot = await HttpExchangeSnapshot.FromResponseAsync(
+            response,
+            options,
+            cancellationToken);
+        return ToVerifyExchangeSnapshot(snapshot);
+    }
+
+    private static async Task<IReadOnlyList<HttpExchangeSnapshot>> CreateVerifyExchangeSnapshotsAsync(
+        HttpExchangeRecorder recorder,
+        CancellationToken cancellationToken)
+    {
+        var snapshots = await recorder.CreateSnapshotsAsync(cancellationToken);
+        return snapshots.Select(ToVerifyExchangeSnapshot).ToArray();
+    }
+
+    private static HttpExchangeSnapshot ToVerifyExchangeSnapshot(HttpExchangeSnapshot snapshot)
+    {
+        var request = snapshot.Request?.Body is JsonElement requestJson
+            ? snapshot.Request with { Body = ToVerifyValue(requestJson) }
+            : snapshot.Request;
+        var response = snapshot.Response?.Body is JsonElement responseJson
+            ? snapshot.Response with { Body = ToVerifyValue(responseJson) }
+            : snapshot.Response;
+
+        return snapshot with { Request = request, Response = response };
     }
 
     private static object? ToVerifyValue(JsonElement element) =>
