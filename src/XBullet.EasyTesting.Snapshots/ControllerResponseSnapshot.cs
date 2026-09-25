@@ -18,7 +18,7 @@ public sealed record ControllerResponseSnapshot(
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(response);
-        options ??= new ControllerSnapshotOptions();
+        options = ControllerSnapshotOptionsDefaults.MergeGlobalOrDefault(options);
 
         var request = options.IncludeRequest && response.RequestMessage is not null
             ? new ControllerRequestSnapshot(

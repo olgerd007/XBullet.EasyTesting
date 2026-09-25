@@ -1,4 +1,7 @@
 #nullable enable
+static XBullet.EasyTesting.Snapshots.ControllerSnapshotOptionsDefaults.ExtendGlobal(System.Action<XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions!>! configure) -> XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions!
+static XBullet.EasyTesting.Snapshots.ControllerSnapshotOptionsDefaults.Global.get -> XBullet.EasyTesting.Snapshots.ControllerSnapshotOptionsDefaults?
+static XBullet.EasyTesting.Snapshots.ControllerSnapshotOptionsDefaults.Global.set -> void
 override XBullet.EasyTesting.Snapshots.HttpExchangeFailureSnapshot.Equals(object? obj) -> bool
 override XBullet.EasyTesting.Snapshots.HttpExchangeFailureSnapshot.GetHashCode() -> int
 override XBullet.EasyTesting.Snapshots.HttpExchangeFailureSnapshot.ToString() -> string!
@@ -25,7 +28,11 @@ static XBullet.EasyTesting.Snapshots.HttpResponseSnapshotExtensions.ShouldMatchH
 static XBullet.EasyTesting.Snapshots.SnapshotAssert.MatchTextAsync(string! actualText, XBullet.EasyTesting.Snapshots.SnapshotSettings? settings = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken), string! sourceFile = "", string! testName = "") -> System.Threading.Tasks.Task!
 static XBullet.EasyTesting.Snapshots.SnapshotSettingsDefaults.Global.get -> XBullet.EasyTesting.Snapshots.SnapshotSettingsDefaults?
 static XBullet.EasyTesting.Snapshots.SnapshotSettingsDefaults.Global.set -> void
+static XBullet.EasyTesting.Snapshots.SnapshotSettingsDefaults.ExtendGlobal(System.Action<XBullet.EasyTesting.Snapshots.SnapshotSettings!>! configure) -> XBullet.EasyTesting.Snapshots.SnapshotSettings!
 XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions.IncludingQueryParameter(string! parameterName) -> XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions!
+XBullet.EasyTesting.Snapshots.ControllerSnapshotOptionsDefaults
+XBullet.EasyTesting.Snapshots.ControllerSnapshotOptionsDefaults.ControllerSnapshotOptionsDefaults(System.Action<XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions!>! configure) -> void
+XBullet.EasyTesting.Snapshots.ControllerSnapshotOptionsDefaults.Create(System.Action<XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions!>? configure = null) -> XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions!
 XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions.RedactedQueryParameters.get -> System.Collections.Generic.ISet<string!>!
 XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions.RedactingQueryParameter(string! parameterName) -> XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions!
 XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions.RedactingQueryParameters(params string![]! parameterNames) -> XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions!
@@ -78,6 +85,8 @@ XBullet.EasyTesting.Snapshots.HttpExchangeResponseSnapshot
 XBullet.EasyTesting.Snapshots.HttpExchangeResponseSnapshot.<Clone>$() -> XBullet.EasyTesting.Snapshots.HttpExchangeResponseSnapshot!
 XBullet.EasyTesting.Snapshots.HttpExchangeResponseSnapshot.Body.get -> object?
 XBullet.EasyTesting.Snapshots.HttpExchangeResponseSnapshot.Body.init -> void
+XBullet.EasyTesting.Snapshots.HttpExchangeResponseSnapshot.BodyFailure.get -> XBullet.EasyTesting.Snapshots.HttpExchangeFailureSnapshot?
+XBullet.EasyTesting.Snapshots.HttpExchangeResponseSnapshot.BodyFailure.init -> void
 XBullet.EasyTesting.Snapshots.HttpExchangeResponseSnapshot.Deconstruct(out int StatusCode, out string? ReasonPhrase, out System.Collections.Generic.IReadOnlyDictionary<string!, string![]!>? Headers, out object? Body) -> void
 XBullet.EasyTesting.Snapshots.HttpExchangeResponseSnapshot.Equals(XBullet.EasyTesting.Snapshots.HttpExchangeResponseSnapshot? other) -> bool
 XBullet.EasyTesting.Snapshots.HttpExchangeResponseSnapshot.Headers.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string![]!>?

@@ -3,30 +3,52 @@ namespace XBullet.EasyTesting.Snapshots;
 /// <summary>Controls which HTTP response details are included in a controller snapshot.</summary>
 public sealed class ControllerSnapshotOptions
 {
+    private readonly HashSet<string> _explicitHeaderDecisions = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _explicitQueryParameterDecisions = new(StringComparer.OrdinalIgnoreCase);
+    private bool _includeRequest = true;
+    private bool _includeBody = true;
+    private bool _includeHeaders = true;
+    private OptionOverrides _overrides;
+    private bool _includesGlobalDefaults;
+
     /// <summary>Gets or sets whether the request method and relative URL are included.</summary>
-    public bool IncludeRequest { get; set; } = true;
+    public bool IncludeRequest
+    {
+        get => _includeRequest;
+        set
+        {
+            _includeRequest = value;
+            _overrides |= OptionOverrides.IncludeRequest;
+        }
+    }
 
     /// <summary>Gets or sets whether response content is included.</summary>
-    public bool IncludeBody { get; set; } = true;
+    public bool IncludeBody
+    {
+        get => _includeBody;
+        set
+        {
+            _includeBody = value;
+            _overrides |= OptionOverrides.IncludeBody;
+        }
+    }
 
     /// <summary>Gets or sets whether response headers are included.</summary>
-    public bool IncludeHeaders { get; set; } = true;
+    public bool IncludeHeaders
+    {
+        get => _includeHeaders;
+        set
+        {
+            _includeHeaders = value;
+            _overrides |= OptionOverrides.IncludeHeaders;
+        }
+    }
 
     /// <summary>
     /// Gets headers excluded from snapshots. Volatile infrastructure headers are excluded by default.
     /// Header names are matched without regard to case.
     /// </summary>
-    public ISet<string> IgnoredHeaders { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-    {
-        "Date",
-        "Server",
-        "Set-Cookie",
-        "Authentication-Info",
-        "Proxy-Authentication-Info",
-        "Request-Id",
-        "Traceparent",
-        "X-Correlation-Id"
-    };
+    public ISet<string> IgnoredHeaders { get; } = CreateIgnoredHeaders();
 
     /// <summary>
     /// Gets headers whose presence is captured while their values are replaced with
@@ -38,7 +60,7 @@ public sealed class ControllerSnapshotOptions
     /// Gets request query parameters whose values are replaced with <c>{Redacted}</c>.
     /// Names are matched without regard to case.
     /// </summary>
-    public ISet<string> RedactedQueryParameters { get; } = CreateSensitiveQueryParameters();
+    public ISet<string> RedactedQueryParameters { get; } = SensitiveQueryParameterDefaults.Create();
 
     /// <summary>Excludes request details and returns this instance.</summary>
     public ControllerSnapshotOptions WithoutRequest()
@@ -70,6 +92,7 @@ public sealed class ControllerSnapshotOptions
             ArgumentException.ThrowIfNullOrWhiteSpace(headerName);
             IgnoredHeaders.Add(headerName);
             RedactedHeaders.Remove(headerName);
+            _explicitHeaderDecisions.Add(headerName);
         }
 
         return this;
@@ -81,6 +104,7 @@ public sealed class ControllerSnapshotOptions
         ArgumentException.ThrowIfNullOrWhiteSpace(headerName);
         IgnoredHeaders.Remove(headerName);
         RedactedHeaders.Remove(headerName);
+        _explicitHeaderDecisions.Add(headerName);
         return this;
     }
 
@@ -97,6 +121,7 @@ public sealed class ControllerSnapshotOptions
             ArgumentException.ThrowIfNullOrWhiteSpace(headerName);
             IgnoredHeaders.Remove(headerName);
             RedactedHeaders.Add(headerName);
+            _explicitHeaderDecisions.Add(headerName);
         }
 
         return this;
@@ -114,6 +139,7 @@ public sealed class ControllerSnapshotOptions
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(parameterName);
             RedactedQueryParameters.Add(parameterName);
+            _explicitQueryParameterDecisions.Add(parameterName);
         }
 
         return this;
@@ -124,21 +150,124 @@ public sealed class ControllerSnapshotOptions
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(parameterName);
         RedactedQueryParameters.Remove(parameterName);
+        _explicitQueryParameterDecisions.Add(parameterName);
         return this;
     }
 
-    private static HashSet<string> CreateSensitiveQueryParameters() =>
+    internal ControllerSnapshotOptions Copy()
+    {
+        var copy = new ControllerSnapshotOptions
+        {
+            _includeRequest = _includeRequest,
+            _includeBody = _includeBody,
+            _includeHeaders = _includeHeaders,
+            _overrides = _overrides,
+            _includesGlobalDefaults = _includesGlobalDefaults
+        };
+
+        copy.IgnoredHeaders.Clear();
+        copy.IgnoredHeaders.UnionWith(IgnoredHeaders);
+        copy.RedactedHeaders.UnionWith(RedactedHeaders);
+        copy.RedactedQueryParameters.Clear();
+        copy.RedactedQueryParameters.UnionWith(RedactedQueryParameters);
+        copy._explicitHeaderDecisions.UnionWith(_explicitHeaderDecisions);
+        copy._explicitQueryParameterDecisions.UnionWith(_explicitQueryParameterDecisions);
+        return copy;
+    }
+
+    internal ControllerSnapshotOptions Merge(ControllerSnapshotOptions local)
+    {
+        ArgumentNullException.ThrowIfNull(local);
+        var merged = Copy();
+
+        if (local._overrides.HasFlag(OptionOverrides.IncludeRequest))
+        {
+            merged._includeRequest = local._includeRequest;
+        }
+        if (local._overrides.HasFlag(OptionOverrides.IncludeBody))
+        {
+            merged._includeBody = local._includeBody;
+        }
+        if (local._overrides.HasFlag(OptionOverrides.IncludeHeaders))
+        {
+            merged._includeHeaders = local._includeHeaders;
+        }
+        merged._overrides |= local._overrides;
+
+        var defaultIgnoredHeaders = CreateIgnoredHeaders();
+        var headerDecisions = new HashSet<string>(
+            local._explicitHeaderDecisions,
+            StringComparer.OrdinalIgnoreCase);
+        headerDecisions.UnionWith(local.RedactedHeaders);
+        headerDecisions.UnionWith(local.IgnoredHeaders.Where(header => !defaultIgnoredHeaders.Contains(header)));
+        headerDecisions.UnionWith(defaultIgnoredHeaders.Where(header => !local.IgnoredHeaders.Contains(header)));
+        foreach (var headerName in headerDecisions)
+        {
+            if (local.RedactedHeaders.Contains(headerName))
+            {
+                merged.IgnoredHeaders.Remove(headerName);
+                merged.RedactedHeaders.Add(headerName);
+            }
+            else if (local.IgnoredHeaders.Contains(headerName))
+            {
+                merged.IgnoredHeaders.Add(headerName);
+                merged.RedactedHeaders.Remove(headerName);
+            }
+            else
+            {
+                merged.IgnoredHeaders.Remove(headerName);
+                merged.RedactedHeaders.Remove(headerName);
+            }
+        }
+
+        var defaultQueryParameters = SensitiveQueryParameterDefaults.Create();
+        var queryParameterDecisions = new HashSet<string>(
+            local._explicitQueryParameterDecisions,
+            StringComparer.OrdinalIgnoreCase);
+        queryParameterDecisions.UnionWith(local.RedactedQueryParameters.Where(
+            parameter => !defaultQueryParameters.Contains(parameter)));
+        queryParameterDecisions.UnionWith(defaultQueryParameters.Where(
+            parameter => !local.RedactedQueryParameters.Contains(parameter)));
+        foreach (var parameterName in queryParameterDecisions)
+        {
+            if (local.RedactedQueryParameters.Contains(parameterName))
+            {
+                merged.RedactedQueryParameters.Add(parameterName);
+            }
+            else
+            {
+                merged.RedactedQueryParameters.Remove(parameterName);
+            }
+        }
+
+        merged._explicitHeaderDecisions.UnionWith(headerDecisions);
+        merged._explicitQueryParameterDecisions.UnionWith(queryParameterDecisions);
+        return merged;
+    }
+
+    internal bool IncludesGlobalDefaults => _includesGlobalDefaults;
+
+    internal void MarkIncludesGlobalDefaults() => _includesGlobalDefaults = true;
+
+    private static HashSet<string> CreateIgnoredHeaders() =>
         new(StringComparer.OrdinalIgnoreCase)
         {
-            "access_token",
-            "api_key",
-            "apikey",
-            "client_secret",
-            "code",
-            "key",
-            "password",
-            "sig",
-            "signature",
-            "token"
+            "Date",
+            "Server",
+            "Set-Cookie",
+            "Authentication-Info",
+            "Proxy-Authentication-Info",
+            "Request-Id",
+            "Traceparent",
+            "X-Correlation-Id"
         };
+
+    [Flags]
+    private enum OptionOverrides
+    {
+        None = 0,
+        IncludeRequest = 1 << 0,
+        IncludeBody = 1 << 1,
+        IncludeHeaders = 1 << 2
+    }
 }

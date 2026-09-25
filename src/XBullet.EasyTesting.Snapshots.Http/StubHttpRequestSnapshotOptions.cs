@@ -34,7 +34,7 @@ public sealed class StubHttpRequestSnapshotOptions
     /// Gets query parameters whose values are replaced with <c>{Redacted}</c>.
     /// Names are matched without regard to case.
     /// </summary>
-    public ISet<string> RedactedQueryParameters { get; } = CreateSensitiveQueryParameters();
+    public ISet<string> RedactedQueryParameters { get; } = SensitiveQueryParameterDefaults.Create();
 
     /// <summary>Excludes request headers and returns this instance.</summary>
     public StubHttpRequestSnapshotOptions WithoutHeaders()
@@ -116,18 +116,4 @@ public sealed class StubHttpRequestSnapshotOptions
         return this;
     }
 
-    private static HashSet<string> CreateSensitiveQueryParameters() =>
-        new(StringComparer.OrdinalIgnoreCase)
-        {
-            "access_token",
-            "api_key",
-            "apikey",
-            "client_secret",
-            "code",
-            "key",
-            "password",
-            "sig",
-            "signature",
-            "token"
-        };
 }
