@@ -22,6 +22,18 @@ public sealed class SnapshotSettings
     private readonly HashSet<string> _scrubbedMembers = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _ignoredMembers = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<JsonSnapshotPathRule> _pathRules = new();
+    private string? _directory;
+    private Func<SnapshotLocationContext, string>? _directoryResolver;
+    private string? _snapshotName;
+    private string? _variant;
+    private JsonSerializerOptions _jsonSerializerOptions = CreateDefaultJsonOptions();
+    private SnapshotUpdateMode _updateMode;
+    private bool _launchDiffTool = true;
+    private SnapshotDiffTool? _diffTool;
+    private bool _allowUpdatesInContinuousIntegration;
+    private SnapshotCatalog? _catalog;
+    private SettingOverrides _overrides;
+    private bool _includesGlobalDefaults;
 
     /// <summary>The environment variable used to select automatic snapshot updates.</summary>
     public const string UpdateModeEnvironmentVariable = "INTEGRATION_TESTS_UPDATE_SNAPSHOTS";
@@ -40,8 +52,8 @@ public sealed class SnapshotSettings
     {
         if (readEnvironment)
         {
-            UpdateMode = ReadUpdateMode();
-            AllowUpdatesInContinuousIntegration =
+            _updateMode = ReadUpdateMode();
+            _allowUpdatesInContinuousIntegration =
                 ContinuousIntegrationEnvironment.IsEnabled(AllowCiUpdatesEnvironmentVariable);
         }
     }
@@ -50,27 +62,72 @@ public sealed class SnapshotSettings
     /// Gets or sets the snapshot directory. Relative paths are resolved from the calling source file.
     /// The default is a <c>__snapshots__</c> directory beside that source file.
     /// </summary>
-    public string? Directory { get; set; }
+    public string? Directory
+    {
+        get => _directory;
+        set
+        {
+            _directory = value;
+            _overrides |= SettingOverrides.Directory;
+        }
+    }
 
     /// <summary>
     /// Gets or sets an optional callback that selects the snapshot directory from the calling test
     /// context. <see cref="Directory"/> takes precedence when both are set.
     /// </summary>
-    public Func<SnapshotLocationContext, string>? DirectoryResolver { get; set; }
+    public Func<SnapshotLocationContext, string>? DirectoryResolver
+    {
+        get => _directoryResolver;
+        set
+        {
+            _directoryResolver = value;
+            _overrides |= SettingOverrides.DirectoryResolver;
+        }
+    }
 
     /// <summary>
     /// Gets or sets the snapshot name. The calling method name is used when this is not specified.
     /// </summary>
-    public string? SnapshotName { get; set; }
+    public string? SnapshotName
+    {
+        get => _snapshotName;
+        set
+        {
+            _snapshotName = value;
+            _overrides |= SettingOverrides.SnapshotName;
+        }
+    }
 
     /// <summary>
     /// Gets or sets an optional snapshot variant. Variants create distinct snapshots for multiple
     /// assertions or parameterized cases in the same test method.
     /// </summary>
-    public string? Variant { get; set; }
+    public string? Variant
+    {
+        get => _variant;
+        set
+        {
+            _variant = value;
+            _overrides |= SettingOverrides.Variant;
+        }
+    }
 
     /// <summary>Gets or sets the JSON options used to serialize the snapshot.</summary>
-    public JsonSerializerOptions JsonSerializerOptions { get; set; } = CreateDefaultJsonOptions();
+    public JsonSerializerOptions JsonSerializerOptions
+    {
+        get
+        {
+            _overrides |= SettingOverrides.JsonSerializerOptions;
+            return _jsonSerializerOptions;
+        }
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            _jsonSerializerOptions = value;
+            _overrides |= SettingOverrides.JsonSerializerOptions;
+        }
+    }
 
     /// <summary>Gets transformations applied to serialized content before comparison.</summary>
     public IList<Func<string, string>> Scrubbers { get; } = new List<Func<string, string>>();
@@ -91,26 +148,66 @@ public sealed class SnapshotSettings
     /// Gets or sets automatic snapshot-update behavior. The default can be selected with
     /// <c>INTEGRATION_TESTS_UPDATE_SNAPSHOTS=missing</c> or <c>all</c>.
     /// </summary>
-    public SnapshotUpdateMode UpdateMode { get; set; }
+    public SnapshotUpdateMode UpdateMode
+    {
+        get => _updateMode;
+        set
+        {
+            _updateMode = value;
+            _overrides |= SettingOverrides.UpdateMode;
+        }
+    }
 
     /// <summary>Gets or sets whether an installed diff viewer is launched after a mismatch.</summary>
-    public bool LaunchDiffTool { get; set; } = true;
+    public bool LaunchDiffTool
+    {
+        get => _launchDiffTool;
+        set
+        {
+            _launchDiffTool = value;
+            _overrides |= SettingOverrides.LaunchDiffTool;
+        }
+    }
 
     /// <summary>
     /// Gets or sets an explicit diff viewer. When omitted, Visual Studio, VS Code, Rider,
     /// and Meld are discovered automatically. Diff viewers are never launched in CI.
     /// </summary>
-    public SnapshotDiffTool? DiffTool { get; set; }
+    public SnapshotDiffTool? DiffTool
+    {
+        get => _diffTool;
+        set
+        {
+            _diffTool = value;
+            _overrides |= SettingOverrides.DiffTool;
+        }
+    }
 
     /// <summary>
     /// Gets or sets whether automatic snapshot updates are allowed when a continuous-integration
     /// environment is detected. The default is controlled by
     /// <c>INTEGRATION_TESTS_ALLOW_SNAPSHOT_UPDATES_IN_CI</c> and is otherwise false.
     /// </summary>
-    public bool AllowUpdatesInContinuousIntegration { get; set; }
+    public bool AllowUpdatesInContinuousIntegration
+    {
+        get => _allowUpdatesInContinuousIntegration;
+        set
+        {
+            _allowUpdatesInContinuousIntegration = value;
+            _overrides |= SettingOverrides.AllowUpdatesInContinuousIntegration;
+        }
+    }
 
     /// <summary>Gets or sets an optional instance-scoped catalog that records exercised snapshots.</summary>
-    public SnapshotCatalog? Catalog { get; set; }
+    public SnapshotCatalog? Catalog
+    {
+        get => _catalog;
+        set
+        {
+            _catalog = value;
+            _overrides |= SettingOverrides.Catalog;
+        }
+    }
 
     /// <summary>Sets the snapshot name and returns this instance.</summary>
     public SnapshotSettings Named(string snapshotName)
@@ -330,16 +427,18 @@ public sealed class SnapshotSettings
     {
         var copy = new SnapshotSettings(readEnvironment: false)
         {
-            Directory = Directory,
-            DirectoryResolver = DirectoryResolver,
-            SnapshotName = SnapshotName,
-            Variant = Variant,
-            JsonSerializerOptions = new JsonSerializerOptions(JsonSerializerOptions),
-            UpdateMode = UpdateMode,
-            LaunchDiffTool = LaunchDiffTool,
-            DiffTool = DiffTool,
-            AllowUpdatesInContinuousIntegration = AllowUpdatesInContinuousIntegration,
-            Catalog = Catalog,
+            _directory = _directory,
+            _directoryResolver = _directoryResolver,
+            _snapshotName = _snapshotName,
+            _variant = _variant,
+            _jsonSerializerOptions = new JsonSerializerOptions(_jsonSerializerOptions),
+            _updateMode = _updateMode,
+            _launchDiffTool = _launchDiffTool,
+            _diffTool = _diffTool,
+            _allowUpdatesInContinuousIntegration = _allowUpdatesInContinuousIntegration,
+            _catalog = _catalog,
+            _overrides = _overrides,
+            _includesGlobalDefaults = _includesGlobalDefaults,
             ScrubGuidValues = ScrubGuidValues,
             ScrubDateTimeValues = ScrubDateTimeValues,
             CanonicalizeObjectProperties = CanonicalizeObjectProperties
@@ -354,6 +453,70 @@ public sealed class SnapshotSettings
         copy._pathRules.AddRange(_pathRules);
         return copy;
     }
+
+    internal SnapshotSettings Merge(SnapshotSettings local)
+    {
+        ArgumentNullException.ThrowIfNull(local);
+        var merged = Copy();
+
+        if (local._overrides.HasFlag(SettingOverrides.Directory))
+        {
+            merged._directory = local._directory;
+        }
+        if (local._overrides.HasFlag(SettingOverrides.DirectoryResolver))
+        {
+            merged._directoryResolver = local._directoryResolver;
+        }
+        if (local._overrides.HasFlag(SettingOverrides.SnapshotName))
+        {
+            merged._snapshotName = local._snapshotName;
+        }
+        if (local._overrides.HasFlag(SettingOverrides.Variant))
+        {
+            merged._variant = local._variant;
+        }
+        if (local._overrides.HasFlag(SettingOverrides.JsonSerializerOptions))
+        {
+            merged._jsonSerializerOptions = new JsonSerializerOptions(local._jsonSerializerOptions);
+        }
+        if (local._overrides.HasFlag(SettingOverrides.UpdateMode))
+        {
+            merged._updateMode = local._updateMode;
+        }
+        if (local._overrides.HasFlag(SettingOverrides.LaunchDiffTool))
+        {
+            merged._launchDiffTool = local._launchDiffTool;
+        }
+        if (local._overrides.HasFlag(SettingOverrides.DiffTool))
+        {
+            merged._diffTool = local._diffTool;
+        }
+        if (local._overrides.HasFlag(SettingOverrides.AllowUpdatesInContinuousIntegration))
+        {
+            merged._allowUpdatesInContinuousIntegration = local._allowUpdatesInContinuousIntegration;
+        }
+        if (local._overrides.HasFlag(SettingOverrides.Catalog))
+        {
+            merged._catalog = local._catalog;
+        }
+
+        merged._overrides |= local._overrides;
+        foreach (var scrubber in local.Scrubbers)
+        {
+            merged.Scrubbers.Add(scrubber);
+        }
+        merged._scrubbedMembers.UnionWith(local._scrubbedMembers);
+        merged._ignoredMembers.UnionWith(local._ignoredMembers);
+        merged._pathRules.AddRange(local._pathRules);
+        merged.ScrubGuidValues |= local.ScrubGuidValues;
+        merged.ScrubDateTimeValues |= local.ScrubDateTimeValues;
+        merged.CanonicalizeObjectProperties |= local.CanonicalizeObjectProperties;
+        return merged;
+    }
+
+    internal bool IncludesGlobalDefaults => _includesGlobalDefaults;
+
+    internal void MarkIncludesGlobalDefaults() => _includesGlobalDefaults = true;
 
     private static void AddMemberNames(ISet<string> target, string[] memberNames)
     {
@@ -379,5 +542,21 @@ public sealed class SnapshotSettings
             ? mode
             : throw new InvalidOperationException(
                 $"Environment variable {UpdateModeEnvironmentVariable} must be 'none', 'missing', or 'all'.");
+    }
+
+    [Flags]
+    private enum SettingOverrides
+    {
+        None = 0,
+        Directory = 1 << 0,
+        DirectoryResolver = 1 << 1,
+        SnapshotName = 1 << 2,
+        Variant = 1 << 3,
+        JsonSerializerOptions = 1 << 4,
+        UpdateMode = 1 << 5,
+        LaunchDiffTool = 1 << 6,
+        DiffTool = 1 << 7,
+        AllowUpdatesInContinuousIntegration = 1 << 8,
+        Catalog = 1 << 9
     }
 }

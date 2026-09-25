@@ -22,7 +22,7 @@ public static class SnapshotAssert
         [CallerFilePath] string sourceFile = "",
         [CallerMemberName] string testName = "")
     {
-        settings ??= SnapshotSettingsDefaults.CreateGlobalOrDefault();
+        settings = SnapshotSettingsDefaults.MergeGlobalOrDefault(settings);
 
         var serialized = JsonSerializer.Serialize(actual, settings.JsonSerializerOptions);
         await MatchContentAsync(
@@ -46,7 +46,7 @@ public static class SnapshotAssert
         [CallerMemberName] string testName = "")
     {
         ArgumentNullException.ThrowIfNull(actualJson);
-        settings ??= SnapshotSettingsDefaults.CreateGlobalOrDefault();
+        settings = SnapshotSettingsDefaults.MergeGlobalOrDefault(settings);
 
         var json = JsonSnapshotContent.Parse(actualJson, settings.JsonSerializerOptions);
         var serialized = JsonSerializer.Serialize(
@@ -70,7 +70,7 @@ public static class SnapshotAssert
         string testName)
     {
         ArgumentNullException.ThrowIfNull(actualJson);
-        settings ??= SnapshotSettingsDefaults.CreateGlobalOrDefault();
+        settings = SnapshotSettingsDefaults.MergeGlobalOrDefault(settings);
 
         var json = await JsonSnapshotContent.ParseAsync(
             actualJson,
@@ -101,7 +101,7 @@ public static class SnapshotAssert
         [CallerMemberName] string testName = "")
     {
         ArgumentNullException.ThrowIfNull(actualText);
-        settings ??= SnapshotSettingsDefaults.CreateGlobalOrDefault();
+        settings = SnapshotSettingsDefaults.MergeGlobalOrDefault(settings);
         return MatchContentAsync(
             actualText,
             settings,

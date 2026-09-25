@@ -37,7 +37,7 @@ public sealed class HttpExchangeRequestSnapshotOptions
     public ISet<string> RedactedHeaders { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Gets query parameters whose values are replaced with <c>{Redacted}</c>.</summary>
-    public ISet<string> RedactedQueryParameters { get; } = CreateSensitiveQueryParameters();
+    public ISet<string> RedactedQueryParameters { get; } = SensitiveQueryParameterDefaults.Create();
 
     /// <summary>Excludes request headers and returns this instance.</summary>
     public HttpExchangeRequestSnapshotOptions WithoutHeaders()
@@ -115,20 +115,6 @@ public sealed class HttpExchangeRequestSnapshotOptions
         return this;
     }
 
-    private static HashSet<string> CreateSensitiveQueryParameters() =>
-        new(StringComparer.OrdinalIgnoreCase)
-        {
-            "access_token",
-            "api_key",
-            "apikey",
-            "client_secret",
-            "code",
-            "key",
-            "password",
-            "sig",
-            "signature",
-            "token"
-        };
 }
 
 /// <summary>Controls which HTTP response details are included in an exchange snapshot.</summary>

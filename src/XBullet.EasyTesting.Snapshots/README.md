@@ -125,7 +125,8 @@ await response.ShouldMatchControllerSnapshot(options);
 ```
 
 Redacted headers and query values are captured as `{Redacted}`. Common secret-bearing query names,
-including `access_token`, `api_key`, `client_secret`, `sig`, and `token`, are redacted by default.
+including `access_token`, `api_key`, `client_secret`, `sas`, `secret`, `sig`, and `token`, are
+redacted by default.
 Call `WithoutHeaders()` to omit the entire header collection, or `IncludingHeader(name)` and
 `IncludingQueryParameter(name)` to explicitly include a value known to be safe.
 
@@ -153,13 +154,15 @@ await response.ShouldMatchHttpExchangeSnapshot(
     snapshotSettings: new SnapshotSettings().ScrubMember("id"));
 ```
 
-The recorder captures requests before transport consumption and buffers response content before
-returning it to the caller. JSON is stored structurally; text stays text; binary bodies use base64.
-Authorization, cookies, API keys, XBullet's test identity and client-certificate transport
-headers, correlation identifiers, and tracing headers are excluded by default. Configure request
-and response headers independently through `HttpExchangeSnapshotOptions`. A test factory or client
-helper can attach a fresh recorder to each client, so individual tests only need the response
-extension shown above.
+The recorder captures requests before transport consumption, captures response metadata before
+returning it, and records response content as the caller reads it. This preserves
+`ResponseHeadersRead` and streaming behavior. An unread response body appears as `{NotRead}`, while
+a content-read error is recorded as `BodyFailure` without being misclassified as a send failure.
+JSON is stored structurally; text stays text; binary bodies use base64. Authorization, cookies, API
+keys, XBullet's test identity and client-certificate transport headers, correlation identifiers,
+and tracing headers are excluded by default. Configure request and response headers independently
+through `HttpExchangeSnapshotOptions`. A test factory or client helper can attach a fresh recorder
+to each client, so individual tests only need the response extension shown above.
 
 Without a recorder, the same response extension falls back to `HttpResponseMessage.RequestMessage`.
 That is sufficient when its content remains readable; attach a recorder for TestServer and other
@@ -245,11 +248,15 @@ internal static class SnapshotConfiguration
             .IgnoreMembers("AccessToken")
             .CanonicalizeJson()
             .WithoutDiffTool());
+
+        ControllerSnapshotOptionsDefaults.Global = new(options => options
+            .IgnoringHeaders("ETag", "X-Request-Nonce")
+            .RedactingHeaders("Authorization", "X-Session-Token"));
     }
 }
 ```
 
-Assertions that omit `snapshotSettings` now use the global template:
+Assertions use the global template directly when `snapshotSettings` is omitted:
 
 ```csharp
 await SnapshotAssert.MatchAsync(result);
@@ -258,20 +265,40 @@ using var response = await client.GetAsync("/api/products");
 await response.ShouldMatchHttpExchangeSnapshot();
 ```
 
-Each assertion receives an independent settings copy. Explicit settings take precedence, and a
-locally customized copy can be created without changing other tests:
+Each assertion receives an independent settings copy. Explicit settings are merged into the global
+template: scrubbers, member rules, and path rules are combined, while locally configured scalar
+values such as the name or directory take precedence. Therefore this keeps global scrubbers and
+adds the local one:
 
 ```csharp
-var settings = SnapshotSettingsDefaults.Global!.Create(settings => settings
+await response.ShouldMatchHttpExchangeSnapshot(
+    snapshotSettings: new SnapshotSettings().ScrubMember("timestamp"));
+```
+
+`ExtendGlobal` also accepts an action when a configured settings object is useful before calling
+the assertion:
+
+```csharp
+var settings = SnapshotSettingsDefaults.ExtendGlobal(settings => settings
     .Named("products")
     .ForVariant($"case-{caseId}"));
 
 await response.ShouldMatchHttpExchangeSnapshot(snapshotSettings: settings);
 ```
 
-Configure `Global` once before tests start. Assign `null` to restore package defaults. HTTP
-request/response header filtering and query redaction remain capture settings configured through
-`HttpExchangeSnapshotOptions` or `HttpExchangeRecorder`.
+Controller options also merge with their global template. Header and query-parameter decisions are
+combined, and an explicit local decision wins for the same name:
+
+```csharp
+await response.ShouldMatchControllerSnapshot(
+    controllerOptions: new ControllerSnapshotOptions()
+        .IgnoringHeaders("Location")
+        .IncludingHeader("ETag"));
+```
+
+Configure each `Global` once before tests start. Assign `null` to restore package defaults. Complete
+HTTP-exchange header filtering remains configured through `HttpExchangeSnapshotOptions` or
+`HttpExchangeRecorder`.
 
 Track the snapshots exercised by a complete test scope to find obsolete verified files. A catalog
 can remain explicit and instance-scoped so parallel projects do not share its observed-file state:

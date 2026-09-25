@@ -5,6 +5,7 @@ using XBullet.EasyTesting.Snapshots;
 [assembly: TypeForwardedTo(typeof(ControllerRequestSnapshot))]
 [assembly: TypeForwardedTo(typeof(ControllerResponseSnapshot))]
 [assembly: TypeForwardedTo(typeof(ControllerSnapshotOptions))]
+[assembly: TypeForwardedTo(typeof(ControllerSnapshotOptionsDefaults))]
 [assembly: TypeForwardedTo(typeof(HttpResponseSnapshotExtensions))]
 [assembly: TypeForwardedTo(typeof(HttpExchangeFailureSnapshot))]
 [assembly: TypeForwardedTo(typeof(HttpExchangeRecorder))]

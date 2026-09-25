@@ -21,6 +21,7 @@ public sealed class SnapshotAssertTests
 
         Assert.Contains(typeof(SnapshotAssert), forwardedTypes);
         Assert.Contains(typeof(SnapshotLocationContext), forwardedTypes);
+        Assert.Contains(typeof(ControllerSnapshotOptionsDefaults), forwardedTypes);
         Assert.Contains(typeof(StubHttpRequestSnapshot), forwardedTypes);
         Assert.Contains(typeof(StubHttpExchangeSnapshot), forwardedTypes);
         Assert.Contains(typeof(HttpExchangeRecorder), forwardedTypes);
@@ -172,6 +173,27 @@ public sealed class SnapshotAssertTests
 
         Assert.Equal("/orders?access_token={Redacted}&view=full", snapshot.Request?.Url);
         Assert.Equal(["response-value", "content-value"], snapshot.Headers["X-Combined"]);
+    }
+
+    [Fact]
+    public async Task Controller_snapshot_redacts_secret_and_sas_query_parameters_case_insensitively()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var response = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            RequestMessage = new HttpRequestMessage(
+                HttpMethod.Get,
+                "https://example.test/orders?s%65cret=first&SaS=second&view=full"),
+            Content = new StringContent("{}", Encoding.UTF8, "application/json")
+        };
+
+        var snapshot = await ControllerResponseSnapshot.FromResponseAsync(
+            response,
+            cancellationToken: cancellationToken);
+
+        Assert.Equal(
+            "/orders?secret={Redacted}&SaS={Redacted}&view=full",
+            snapshot.Request?.Url);
     }
 
     [Fact]
@@ -1348,6 +1370,22 @@ public sealed class SnapshotAssertTests
     }
 
     [Fact]
+    public void Captured_request_snapshot_redacts_secret_and_sas_query_parameters_case_insensitively()
+    {
+        var request = new StubHttpRequest(
+            HttpMethod.Get,
+            new Uri("/orders?SeCrEt=first&SAS=second&view=full", UriKind.Relative),
+            new Dictionary<string, string[]>(),
+            Body: null);
+
+        var snapshot = StubHttpRequestSnapshot.FromRequest(request);
+
+        Assert.Equal(
+            "/orders?SeCrEt={Redacted}&SAS={Redacted}&view=full",
+            snapshot.Url);
+    }
+
+    [Fact]
     public async Task Captured_exchange_snapshot_contains_structural_request_and_response_data()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
@@ -1696,6 +1734,27 @@ public sealed class SnapshotAssertTests
     }
 
     [Fact]
+    public async Task Http_exchange_snapshot_redacts_secret_and_sas_query_parameters_case_insensitively()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var response = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            RequestMessage = new HttpRequestMessage(
+                HttpMethod.Get,
+                new Uri("/orders?SECRET=first&sAs=second&view=full", UriKind.Relative)),
+            Content = new ByteArrayContent([])
+        };
+
+        var snapshot = await HttpExchangeSnapshot.FromResponseAsync(
+            response,
+            cancellationToken: cancellationToken);
+
+        Assert.Equal(
+            "/orders?SECRET={Redacted}&sAs={Redacted}&view=full",
+            snapshot.Request!.Url);
+    }
+
+    [Fact]
     public async Task Http_exchange_recorder_captures_body_before_transport_consumes_it()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
@@ -1750,6 +1809,121 @@ public sealed class SnapshotAssertTests
 
         Assert.Same(recorder, recorder.Reset());
         Assert.Equal(0, recorder.CallCount);
+    }
+
+    [Fact]
+    public async Task Http_exchange_recorder_defers_response_body_capture_until_caller_reads()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var content = new GatedHttpContent("streamed body");
+        using var recorder = new HttpExchangeRecorder
+        {
+            InnerHandler = new CallbackHttpMessageHandler((request, _) =>
+                Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    RequestMessage = request,
+                    Content = content
+                }))
+        };
+        using var client = new HttpClient(recorder);
+
+        using var response = await client.SendAsync(
+            new HttpRequestMessage(HttpMethod.Get, "https://orders.example.test/stream"),
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken).WaitAsync(TimeSpan.FromSeconds(1), cancellationToken);
+
+        Assert.False(content.CopyStarted.IsCompleted);
+        var unread = Assert.Single(await recorder.CreateSnapshotsAsync(cancellationToken));
+        Assert.Equal("{NotRead}", unread.Response!.Body);
+        Assert.Null(unread.Response.BodyFailure);
+
+        var read = response.Content.ReadAsStringAsync(cancellationToken);
+        await content.CopyStarted.WaitAsync(cancellationToken);
+        Assert.False(read.IsCompleted);
+        content.Release();
+        Assert.Equal("streamed body", await read);
+
+        var captured = Assert.Single(await recorder.CreateSnapshotsAsync(cancellationToken));
+        var responseSnapshot = await HttpExchangeSnapshot.FromResponseAsync(
+            response,
+            cancellationToken: cancellationToken);
+        Assert.Equal("streamed body", captured.Response!.Body);
+        Assert.Null(captured.Response.BodyFailure);
+        Assert.Equal(captured, responseSnapshot);
+    }
+
+    [Fact]
+    public async Task Http_exchange_recorder_preserves_streaming_response_reads()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var source = new GatedReadStream("streamed body");
+        using var content = new StreamContent(source);
+        content.Headers.ContentType = new("text/plain") { CharSet = "utf-8" };
+        content.Headers.ContentLength = source.Length;
+        using var recorder = new HttpExchangeRecorder
+        {
+            InnerHandler = new CallbackHttpMessageHandler((request, _) =>
+                Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    RequestMessage = request,
+                    Content = content
+                }))
+        };
+        using var client = new HttpClient(recorder);
+
+        using var response = await client.SendAsync(
+            new HttpRequestMessage(HttpMethod.Get, "https://orders.example.test/stream"),
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken);
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken)
+            .WaitAsync(TimeSpan.FromSeconds(1), cancellationToken);
+
+        Assert.False(source.ReadStarted.IsCompleted);
+        var buffer = new byte[checked((int)source.Length)];
+        var read = stream.ReadAsync(buffer, cancellationToken).AsTask();
+        await source.ReadStarted.WaitAsync(cancellationToken);
+        Assert.False(read.IsCompleted);
+        source.Release();
+
+        var bytesRead = await read;
+        Assert.Equal(source.Length, (long)bytesRead);
+        Assert.Equal("streamed body", Encoding.UTF8.GetString(buffer));
+        var snapshot = Assert.Single(await recorder.CreateSnapshotsAsync(cancellationToken));
+        Assert.Equal("streamed body", snapshot.Response!.Body);
+        Assert.Null(snapshot.Response.BodyFailure);
+    }
+
+    [Fact]
+    public async Task Http_exchange_recorder_preserves_response_when_body_read_fails()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var recorder = new HttpExchangeRecorder
+        {
+            InnerHandler = new CallbackHttpMessageHandler((request, _) =>
+                Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    RequestMessage = request,
+                    Content = new FailingHttpContent("partial body", "response body failed")
+                }))
+        };
+        using var client = new HttpClient(recorder);
+
+        using var response = await client.SendAsync(
+            new HttpRequestMessage(HttpMethod.Get, "https://orders.example.test/truncated"),
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var exception = await Record.ExceptionAsync(
+            () => response.Content.ReadAsStringAsync(cancellationToken));
+        Assert.NotNull(exception);
+        Assert.Contains("response body failed", exception.ToString());
+
+        var snapshot = Assert.Single(await recorder.CreateSnapshotsAsync(cancellationToken));
+        Assert.Null(snapshot.Failure);
+        Assert.Equal("partial body", snapshot.Response!.Body);
+        Assert.Equal(typeof(IOException).FullName, snapshot.Response.BodyFailure!.Type);
+        Assert.Equal("response body failed", snapshot.Response.BodyFailure.Message);
     }
 
     [Fact]
@@ -2276,7 +2450,7 @@ public sealed class SnapshotAssertTests
     }
 
     [Fact]
-    public async Task Global_defaults_apply_implicitly_and_explicit_settings_take_precedence()
+    public async Task Global_defaults_merge_with_explicit_settings_and_local_values_take_precedence()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         var globalDirectory = CreateTemporarySnapshotDirectory();
@@ -2297,13 +2471,11 @@ public sealed class SnapshotAssertTests
                 new { Id = 123, Name = "global" },
                 cancellationToken: cancellationToken);
             await SnapshotAssert.MatchAsync(
-                new { Id = 456, Name = "explicit" },
+                new { Id = 456, Timestamp = "volatile", Name = "explicit" },
                 new SnapshotSettings()
                     .InDirectory(explicitDirectory)
                     .Named("explicit-settings")
-                    .Updating(SnapshotUpdateMode.Missing)
-                    .AllowingUpdatesInContinuousIntegration()
-                    .WithoutDiffTool(),
+                    .ScrubMember("Timestamp"),
                 cancellationToken);
 
             var globalSnapshot = await ReadSingleVerifiedSnapshotAsync(
@@ -2315,14 +2487,121 @@ public sealed class SnapshotAssertTests
 
             Assert.Contains("{Scrubbed}", globalSnapshot);
             Assert.DoesNotContain("123", globalSnapshot);
-            Assert.Contains("456", explicitSnapshot);
-            Assert.DoesNotContain("{Scrubbed}", explicitSnapshot);
+            Assert.Contains("{Scrubbed}", explicitSnapshot);
+            Assert.DoesNotContain("456", explicitSnapshot);
+            Assert.DoesNotContain("volatile", explicitSnapshot);
         }
         finally
         {
             SnapshotSettingsDefaults.Global = originalDefaults;
             DeleteTemporarySnapshotDirectory(globalDirectory);
             DeleteTemporarySnapshotDirectory(explicitDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task ExtendGlobal_copies_global_defaults_and_applies_local_configuration()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var originalDefaults = SnapshotSettingsDefaults.Global;
+
+        try
+        {
+            SnapshotSettingsDefaults.Global = new(settings => settings
+                .InDirectory(snapshotDirectory)
+                .Named("extended-global-defaults")
+                .ScrubMember("Id")
+                .Updating(SnapshotUpdateMode.Missing)
+                .AllowingUpdatesInContinuousIntegration()
+                .WithoutDiffTool());
+
+            var settings = SnapshotSettingsDefaults.ExtendGlobal(settings => settings
+                .ScrubMember("Timestamp"));
+
+            await SnapshotAssert.MatchAsync(
+                new { Id = 123, Timestamp = "volatile", Name = "Keyboard" },
+                settings,
+                cancellationToken);
+
+            var snapshot = await ReadSingleVerifiedSnapshotAsync(
+                snapshotDirectory,
+                cancellationToken);
+            Assert.DoesNotContain("123", snapshot);
+            Assert.DoesNotContain("volatile", snapshot);
+            Assert.Contains("Keyboard", snapshot);
+        }
+        finally
+        {
+            SnapshotSettingsDefaults.Global = originalDefaults;
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task Global_controller_options_merge_with_local_options_and_local_decisions_win()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var originalDefaults = ControllerSnapshotOptionsDefaults.Global;
+
+        static HttpResponseMessage CreateResponse()
+        {
+            var response = new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                RequestMessage = new HttpRequestMessage(
+                    HttpMethod.Get,
+                    "/api/products?global_secret=one&local_secret=two"),
+                Content = JsonContent.Create(new { Value = 42 })
+            };
+            response.Headers.TryAddWithoutValidation("X-Global-Ignored", "ignored");
+            response.Headers.TryAddWithoutValidation("X-Global-Redacted", "visible-locally");
+            response.Headers.TryAddWithoutValidation("X-Local-Ignored", "ignored");
+            return response;
+        }
+
+        try
+        {
+            ControllerSnapshotOptionsDefaults.Global = new(options => options
+                .WithoutRequest()
+                .WithoutBody()
+                .IgnoringHeaders("X-Global-Ignored")
+                .RedactingHeader("X-Global-Redacted")
+                .RedactingQueryParameter("global_secret"));
+
+            using var defaultResponse = CreateResponse();
+            var defaultSnapshot = await ControllerResponseSnapshot.FromResponseAsync(
+                defaultResponse,
+                cancellationToken: cancellationToken);
+            Assert.Null(defaultSnapshot.Request);
+            Assert.Null(defaultSnapshot.Body);
+            Assert.DoesNotContain("X-Global-Ignored", defaultSnapshot.Headers);
+            Assert.Equal(["{Redacted}"], defaultSnapshot.Headers["X-Global-Redacted"]);
+
+            using var localResponse = CreateResponse();
+            var localOptions = new ControllerSnapshotOptions
+            {
+                IncludeRequest = true,
+                IncludeBody = true
+            }
+                .IncludingHeader("X-Global-Redacted")
+                .IgnoringHeaders("X-Local-Ignored")
+                .RedactingQueryParameter("local_secret");
+            var localSnapshot = await ControllerResponseSnapshot.FromResponseAsync(
+                localResponse,
+                localOptions,
+                cancellationToken);
+
+            Assert.Equal(
+                "/api/products?global_secret={Redacted}&local_secret={Redacted}",
+                localSnapshot.Request?.Url);
+            Assert.NotNull(localSnapshot.Body);
+            Assert.DoesNotContain("X-Global-Ignored", localSnapshot.Headers);
+            Assert.DoesNotContain("X-Local-Ignored", localSnapshot.Headers);
+            Assert.Equal(["visible-locally"], localSnapshot.Headers["X-Global-Redacted"]);
+        }
+        finally
+        {
+            ControllerSnapshotOptionsDefaults.Global = originalDefaults;
         }
     }
 
@@ -2938,6 +3217,147 @@ public sealed class SnapshotAssertTests
             }
 
             base.Dispose(disposing);
+        }
+    }
+
+    private sealed class GatedReadStream : Stream
+    {
+        private readonly byte[] _content;
+        private readonly TaskCompletionSource _readStarted =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _release =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _position;
+
+        public GatedReadStream(string content) => _content = Encoding.UTF8.GetBytes(content);
+
+        public Task ReadStarted => _readStarted.Task;
+
+        public void Release() => _release.TrySetResult();
+
+        public override bool CanRead => true;
+
+        public override bool CanSeek => false;
+
+        public override bool CanWrite => false;
+
+        public override long Length => _content.Length;
+
+        public override long Position
+        {
+            get => _position;
+            set => throw new NotSupportedException();
+        }
+
+        public override void Flush()
+        {
+        }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            _readStarted.TrySetResult();
+            _release.Task.GetAwaiter().GetResult();
+            var bytesRead = Math.Min(count, _content.Length - _position);
+            _content.AsSpan(_position, bytesRead).CopyTo(buffer.AsSpan(offset, bytesRead));
+            _position += bytesRead;
+            return bytesRead;
+        }
+
+        public override async ValueTask<int> ReadAsync(
+            Memory<byte> buffer,
+            CancellationToken cancellationToken = default)
+        {
+            _readStarted.TrySetResult();
+            await _release.Task.WaitAsync(cancellationToken);
+            var bytesRead = Math.Min(buffer.Length, _content.Length - _position);
+            _content.AsMemory(_position, bytesRead).CopyTo(buffer);
+            _position += bytesRead;
+            return bytesRead;
+        }
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    }
+
+    private sealed class GatedHttpContent : HttpContent
+    {
+        private readonly byte[] _content;
+        private readonly TaskCompletionSource _copyStarted =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _release =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public GatedHttpContent(string content)
+        {
+            _content = Encoding.UTF8.GetBytes(content);
+            Headers.ContentType = new("text/plain") { CharSet = "utf-8" };
+        }
+
+        public Task CopyStarted => _copyStarted.Task;
+
+        public void Release() => _release.TrySetResult();
+
+        protected override Task SerializeToStreamAsync(
+            Stream stream,
+            System.Net.TransportContext? context) =>
+            SerializeCoreAsync(stream, CancellationToken.None);
+
+        protected override Task SerializeToStreamAsync(
+            Stream stream,
+            System.Net.TransportContext? context,
+            CancellationToken cancellationToken) =>
+            SerializeCoreAsync(stream, cancellationToken);
+
+        protected override bool TryComputeLength(out long length)
+        {
+            length = _content.Length;
+            return true;
+        }
+
+        private async Task SerializeCoreAsync(Stream stream, CancellationToken cancellationToken)
+        {
+            _copyStarted.TrySetResult();
+            await _release.Task.WaitAsync(cancellationToken);
+            await stream.WriteAsync(_content, cancellationToken);
+        }
+    }
+
+    private sealed class FailingHttpContent : HttpContent
+    {
+        private readonly byte[] _content;
+        private readonly string _message;
+
+        public FailingHttpContent(string content, string message)
+        {
+            _content = Encoding.UTF8.GetBytes(content);
+            _message = message;
+            Headers.ContentType = new("text/plain") { CharSet = "utf-8" };
+        }
+
+        protected override Task SerializeToStreamAsync(
+            Stream stream,
+            System.Net.TransportContext? context) =>
+            SerializeCoreAsync(stream, CancellationToken.None);
+
+        protected override Task SerializeToStreamAsync(
+            Stream stream,
+            System.Net.TransportContext? context,
+            CancellationToken cancellationToken) =>
+            SerializeCoreAsync(stream, cancellationToken);
+
+        protected override bool TryComputeLength(out long length)
+        {
+            length = 0;
+            return false;
+        }
+
+        private async Task SerializeCoreAsync(Stream stream, CancellationToken cancellationToken)
+        {
+            await stream.WriteAsync(_content, cancellationToken);
+            throw new IOException(_message);
         }
     }
 

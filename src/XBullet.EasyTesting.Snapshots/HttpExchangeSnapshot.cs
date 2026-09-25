@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace XBullet.EasyTesting.Snapshots;
 
@@ -59,18 +60,53 @@ public sealed record HttpExchangeSnapshot(
         HttpExchangeResponseSnapshotOptions options,
         CancellationToken cancellationToken)
     {
-        var headers = options.IncludeHeaders
-            ? CaptureHeaders(response.Headers, response.Content.Headers, options.IgnoredHeaders, options.RedactedHeaders)
-            : null;
         var body = options.IncludeBody
             ? await ReadBodyAsync(response.Content, cancellationToken)
+            : null;
+
+        return CreateResponse(response, options, body);
+    }
+
+    internal static HttpExchangeResponseSnapshot CreateResponse(
+        HttpResponseMessage response,
+        HttpExchangeResponseSnapshotOptions options,
+        object? body,
+        HttpExchangeFailureSnapshot? bodyFailure = null)
+    {
+        var headers = options.IncludeHeaders
+            ? CaptureHeaders(response.Headers, response.Content?.Headers, options.IgnoredHeaders, options.RedactedHeaders)
             : null;
 
         return new HttpExchangeResponseSnapshot(
             (int)response.StatusCode,
             response.ReasonPhrase,
             headers,
-            body);
+            body)
+        {
+            BodyFailure = bodyFailure
+        };
+    }
+
+    internal static object? CreateBodySnapshot(
+        ReadOnlyMemory<byte> bytes,
+        MediaTypeHeaderValue? contentType)
+    {
+        if (bytes.IsEmpty)
+        {
+            return null;
+        }
+
+        if (JsonSnapshotContent.IsJson(contentType))
+        {
+            return JsonSnapshotContent.Parse(bytes);
+        }
+
+        if (IsText(contentType))
+        {
+            return GetEncoding(contentType!.CharSet).GetString(bytes.Span);
+        }
+
+        return new ControllerBinaryBodySnapshot("base64", Convert.ToBase64String(bytes.Span));
     }
 
     private static IReadOnlyDictionary<string, string[]> CaptureHeaders(
@@ -100,23 +136,7 @@ public sealed record HttpExchangeSnapshot(
         }
 
         var bytes = await content.ReadAsByteArrayAsync(cancellationToken);
-        if (bytes.Length == 0)
-        {
-            return null;
-        }
-
-        var contentType = content.Headers.ContentType;
-        if (JsonSnapshotContent.IsJson(contentType))
-        {
-            return JsonSnapshotContent.Parse(bytes);
-        }
-
-        if (IsText(contentType))
-        {
-            return GetEncoding(contentType!.CharSet).GetString(bytes);
-        }
-
-        return new ControllerBinaryBodySnapshot("base64", Convert.ToBase64String(bytes));
+        return CreateBodySnapshot(bytes, content.Headers.ContentType);
     }
 
     private static string? GetRelativeUrl(Uri? uri, ISet<string> redactedQueryParameters)
@@ -179,7 +199,12 @@ public sealed record HttpExchangeResponseSnapshot(
     int StatusCode,
     string? ReasonPhrase,
     IReadOnlyDictionary<string, string[]>? Headers,
-    object? Body);
+    object? Body)
+{
+    /// <summary>Gets the failure raised while the response body was recorded.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public HttpExchangeFailureSnapshot? BodyFailure { get; init; }
+}
 
 /// <summary>A stable representation of a failure that prevented an HTTP response.</summary>
 public sealed record HttpExchangeFailureSnapshot(string Type, string Message)

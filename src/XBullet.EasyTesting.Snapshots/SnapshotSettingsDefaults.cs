@@ -10,9 +10,9 @@ public sealed class SnapshotSettingsDefaults
     private readonly SnapshotSettings _template;
 
     /// <summary>
-    /// Gets or sets the optional defaults used when a snapshot assertion does not receive explicit
-    /// settings. Configure this once while the test assembly is initialized. Each assertion receives
-    /// an independent copy of the template.
+    /// Gets or sets the optional defaults used as the base for snapshot assertions. Configure this
+    /// once while the test assembly is initialized. Each assertion receives an independent copy;
+    /// explicit settings are merged into it and locally configured scalar values take precedence.
     /// </summary>
     public static SnapshotSettingsDefaults? Global
     {
@@ -33,12 +33,53 @@ public sealed class SnapshotSettingsDefaults
     {
         var settings = _template.Copy();
         configure?.Invoke(settings);
+        if (ReferenceEquals(this, Global))
+        {
+            settings.MarkIncludesGlobalDefaults();
+        }
+        return settings;
+    }
+
+    /// <summary>
+    /// Creates settings from the global template, or package defaults when no global template is
+    /// configured, and then applies per-assertion configuration.
+    /// </summary>
+    public static SnapshotSettings ExtendGlobal(Action<SnapshotSettings> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        var settings = CreateGlobalOrDefault();
+        configure(settings);
         return settings;
     }
 
     internal static SnapshotSettings CreateGlobalOrDefault()
     {
         var global = Global;
-        return global is null ? new SnapshotSettings() : global.Create();
+        if (global is null)
+        {
+            return new SnapshotSettings();
+        }
+
+        var settings = global.Create();
+        settings.MarkIncludesGlobalDefaults();
+        return settings;
+    }
+
+    internal static SnapshotSettings MergeGlobalOrDefault(SnapshotSettings? local)
+    {
+        if (local?.IncludesGlobalDefaults == true)
+        {
+            return local;
+        }
+
+        var global = Global;
+        if (global is null)
+        {
+            return local ?? new SnapshotSettings();
+        }
+
+        var settings = global.Create();
+        settings.MarkIncludesGlobalDefaults();
+        return local is null ? settings : settings.Merge(local);
     }
 }

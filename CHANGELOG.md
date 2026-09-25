@@ -6,6 +6,29 @@ The project follows Semantic Versioning. Package versions are produced from GitH
 
 ## [Unreleased]
 
+### Added
+
+- `SnapshotSettingsDefaults.ExtendGlobal(Action<SnapshotSettings>)` for adding per-assertion
+  configuration to an independent copy of the global snapshot defaults.
+- `ControllerSnapshotOptionsDefaults.Global` and `ExtendGlobal(...)` for reusable controller
+  capture defaults with independently copied, mergeable local options.
+
+### Changed
+
+- Explicit `SnapshotSettings` now merge with configured global defaults. Collection-based rules
+  are combined, and explicitly configured local scalar values take precedence.
+
+### Fixed
+
+- `HttpExchangeRecorder` now preserves `ResponseHeadersRead` and records response bodies as callers
+  consume them instead of buffering them inside `SendAsync`. Unread bodies and body-read failures
+  are represented separately from send failures.
+
+### Security
+
+- Snapshot request URLs now redact `secret` and `sas` query parameters by default across
+  controller, complete HTTP-exchange, and outbound HTTP-stub snapshots.
+
 ## [1.0.11] - 2026-09-24
 
 ### Added

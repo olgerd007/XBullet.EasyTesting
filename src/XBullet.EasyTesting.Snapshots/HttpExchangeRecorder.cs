@@ -82,12 +82,25 @@ public sealed class HttpExchangeRecorder : DelegatingHandler
         try
         {
             var response = await base.SendAsync(request, cancellationToken);
-            var capturedResponse = await HttpExchangeSnapshot.CreateResponseAsync(
+            var capturedResponse = HttpExchangeSnapshot.CreateResponse(
                 response,
                 Options.Response,
-                cancellationToken);
+                Options.Response.IncludeBody ? "{NotRead}" : null);
             exchange.SetResponse(capturedResponse);
-            Attach(response, exchange.CreateSnapshot());
+
+            if (Options.Response.IncludeBody && response.Content is not null)
+            {
+                var content = response.Content;
+                var contentType = content.Headers.ContentType;
+                response.Content = new RecordingHttpContent(
+                    content,
+                    (body, exception) => exchange.SetResponseBody(
+                        body,
+                        contentType,
+                        exception));
+            }
+
+            Attach(response, exchange);
             return response;
         }
         catch (Exception exception)
@@ -122,21 +135,21 @@ public sealed class HttpExchangeRecorder : DelegatingHandler
                 "snapshot assertion without separate exchange options.");
         }
 
-        snapshot = recorded.Snapshot;
+        snapshot = recorded.Exchange.CreateSnapshot();
         return true;
     }
 
-    private void Attach(HttpResponseMessage response, HttpExchangeSnapshot snapshot)
+    private void Attach(HttpResponseMessage response, PendingExchange exchange)
     {
         lock (RecordedExchangeGate)
         {
             RecordedExchanges.Remove(response);
-            RecordedExchanges.Add(response, new RecordedExchange(snapshot, Options));
+            RecordedExchanges.Add(response, new RecordedExchange(exchange, Options));
         }
     }
 
     private sealed record RecordedExchange(
-        HttpExchangeSnapshot Snapshot,
+        PendingExchange Exchange,
         HttpExchangeSnapshotOptions Options);
 
     private sealed class PendingExchange(HttpExchangeRequestSnapshot request)
@@ -149,6 +162,45 @@ public sealed class HttpExchangeRecorder : DelegatingHandler
             lock (_gate)
             {
                 _snapshot = new HttpExchangeSnapshot(request, response, Failure: null);
+            }
+        }
+
+        public void SetResponseBody(
+            byte[] body,
+            System.Net.Http.Headers.MediaTypeHeaderValue? contentType,
+            Exception? exception)
+        {
+            object? bodySnapshot;
+            HttpExchangeFailureSnapshot? bodyFailure = exception is null
+                ? null
+                : HttpExchangeFailureSnapshot.FromException(exception);
+            try
+            {
+                bodySnapshot = HttpExchangeSnapshot.CreateBodySnapshot(body, contentType);
+            }
+            catch (Exception captureException)
+            {
+                bodySnapshot = new ControllerBinaryBodySnapshot(
+                    "base64",
+                    Convert.ToBase64String(body));
+                bodyFailure ??= HttpExchangeFailureSnapshot.FromException(captureException);
+            }
+
+            lock (_gate)
+            {
+                if (_snapshot?.Response is null)
+                {
+                    return;
+                }
+
+                _snapshot = _snapshot with
+                {
+                    Response = _snapshot.Response with
+                    {
+                        Body = bodySnapshot,
+                        BodyFailure = bodyFailure
+                    }
+                };
             }
         }
 
