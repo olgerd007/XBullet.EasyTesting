@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace XBullet.EasyTesting.Snapshots;
 
@@ -201,6 +202,7 @@ public sealed record HttpExchangeResponseSnapshot(
     object? Body)
 {
     /// <summary>Gets the failure raised while the response body was recorded.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public HttpExchangeFailureSnapshot? BodyFailure { get; init; }
 }
 
