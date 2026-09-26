@@ -75,3 +75,8 @@ transport.VerifyCalled(RequestMethod.Head, "/container/blob", expectedCount: 2);
 Responses are consumed in order, making transient-failure and retry tests deterministic. Recorded
 requests include method, URI, headers, and buffered content. Failure diagnostics omit header values,
 query strings, and body content so credentials and payloads are not exposed.
+
+## Documentation
+
+- [Documentation home and package selection](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/index.md)
+- [Executable Azure SDK examples](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/tests/XBullet.EasyTesting.Tests/AzureTestingTests.cs)

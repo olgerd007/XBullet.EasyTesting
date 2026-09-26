@@ -10,6 +10,8 @@ The package targets .NET 8, .NET 9, and .NET 10.
 dotnet add package XBullet.EasyTesting.Verify.Xunit
 ```
 
+## Example
+
 ```csharp
 [Fact]
 public async Task Get_order_matches_snapshot()
@@ -53,4 +55,8 @@ recorder, the extension falls back to the request retained by `HttpResponseMessa
 `recorder.VerifyHttpExchangesSnapshot(settings)` when the verified file should contain an array of
 every exchange in request order.
 
-See the [repository documentation](https://github.com/olgerd007/XBullet.EasyTesting) for settings and customization examples.
+## Documentation
+
+- [Verify.Xunit controller snapshot guide](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/verify-xunit.md)
+- [Built-in snapshot guide](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/snapshots.md)
+- [Snapshot core package](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/src/XBullet.EasyTesting.Snapshots/README.md)

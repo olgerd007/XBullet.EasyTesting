@@ -14,6 +14,16 @@ The project follows Semantic Versioning. Package versions are produced from GitH
   controller and outbound-stub HTTP exchange snapshots, while JSON remains the default.
 - `HttpExchangeSnapshotOptionsDefaults.Global`, `Create(...)`, and `ExtendGlobal(...)` for
   module-wide complete HTTP exchange capture and format conventions.
+
+### Changed
+
+- Optimized concurrent rule matching and header capture in `StubHttpMessageHandler`, reducing
+  per-request locking and allocations while preserving registration-order matching.
+
+## [1.0.12] - 2026-09-25
+
+### Added
+
 - `SnapshotSettingsDefaults.ExtendGlobal(Action<SnapshotSettings>)` for adding per-assertion
   configuration to an independent copy of the global snapshot defaults.
 - `ControllerSnapshotOptionsDefaults.Global` and `ExtendGlobal(...)` for reusable controller
@@ -29,6 +39,8 @@ The project follows Semantic Versioning. Package versions are produced from GitH
 - `HttpExchangeRecorder` now preserves `ResponseHeadersRead` and records response bodies as callers
   consume them instead of buffering them inside `SendAsync`. Unread bodies and body-read failures
   are represented separately from send failures.
+- JSON HTTP exchange snapshots omit a missing body failure to preserve the established snapshot
+  shape.
 
 ### Security
 

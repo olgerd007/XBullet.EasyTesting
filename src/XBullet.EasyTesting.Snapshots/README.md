@@ -16,6 +16,8 @@ Use `XBullet.EasyTesting.Snapshots.Http` for snapshots of outbound requests capt
 `StubHttpMessageHandler`. The original `XBullet.EasyTesting.Snapshots` package remains available as
 a compatibility facade that references both packages.
 
+## Example
+
 ```csharp
 var settings = new SnapshotSettings()
     .Named("administrator-order")
@@ -34,6 +36,8 @@ var settings = new SnapshotSettings()
         "snapshots",
         context.SourceFileName));
 ```
+
+## Configuration and workflows
 
 ### Snapshot locations
 
@@ -359,4 +363,9 @@ mode. Keep this opt-in limited to dedicated snapshot-update jobs.
 
 The first run writes a received snapshot. Review and approve it as the verified snapshot; subsequent runs report structural differences. Update modes and local diff viewers are opt-in.
 
-See the [repository documentation](https://github.com/olgerd007/XBullet.EasyTesting) for controller snapshots, scrubbers, and approval workflows.
+## Documentation
+
+- [Built-in snapshot guide](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/snapshots.md)
+- [Outbound HTTP snapshot adapters](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/src/XBullet.EasyTesting.Snapshots.Http/README.md)
+- [Compatibility facade](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/src/XBullet.EasyTesting.Snapshots.Compatibility/README.md)
+- [Verify.Xunit adapter](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/src/XBullet.EasyTesting.Verify.Xunit/README.md)

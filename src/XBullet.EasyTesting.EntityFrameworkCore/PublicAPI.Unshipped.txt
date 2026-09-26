@@ -1,12 +1,1 @@
 #nullable enable
-const XBullet.EasyTesting.EntityFrameworkCore.SqliteDatabaseCleanupDiagnostics.ExceptionDataKey = "XBullet.EasyTesting.EntityFrameworkCore.SqliteDatabaseCleanupDiagnostics" -> string!
-virtual XBullet.EasyTesting.EntityFrameworkCore.EntityFrameworkWebApplicationFactory<TEntryPoint, TDbContext>.CleanupScenarioDatabaseAsync(TDbContext! database, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
-virtual XBullet.EasyTesting.EntityFrameworkCore.EntityFrameworkWebApplicationFactory<TEntryPoint, TDbContext>.InitializeScenarioDatabaseAsync(TDbContext! database, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
-XBullet.EasyTesting.EntityFrameworkCore.DatabaseScenarioBuilder<TEntryPoint, TDbContext>.RecreateDatabaseWith(System.Func<TDbContext!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>! recreateDatabase) -> XBullet.EasyTesting.EntityFrameworkCore.DatabaseScenarioBuilder<TEntryPoint!, TDbContext!>!
-XBullet.EasyTesting.EntityFrameworkCore.SqliteDatabaseCleanupDiagnostics
-XBullet.EasyTesting.EntityFrameworkCore.SqliteDatabaseCleanupDiagnostics.Attempts.get -> int
-XBullet.EasyTesting.EntityFrameworkCore.SqliteDatabaseCleanupDiagnostics.DataSource.get -> string?
-XBullet.EasyTesting.EntityFrameworkCore.SqliteDatabaseCleanupDiagnostics.ExceptionType.get -> string!
-XBullet.EasyTesting.EntityFrameworkCore.SqliteDatabaseCleanupDiagnostics.Message.get -> string!
-XBullet.EasyTesting.EntityFrameworkCore.SqliteDatabaseCleanupDiagnostics.ProviderName.get -> string?
-XBullet.EasyTesting.EntityFrameworkCore.SqliteDatabaseCleanupDiagnostics.SqliteDatabaseCleanupDiagnostics(string? providerName, string? dataSource, int attempts, string! exceptionType, string! message) -> void

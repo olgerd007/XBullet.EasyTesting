@@ -66,4 +66,8 @@ External dependencies that need asynchronous startup can implement
 can add configuration and services after their endpoint is known, participate in failure
 diagnostics, and are disposed after the scenario host.
 
-See the [repository documentation](https://github.com/olgerd007/XBullet.EasyTesting) for complete examples.
+## Documentation
+
+- [Authentication and scenarios guide](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/authentication-and-scenarios.md)
+- [Documentation home and package selection](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/index.md)
+- [Executable integration-test examples](https://github.com/olgerd007/XBullet.EasyTesting/tree/main/tests/TestApi.IntegrationTests)

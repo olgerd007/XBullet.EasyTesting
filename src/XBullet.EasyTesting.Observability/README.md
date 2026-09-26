@@ -41,3 +41,8 @@ instrument should be sampled explicitly.
 All three collectors are bounded and included in scenario failure diagnostics before the host and
 observability resource are disposed. Activity-source and meter filters are exact-name allowlists;
 when no names are configured, all sources and meters are captured.
+
+## Documentation
+
+- [Documentation home and package selection](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/index.md)
+- [Executable observability examples](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/tests/TestApi.IntegrationTests/ObservabilityTests.cs)

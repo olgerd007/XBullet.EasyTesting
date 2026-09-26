@@ -10,6 +10,8 @@ The package targets .NET 8, .NET 9, and .NET 10.
 dotnet add package XBullet.EasyTesting.Messaging
 ```
 
+## Example
+
 Adapt your application's publisher interface to a `RecordedMessageBus`, then assert the captured transport, destination, headers, and typed payload:
 
 ```csharp
@@ -26,6 +28,10 @@ messages.Should()
     .HavePayload(new OrderCreated(42));
 ```
 
-Well-known transport names are included for Kafka, Azure Service Bus, and Azure Notification Hubs, while custom transports remain supported.
+Well-known transport names are included for Kafka, Azure Service Bus, and Azure Notification Hubs,
+while custom transports remain supported.
 
-See the [repository documentation](https://github.com/olgerd007/XBullet.EasyTesting) for registration and assertion examples.
+## Documentation
+
+- [Messaging and application-boundary guide](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/application-boundaries.md)
+- [Executable messaging examples](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/tests/XBullet.EasyTesting.Tests/RecordedMessageBusTests.cs)

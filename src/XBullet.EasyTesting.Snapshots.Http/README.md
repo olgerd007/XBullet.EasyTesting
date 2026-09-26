@@ -4,9 +4,15 @@ Snapshot adapters for requests and complete exchanges captured by `XBullet.EasyT
 `XBullet.EasyTesting.Snapshots.Core` and keeps the existing
 `XBullet.EasyTesting.Snapshots` namespace.
 
+The package targets .NET 8, .NET 9, and .NET 10.
+
+## Install
+
 ```shell
 dotnet add package XBullet.EasyTesting.Snapshots.Http
 ```
+
+## Example
 
 ```csharp
 using var response = await client.PostAsJsonAsync("/orders", order);
@@ -19,6 +25,8 @@ body. Send failures and response-body read failures are captured as stable excep
 pairs. JSON request and response bodies are captured structurally; text remains text and binary
 content is stored as base64. Response content that has not been consumed is represented as
 `{NotRead}` rather than being read eagerly by the recorder.
+
+## Configure capture
 
 Request and response capture can be customized independently:
 
@@ -75,3 +83,9 @@ parameters are redacted by default; additional header and query values can be pr
 Complete GUID path segments are captured as `{Guid}` when `ScrubbingUrlPathGuids()` is enabled.
 Use `ScrubbingUrlPath(path => ...)` for other route transformations. Scrubbed query values appear as
 `{Scrubbed}`; security-redacted query values appear as `{Redacted}` and take precedence.
+
+## Documentation
+
+- [Built-in snapshot guide](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/snapshots.md)
+- [Snapshot core package](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/src/XBullet.EasyTesting.Snapshots/README.md)
+- [Compatibility facade](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/src/XBullet.EasyTesting.Snapshots.Compatibility/README.md)

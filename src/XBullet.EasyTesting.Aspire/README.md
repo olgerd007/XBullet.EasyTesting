@@ -53,3 +53,8 @@ await using var application = await AspireTestHost.Create<Projects.Orders_AppHos
 
 var diagnostics = await application.CaptureDiagnosticsAsync(cancellationToken);
 ```
+
+## Documentation
+
+- [Documentation home and package selection](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/index.md)
+- [Executable Aspire examples](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/tests/TestApi.IntegrationTests/AspireTests.cs)

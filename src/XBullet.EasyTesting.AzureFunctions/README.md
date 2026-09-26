@@ -10,6 +10,8 @@ The package targets .NET 8, .NET 9, and .NET 10.
 dotnet add package XBullet.EasyTesting.AzureFunctions
 ```
 
+## Example
+
 ```csharp
 await using var host = AzureFunctionTestHost.CreateBuilder()
     .AddFunction<ProcessOrderHttpFunction>()
@@ -44,6 +46,12 @@ var result = await orchestrator.RunAsync(context);
 Assert.Equal(nameof(CreateOrderActivity), context.ActivityCalls.Single().ActivityName);
 ```
 
-Only `CallActivityAsync` is emulated; Durable runtime operations such as timers, external events, sub-orchestrators, and replay state throw `NotSupportedException`.
+## Limitations
 
-See the [repository documentation](https://github.com/olgerd007/XBullet.EasyTesting) for invocation and binding examples.
+Only `CallActivityAsync` is emulated; Durable runtime operations such as timers, external events,
+sub-orchestrators, and replay state throw `NotSupportedException`.
+
+## Documentation
+
+- [Detailed Azure Functions guide](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/azure-functions.md)
+- [Executable Functions examples](https://github.com/olgerd007/XBullet.EasyTesting/tree/main/tests/TestFunctions.IntegrationTests)

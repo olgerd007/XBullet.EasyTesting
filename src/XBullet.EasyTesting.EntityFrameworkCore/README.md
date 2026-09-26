@@ -10,6 +10,8 @@ The package targets .NET 8, .NET 9, and .NET 10.
 dotnet add package XBullet.EasyTesting.EntityFrameworkCore
 ```
 
+## Example
+
 Derive your test factory from `EntityFrameworkWebApplicationFactory<TEntryPoint, TDbContext>` to configure an isolated database for each scenario. Tests can seed, query, and execute scoped database actions through the factory while requests still run through the in-memory ASP.NET Core host.
 
 For fast tests that do not require relational database behavior, derive from
@@ -60,4 +62,7 @@ SQLite file cleanup clears connection pools, retries transient lock failures, an
 `SqliteDatabaseCleanupDiagnostics` value to the terminal exception's `Data` dictionary under
 `SqliteDatabaseCleanupDiagnostics.ExceptionDataKey`.
 
-See the [repository documentation](https://github.com/olgerd007/XBullet.EasyTesting) for factory setup and isolation examples.
+## Documentation
+
+- [Database and application-boundary guide](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/application-boundaries.md)
+- [Executable database examples](https://github.com/olgerd007/XBullet.EasyTesting/tree/main/tests/TestApi.IntegrationTests)

@@ -87,3 +87,8 @@ dotnet test tests/XBullet.EasyTesting.ContainerTests/XBullet.EasyTesting.Contain
 
 These slow tests are intentionally excluded from CI and are available for local or manually scheduled
 infrastructure verification.
+
+## Documentation
+
+- [Documentation home and package selection](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/index.md)
+- [Executable container examples](https://github.com/olgerd007/XBullet.EasyTesting/tree/main/tests/XBullet.EasyTesting.ContainerTests)
