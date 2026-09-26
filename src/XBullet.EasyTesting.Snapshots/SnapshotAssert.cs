@@ -111,6 +111,37 @@ public static class SnapshotAssert
             testName);
     }
 
+    internal static async Task MatchHttpExchangeAsync(
+        object actual,
+        HttpExchangeSnapshotFormat format,
+        SnapshotSettings? settings,
+        CancellationToken cancellationToken,
+        string sourceFile,
+        string testName)
+    {
+        ArgumentNullException.ThrowIfNull(actual);
+        settings = SnapshotSettingsDefaults.MergeGlobalOrDefault(settings);
+
+        var serialized = JsonSerializer.Serialize(actual, settings.JsonSerializerOptions);
+        var preparedJson = PrepareJsonContent(serialized, settings);
+        var content = HttpExchangeSnapshotFormatter.Format(preparedJson, format);
+        var contentKind = format switch
+        {
+            HttpExchangeSnapshotFormat.Json => SnapshotContentKind.Json,
+            HttpExchangeSnapshotFormat.Http => SnapshotContentKind.Text,
+            HttpExchangeSnapshotFormat.Yaml => SnapshotContentKind.Yaml,
+            _ => throw new ArgumentOutOfRangeException(nameof(format), format, "Unknown HTTP exchange snapshot format.")
+        };
+
+        await MatchPreparedContentAsync(
+            content,
+            settings,
+            contentKind,
+            cancellationToken,
+            sourceFile,
+            testName);
+    }
+
     private static async Task MatchContentAsync(
         string content,
         SnapshotSettings settings,
@@ -121,15 +152,34 @@ public static class SnapshotAssert
     {
         if (contentKind == SnapshotContentKind.Json)
         {
-            content = StructuredSnapshotScrubber.Apply(content, settings);
+            content = PrepareJsonContent(content, settings);
+        }
+        else
+        {
+            foreach (var scrubber in settings.Scrubbers)
+            {
+                content = scrubber(content);
+            }
         }
 
+        await MatchPreparedContentAsync(
+            content,
+            settings,
+            contentKind,
+            cancellationToken,
+            sourceFile,
+            testName);
+    }
+
+    private static string PrepareJsonContent(string content, SnapshotSettings settings)
+    {
+        content = StructuredSnapshotScrubber.Apply(content, settings);
         foreach (var scrubber in settings.Scrubbers)
         {
             content = scrubber(content);
         }
 
-        if (contentKind == SnapshotContentKind.Json && settings.Scrubbers.Count > 0)
+        if (settings.Scrubbers.Count > 0)
         {
             try
             {
@@ -143,6 +193,17 @@ public static class SnapshotAssert
             }
         }
 
+        return content;
+    }
+
+    private static async Task MatchPreparedContentAsync(
+        string content,
+        SnapshotSettings settings,
+        SnapshotContentKind contentKind,
+        CancellationToken cancellationToken,
+        string sourceFile,
+        string testName)
+    {
         content = NormalizeNewLines(content);
         var paths = ResolvePaths(settings, sourceFile, testName, contentKind.Extension);
         settings.Catalog?.Record(paths.Verified);
@@ -494,5 +555,7 @@ public static class SnapshotAssert
         public static SnapshotContentKind Json { get; } = new("json");
 
         public static SnapshotContentKind Text { get; } = new("txt");
+
+        public static SnapshotContentKind Yaml { get; } = new("yaml");
     }
 }

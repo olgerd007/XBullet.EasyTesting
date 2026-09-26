@@ -23,9 +23,11 @@ public sealed record ControllerResponseSnapshot(
         var request = options.IncludeRequest && response.RequestMessage is not null
             ? new ControllerRequestSnapshot(
                 response.RequestMessage.Method.Method,
-                GetRelativeUrl(
+                SnapshotUrlFormatter.Format(
                     response.RequestMessage.RequestUri,
-                    options.RedactedQueryParameters))
+                    options.RedactedQueryParameters,
+                    options.ScrubbedQueryParameters,
+                    options.UrlPathScrubbers))
             : null;
 
         var headers = options.IncludeHeaders
@@ -52,42 +54,6 @@ public sealed record ControllerResponseSnapshot(
             response.ReasonPhrase,
             headers,
             body);
-    }
-
-    private static string? GetRelativeUrl(Uri? uri, ISet<string> redactedQueryParameters)
-    {
-        if (uri is null)
-        {
-            return null;
-        }
-
-        var value = uri.IsAbsoluteUri ? uri.PathAndQuery : uri.OriginalString;
-        return RedactQueryParameters(value, redactedQueryParameters);
-    }
-
-    private static string RedactQueryParameters(string value, ISet<string> redactedQueryParameters)
-    {
-        var queryIndex = value.IndexOf('?');
-        if (queryIndex < 0 || redactedQueryParameters.Count == 0)
-        {
-            return value;
-        }
-
-        var fragmentIndex = value.IndexOf('#', queryIndex + 1);
-        var queryEnd = fragmentIndex < 0 ? value.Length : fragmentIndex;
-        var query = value[(queryIndex + 1)..queryEnd];
-        var redacted = query.Split('&').Select(segment =>
-        {
-            var equalsIndex = segment.IndexOf('=');
-            var encodedName = equalsIndex < 0 ? segment : segment[..equalsIndex];
-            var name = Uri.UnescapeDataString(encodedName.Replace('+', ' '));
-            return redactedQueryParameters.Contains(name)
-                ? $"{encodedName}={{Redacted}}"
-                : segment;
-        });
-
-        var fragment = fragmentIndex < 0 ? string.Empty : value[fragmentIndex..];
-        return $"{value[..(queryIndex + 1)]}{string.Join('&', redacted)}{fragment}";
     }
 
     private static async Task<object?> ReadBodyAsync(

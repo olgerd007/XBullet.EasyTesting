@@ -10,6 +10,8 @@ The package targets .NET 8, .NET 9, and .NET 10.
 dotnet add package XBullet.EasyTesting.Http
 ```
 
+## Example
+
 ```csharp
 var stub = new StubHttpMessageHandler();
 
@@ -34,4 +36,8 @@ timeouts, cancellation, malformed payloads, and recorded-request assertions are 
 `Exchanges` records each request together with its response or failure; response bytes and content
 read failures are observed without eagerly consuming the body.
 
-See the [repository documentation](https://github.com/olgerd007/XBullet.EasyTesting) for complete examples.
+## Documentation
+
+- [External APIs and application-boundary guide](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/application-boundaries.md)
+- [Executable HTTP-stub examples](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/tests/XBullet.EasyTesting.Tests/StubHttpMessageHandlerTests.cs)
+- [Snapshot adapters for recorded HTTP exchanges](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/src/XBullet.EasyTesting.Snapshots.Http/README.md)

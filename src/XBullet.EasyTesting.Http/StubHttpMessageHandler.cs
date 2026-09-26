@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using XBullet.EasyTesting.Diagnostics;
 using XBullet.EasyTesting.Hosting;
 
@@ -10,7 +11,7 @@ namespace XBullet.EasyTesting.Http;
 public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioResource
 {
     private readonly object _gate = new();
-    private readonly List<StubRule> _rules = [];
+    private StubRule[] _rules = [];
     private readonly List<StubHttpRequest> _requests = [];
     private readonly List<StubHttpExchange> _exchanges = [];
 
@@ -126,7 +127,7 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
     {
         lock (_gate)
         {
-            _rules.Clear();
+            Volatile.Write(ref _rules, []);
             _requests.Clear();
             _exchanges.Clear();
         }
@@ -174,12 +175,16 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
     {
         lock (_gate)
         {
-            _rules.Add(new StubRule(
+            var rules = _rules;
+            var updatedRules = new StubRule[rules.Length + 1];
+            Array.Copy(rules, updatedRules, rules.Length);
+            updatedRules[^1] = new StubRule(
                 method,
                 requestUri,
                 matchUriPathOnly,
                 predicates,
-                responseFactory));
+                responseFactory);
+            Volatile.Write(ref _rules, updatedRules);
         }
 
         return this;
@@ -193,30 +198,29 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
         var body = request.Content is null
             ? null
             : await request.Content.ReadAsStringAsync(cancellationToken);
-        var headers = request.Headers
-            .Concat(
-                request.Content?.Headers ??
-                Enumerable.Empty<KeyValuePair<string, IEnumerable<string>>>())
-            .GroupBy(header => header.Key, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(
-                group => group.Key,
-                group => group.SelectMany(header => header.Value).ToArray(),
-                StringComparer.OrdinalIgnoreCase);
+        var headers = CaptureHeaders(request.Headers, request.Content?.Headers);
 
         var capturedRequest = new StubHttpRequest(request.Method, request.RequestUri, headers, body);
         var exchange = new StubHttpExchange(capturedRequest);
-        Func<StubHttpRequest, CancellationToken, Task<HttpResponseMessage>>? responseFactory;
-        StubRuleMatchResult[] matchResults;
         lock (_gate)
         {
             _requests.Add(capturedRequest);
             _exchanges.Add(exchange);
-            matchResults = _rules
-                .Select(rule => rule.Evaluate(capturedRequest))
-                .ToArray();
-            responseFactory = matchResults
-                .FirstOrDefault(result => result.IsMatch)
-                ?.Rule.ResponseFactory;
+        }
+
+        var rules = Volatile.Read(ref _rules);
+        List<StubRuleMatchResult>? matchResults = null;
+        Func<StubHttpRequest, CancellationToken, Task<HttpResponseMessage>>? responseFactory = null;
+        foreach (var rule in rules)
+        {
+            var matchResult = rule.Evaluate(capturedRequest);
+            if (matchResult.IsMatch)
+            {
+                responseFactory = rule.ResponseFactory;
+                break;
+            }
+
+            (matchResults ??= []).Add(matchResult);
         }
 
         try
@@ -225,22 +229,14 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
                 ? new HttpResponseMessage(HttpStatusCode.NotImplemented)
                 {
                     Content = new StringContent(
-                        FormatMatchFailure(capturedRequest, matchResults))
+                        FormatMatchFailure(capturedRequest, matchResults ?? []))
                 }
                 : await responseFactory(capturedRequest, cancellationToken)
                     ?? throw new InvalidOperationException(
                         "The outbound HTTP response factory returned null.");
             response.RequestMessage ??= request;
 
-            var responseHeaders = response.Headers
-                .Concat(
-                    response.Content?.Headers ??
-                    Enumerable.Empty<KeyValuePair<string, IEnumerable<string>>>())
-                .GroupBy(header => header.Key, StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(
-                    group => group.Key,
-                    group => group.SelectMany(header => header.Value).ToArray(),
-                    StringComparer.OrdinalIgnoreCase);
+            var responseHeaders = CaptureHeaders(response.Headers, response.Content?.Headers);
             exchange.SetResponse(new StubHttpResponse(
                 (int)response.StatusCode,
                 response.ReasonPhrase,
@@ -262,6 +258,38 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
         {
             exchange.SetFailure(exception);
             throw;
+        }
+    }
+
+    private static IReadOnlyDictionary<string, string[]> CaptureHeaders(
+        HttpHeaders messageHeaders,
+        HttpHeaders? contentHeaders)
+    {
+        var captured = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
+        AddHeaders(messageHeaders);
+        if (contentHeaders is not null)
+        {
+            AddHeaders(contentHeaders);
+        }
+
+        return captured;
+
+        void AddHeaders(HttpHeaders headers)
+        {
+            foreach (var header in headers)
+            {
+                var values = header.Value.ToArray();
+                if (!captured.TryGetValue(header.Key, out var existingValues))
+                {
+                    captured.Add(header.Key, values);
+                    continue;
+                }
+
+                var combinedValues = new string[existingValues.Length + values.Length];
+                existingValues.CopyTo(combinedValues, 0);
+                values.CopyTo(combinedValues, existingValues.Length);
+                captured[header.Key] = combinedValues;
+            }
         }
     }
 
@@ -289,24 +317,24 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
                      $"received {UriDiagnosticFormatter.Format(request.RequestUri)}"]);
             }
 
-            var failures = new List<string>();
+            List<string>? failures = null;
             foreach (var predicate in Predicates)
             {
                 try
                 {
                     if (!predicate.Matches(request))
                     {
-                        failures.Add($"did not satisfy {predicate.Description}");
+                        (failures ??= []).Add($"did not satisfy {predicate.Description}");
                     }
                 }
                 catch (Exception exception)
                 {
-                    failures.Add(
+                    (failures ??= []).Add(
                         $"{predicate.Description} threw {exception.GetType().Name}: {exception.Message}");
                 }
             }
 
-            return new StubRuleMatchResult(this, failures);
+            return new StubRuleMatchResult(this, failures ?? []);
         }
     }
 

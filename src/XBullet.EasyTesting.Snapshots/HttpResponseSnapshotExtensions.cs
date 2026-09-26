@@ -90,7 +90,7 @@ public static class HttpResponseSnapshotExtensions
 
     /// <summary>
     /// Asserts that the complete request and response represented by an HTTP response match their
-    /// committed JSON snapshot.
+    /// committed snapshot. JSON is the default; the exchange options can select HTTP text or YAML.
     /// </summary>
     public static async Task ShouldMatchHttpExchangeSnapshot(
         this HttpResponseMessage response,
@@ -100,13 +100,15 @@ public static class HttpResponseSnapshotExtensions
         [CallerFilePath] string sourceFile = "",
         [CallerMemberName] string testName = "")
     {
+        var format = HttpExchangeRecorder.ResolveFormat(response, exchangeOptions);
         var snapshot = await HttpExchangeSnapshot.FromResponseAsync(
             response,
             exchangeOptions,
             cancellationToken);
 
-        await SnapshotAssert.MatchAsync(
+        await SnapshotAssert.MatchHttpExchangeAsync(
             snapshot,
+            format,
             snapshotSettings,
             cancellationToken,
             sourceFile,
@@ -124,8 +126,9 @@ public static class HttpResponseSnapshotExtensions
         ArgumentNullException.ThrowIfNull(recorder);
         var snapshots = await recorder.CreateSnapshotsAsync(cancellationToken);
 
-        await SnapshotAssert.MatchAsync(
+        await SnapshotAssert.MatchHttpExchangeAsync(
             snapshots,
+            recorder.Options.Format,
             snapshotSettings,
             cancellationToken,
             sourceFile,

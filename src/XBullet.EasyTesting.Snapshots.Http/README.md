@@ -4,9 +4,15 @@ Snapshot adapters for requests and complete exchanges captured by `XBullet.EasyT
 `XBullet.EasyTesting.Snapshots.Core` and keeps the existing
 `XBullet.EasyTesting.Snapshots` namespace.
 
+The package targets .NET 8, .NET 9, and .NET 10.
+
+## Install
+
 ```shell
 dotnet add package XBullet.EasyTesting.Snapshots.Http
 ```
+
+## Example
 
 ```csharp
 using var response = await client.PostAsJsonAsync("/orders", order);
@@ -20,6 +26,8 @@ pairs. JSON request and response bodies are captured structurally; text remains 
 content is stored as base64. Response content that has not been consumed is represented as
 `{NotRead}` rather than being read eagerly by the recorder.
 
+## Configure capture
+
 Request and response capture can be customized independently:
 
 ```csharp
@@ -27,7 +35,9 @@ var options = new StubHttpExchangeSnapshotOptions();
 options.Request
     .IgnoringHeaders("X-Retry-Count")
     .RedactingHeader("X-Session")
-    .RedactingQueryParameter("tenant_secret");
+    .RedactingQueryParameter("tenant_secret")
+    .ScrubbingUrlPathGuids()
+    .ScrubbingQueryParameters("timestamp", "requestId");
 options.Response
     .IgnoringHeaders("ETag")
     .RedactingHeader("Set-Cookie");
@@ -37,6 +47,20 @@ await handler.ShouldMatchExchangesSnapshot(
     new SnapshotSettings().ScrubMembers("timestamp", "requestId"));
 ```
 
+JSON is the default. Complete exchanges can instead use an HTTP-style `.verified.txt` transcript
+or deterministic `.verified.yaml` output:
+
+```csharp
+var options = new StubHttpExchangeSnapshotOptions
+{
+    Format = HttpExchangeSnapshotFormat.Yaml // or Http
+};
+
+await handler.ShouldMatchExchangesSnapshot(options);
+```
+
+Structured JSON scrubbers are applied before either alternative format is rendered.
+
 Request-only snapshots remain available:
 
 ```csharp
@@ -44,7 +68,9 @@ await handler.ShouldMatchRequestsSnapshot(
     new StubHttpRequestSnapshotOptions()
         .IgnoringHeaders("X-Retry-Count")
         .RedactingHeader("X-Session")
-        .RedactingQueryParameter("tenant_secret"),
+        .RedactingQueryParameter("tenant_secret")
+        .ScrubbingUrlPathGuids()
+        .ScrubbingQueryParameters("timestamp", "requestId"),
     new SnapshotSettings()
         .ScrubMembers("timestamp", "requestId"));
 ```
@@ -53,3 +79,13 @@ JSON request bodies are captured structurally with `System.Text.Json`. Authoriza
 API keys, correlation IDs, and tracing headers are excluded by default. Common secret-bearing query
 parameters are redacted by default; additional header and query values can be preserved as
 `{Redacted}`.
+
+Complete GUID path segments are captured as `{Guid}` when `ScrubbingUrlPathGuids()` is enabled.
+Use `ScrubbingUrlPath(path => ...)` for other route transformations. Scrubbed query values appear as
+`{Scrubbed}`; security-redacted query values appear as `{Redacted}` and take precedence.
+
+## Documentation
+
+- [Built-in snapshot guide](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/snapshots.md)
+- [Snapshot core package](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/src/XBullet.EasyTesting.Snapshots/README.md)
+- [Compatibility facade](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/src/XBullet.EasyTesting.Snapshots.Compatibility/README.md)

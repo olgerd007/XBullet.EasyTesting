@@ -49,6 +49,9 @@ public sealed class StubHttpExchangeSnapshot
 /// <summary>Options for request and response portions of an outbound exchange snapshot.</summary>
 public sealed class StubHttpExchangeSnapshotOptions
 {
+    /// <summary>Gets or sets the committed snapshot file format. The default is JSON.</summary>
+    public HttpExchangeSnapshotFormat Format { get; set; } = HttpExchangeSnapshotFormat.Json;
+
     /// <summary>Gets the request snapshot options.</summary>
     public StubHttpRequestSnapshotOptions Request { get; } = new();
 
