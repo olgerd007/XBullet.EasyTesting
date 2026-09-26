@@ -36,6 +36,16 @@ public sealed class StubHttpRequestSnapshotOptions
     /// </summary>
     public ISet<string> RedactedQueryParameters { get; } = SensitiveQueryParameterDefaults.Create();
 
+    /// <summary>
+    /// Gets query parameters whose values are replaced with <c>{Scrubbed}</c>. Names are matched
+    /// without regard to case. Security redaction takes precedence when a name appears in both
+    /// query-parameter sets.
+    /// </summary>
+    public ISet<string> ScrubbedQueryParameters { get; } =
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+    internal List<Func<string, string>> UrlPathScrubbers { get; } = [];
+
     /// <summary>Excludes request headers and returns this instance.</summary>
     public StubHttpRequestSnapshotOptions WithoutHeaders()
     {
@@ -103,16 +113,50 @@ public sealed class StubHttpRequestSnapshotOptions
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(parameterName);
             RedactedQueryParameters.Add(parameterName);
+            ScrubbedQueryParameters.Remove(parameterName);
         }
 
         return this;
     }
+
+    /// <summary>Scrubs one volatile query-parameter value and returns this instance.</summary>
+    public StubHttpRequestSnapshotOptions ScrubbingQueryParameter(string parameterName) =>
+        ScrubbingQueryParameters(parameterName);
+
+    /// <summary>Scrubs volatile query-parameter values and returns this instance.</summary>
+    public StubHttpRequestSnapshotOptions ScrubbingQueryParameters(params string[] parameterNames)
+    {
+        ArgumentNullException.ThrowIfNull(parameterNames);
+        foreach (var parameterName in parameterNames)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(parameterName);
+            if (!RedactedQueryParameters.Contains(parameterName))
+            {
+                ScrubbedQueryParameters.Add(parameterName);
+            }
+        }
+
+        return this;
+    }
+
+    /// <summary>Adds a transformation applied to the request URL path before it is snapshotted.</summary>
+    public StubHttpRequestSnapshotOptions ScrubbingUrlPath(Func<string, string> scrubber)
+    {
+        ArgumentNullException.ThrowIfNull(scrubber);
+        UrlPathScrubbers.Add(scrubber);
+        return this;
+    }
+
+    /// <summary>Replaces complete GUID request-path segments with <c>{Guid}</c>.</summary>
+    public StubHttpRequestSnapshotOptions ScrubbingUrlPathGuids() =>
+        ScrubbingUrlPath(SnapshotUrlFormatter.ScrubGuidsInPath);
 
     /// <summary>Includes the original value of a query parameter and returns this instance.</summary>
     public StubHttpRequestSnapshotOptions IncludingQueryParameter(string parameterName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(parameterName);
         RedactedQueryParameters.Remove(parameterName);
+        ScrubbedQueryParameters.Remove(parameterName);
         return this;
     }
 

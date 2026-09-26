@@ -62,6 +62,16 @@ public sealed class ControllerSnapshotOptions
     /// </summary>
     public ISet<string> RedactedQueryParameters { get; } = SensitiveQueryParameterDefaults.Create();
 
+    /// <summary>
+    /// Gets request query parameters whose values are replaced with <c>{Scrubbed}</c>.
+    /// Names are matched without regard to case. Security redaction takes precedence when a name
+    /// appears in both query-parameter sets.
+    /// </summary>
+    public ISet<string> ScrubbedQueryParameters { get; } =
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+    internal List<Func<string, string>> UrlPathScrubbers { get; } = [];
+
     /// <summary>Excludes request details and returns this instance.</summary>
     public ControllerSnapshotOptions WithoutRequest()
     {
@@ -139,17 +149,52 @@ public sealed class ControllerSnapshotOptions
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(parameterName);
             RedactedQueryParameters.Add(parameterName);
+            ScrubbedQueryParameters.Remove(parameterName);
             _explicitQueryParameterDecisions.Add(parameterName);
         }
 
         return this;
     }
 
+    /// <summary>Scrubs one volatile request query-parameter value and returns this instance.</summary>
+    public ControllerSnapshotOptions ScrubbingQueryParameter(string parameterName) =>
+        ScrubbingQueryParameters(parameterName);
+
+    /// <summary>Scrubs volatile request query-parameter values and returns this instance.</summary>
+    public ControllerSnapshotOptions ScrubbingQueryParameters(params string[] parameterNames)
+    {
+        ArgumentNullException.ThrowIfNull(parameterNames);
+        foreach (var parameterName in parameterNames)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(parameterName);
+            if (!RedactedQueryParameters.Contains(parameterName))
+            {
+                ScrubbedQueryParameters.Add(parameterName);
+            }
+            _explicitQueryParameterDecisions.Add(parameterName);
+        }
+
+        return this;
+    }
+
+    /// <summary>Adds a transformation applied to the request URL path before it is snapshotted.</summary>
+    public ControllerSnapshotOptions ScrubbingUrlPath(Func<string, string> scrubber)
+    {
+        ArgumentNullException.ThrowIfNull(scrubber);
+        UrlPathScrubbers.Add(scrubber);
+        return this;
+    }
+
+    /// <summary>Replaces complete GUID request-path segments with <c>{Guid}</c>.</summary>
+    public ControllerSnapshotOptions ScrubbingUrlPathGuids() =>
+        ScrubbingUrlPath(SnapshotUrlFormatter.ScrubGuidsInPath);
+
     /// <summary>Includes the original value of a query parameter and returns this instance.</summary>
     public ControllerSnapshotOptions IncludingQueryParameter(string parameterName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(parameterName);
         RedactedQueryParameters.Remove(parameterName);
+        ScrubbedQueryParameters.Remove(parameterName);
         _explicitQueryParameterDecisions.Add(parameterName);
         return this;
     }
@@ -170,6 +215,8 @@ public sealed class ControllerSnapshotOptions
         copy.RedactedHeaders.UnionWith(RedactedHeaders);
         copy.RedactedQueryParameters.Clear();
         copy.RedactedQueryParameters.UnionWith(RedactedQueryParameters);
+        copy.ScrubbedQueryParameters.UnionWith(ScrubbedQueryParameters);
+        copy.UrlPathScrubbers.AddRange(UrlPathScrubbers);
         copy._explicitHeaderDecisions.UnionWith(_explicitHeaderDecisions);
         copy._explicitQueryParameterDecisions.UnionWith(_explicitQueryParameterDecisions);
         return copy;
@@ -228,17 +275,27 @@ public sealed class ControllerSnapshotOptions
             parameter => !defaultQueryParameters.Contains(parameter)));
         queryParameterDecisions.UnionWith(defaultQueryParameters.Where(
             parameter => !local.RedactedQueryParameters.Contains(parameter)));
+        queryParameterDecisions.UnionWith(local.ScrubbedQueryParameters);
         foreach (var parameterName in queryParameterDecisions)
         {
             if (local.RedactedQueryParameters.Contains(parameterName))
             {
                 merged.RedactedQueryParameters.Add(parameterName);
+                merged.ScrubbedQueryParameters.Remove(parameterName);
+            }
+            else if (local.ScrubbedQueryParameters.Contains(parameterName))
+            {
+                merged.RedactedQueryParameters.Remove(parameterName);
+                merged.ScrubbedQueryParameters.Add(parameterName);
             }
             else
             {
                 merged.RedactedQueryParameters.Remove(parameterName);
+                merged.ScrubbedQueryParameters.Remove(parameterName);
             }
         }
+
+        merged.UrlPathScrubbers.AddRange(local.UrlPathScrubbers);
 
         merged._explicitHeaderDecisions.UnionWith(headerDecisions);
         merged._explicitQueryParameterDecisions.UnionWith(queryParameterDecisions);

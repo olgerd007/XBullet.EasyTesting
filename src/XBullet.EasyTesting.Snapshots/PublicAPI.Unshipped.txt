@@ -36,6 +36,11 @@ XBullet.EasyTesting.Snapshots.ControllerSnapshotOptionsDefaults.Create(System.Ac
 XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions.RedactedQueryParameters.get -> System.Collections.Generic.ISet<string!>!
 XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions.RedactingQueryParameter(string! parameterName) -> XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions!
 XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions.RedactingQueryParameters(params string![]! parameterNames) -> XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions!
+XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions.ScrubbedQueryParameters.get -> System.Collections.Generic.ISet<string!>!
+XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions.ScrubbingQueryParameter(string! parameterName) -> XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions!
+XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions.ScrubbingQueryParameters(params string![]! parameterNames) -> XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions!
+XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions.ScrubbingUrlPath(System.Func<string!, string!>! scrubber) -> XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions!
+XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions.ScrubbingUrlPathGuids() -> XBullet.EasyTesting.Snapshots.ControllerSnapshotOptions!
 XBullet.EasyTesting.Snapshots.HttpExchangeFailureSnapshot
 XBullet.EasyTesting.Snapshots.HttpExchangeFailureSnapshot.<Clone>$() -> XBullet.EasyTesting.Snapshots.HttpExchangeFailureSnapshot!
 XBullet.EasyTesting.Snapshots.HttpExchangeFailureSnapshot.Deconstruct(out string! Type, out string! Message) -> void
@@ -78,7 +83,13 @@ XBullet.EasyTesting.Snapshots.HttpExchangeRequestSnapshotOptions.RedactedHeaders
 XBullet.EasyTesting.Snapshots.HttpExchangeRequestSnapshotOptions.RedactedQueryParameters.get -> System.Collections.Generic.ISet<string!>!
 XBullet.EasyTesting.Snapshots.HttpExchangeRequestSnapshotOptions.RedactingHeader(string! headerName) -> XBullet.EasyTesting.Snapshots.HttpExchangeRequestSnapshotOptions!
 XBullet.EasyTesting.Snapshots.HttpExchangeRequestSnapshotOptions.RedactingHeaders(params string![]! headerNames) -> XBullet.EasyTesting.Snapshots.HttpExchangeRequestSnapshotOptions!
+XBullet.EasyTesting.Snapshots.HttpExchangeRequestSnapshotOptions.RedactingQueryParameter(string! parameterName) -> XBullet.EasyTesting.Snapshots.HttpExchangeRequestSnapshotOptions!
 XBullet.EasyTesting.Snapshots.HttpExchangeRequestSnapshotOptions.RedactingQueryParameters(params string![]! parameterNames) -> XBullet.EasyTesting.Snapshots.HttpExchangeRequestSnapshotOptions!
+XBullet.EasyTesting.Snapshots.HttpExchangeRequestSnapshotOptions.ScrubbedQueryParameters.get -> System.Collections.Generic.ISet<string!>!
+XBullet.EasyTesting.Snapshots.HttpExchangeRequestSnapshotOptions.ScrubbingQueryParameter(string! parameterName) -> XBullet.EasyTesting.Snapshots.HttpExchangeRequestSnapshotOptions!
+XBullet.EasyTesting.Snapshots.HttpExchangeRequestSnapshotOptions.ScrubbingQueryParameters(params string![]! parameterNames) -> XBullet.EasyTesting.Snapshots.HttpExchangeRequestSnapshotOptions!
+XBullet.EasyTesting.Snapshots.HttpExchangeRequestSnapshotOptions.ScrubbingUrlPath(System.Func<string!, string!>! scrubber) -> XBullet.EasyTesting.Snapshots.HttpExchangeRequestSnapshotOptions!
+XBullet.EasyTesting.Snapshots.HttpExchangeRequestSnapshotOptions.ScrubbingUrlPathGuids() -> XBullet.EasyTesting.Snapshots.HttpExchangeRequestSnapshotOptions!
 XBullet.EasyTesting.Snapshots.HttpExchangeRequestSnapshotOptions.WithoutBody() -> XBullet.EasyTesting.Snapshots.HttpExchangeRequestSnapshotOptions!
 XBullet.EasyTesting.Snapshots.HttpExchangeRequestSnapshotOptions.WithoutHeaders() -> XBullet.EasyTesting.Snapshots.HttpExchangeRequestSnapshotOptions!
 XBullet.EasyTesting.Snapshots.HttpExchangeResponseSnapshot
@@ -111,6 +122,10 @@ XBullet.EasyTesting.Snapshots.HttpExchangeResponseSnapshotOptions.RedactingHeade
 XBullet.EasyTesting.Snapshots.HttpExchangeResponseSnapshotOptions.WithoutBody() -> XBullet.EasyTesting.Snapshots.HttpExchangeResponseSnapshotOptions!
 XBullet.EasyTesting.Snapshots.HttpExchangeResponseSnapshotOptions.WithoutHeaders() -> XBullet.EasyTesting.Snapshots.HttpExchangeResponseSnapshotOptions!
 XBullet.EasyTesting.Snapshots.HttpExchangeSnapshot
+XBullet.EasyTesting.Snapshots.HttpExchangeSnapshotFormat
+XBullet.EasyTesting.Snapshots.HttpExchangeSnapshotFormat.Http = 1 -> XBullet.EasyTesting.Snapshots.HttpExchangeSnapshotFormat
+XBullet.EasyTesting.Snapshots.HttpExchangeSnapshotFormat.Json = 0 -> XBullet.EasyTesting.Snapshots.HttpExchangeSnapshotFormat
+XBullet.EasyTesting.Snapshots.HttpExchangeSnapshotFormat.Yaml = 2 -> XBullet.EasyTesting.Snapshots.HttpExchangeSnapshotFormat
 XBullet.EasyTesting.Snapshots.HttpExchangeSnapshot.<Clone>$() -> XBullet.EasyTesting.Snapshots.HttpExchangeSnapshot!
 XBullet.EasyTesting.Snapshots.HttpExchangeSnapshot.Deconstruct(out XBullet.EasyTesting.Snapshots.HttpExchangeRequestSnapshot? Request, out XBullet.EasyTesting.Snapshots.HttpExchangeResponseSnapshot? Response, out XBullet.EasyTesting.Snapshots.HttpExchangeFailureSnapshot? Failure) -> void
 XBullet.EasyTesting.Snapshots.HttpExchangeSnapshot.Equals(XBullet.EasyTesting.Snapshots.HttpExchangeSnapshot? other) -> bool
@@ -122,6 +137,14 @@ XBullet.EasyTesting.Snapshots.HttpExchangeSnapshot.Request.init -> void
 XBullet.EasyTesting.Snapshots.HttpExchangeSnapshot.Response.get -> XBullet.EasyTesting.Snapshots.HttpExchangeResponseSnapshot?
 XBullet.EasyTesting.Snapshots.HttpExchangeSnapshot.Response.init -> void
 XBullet.EasyTesting.Snapshots.HttpExchangeSnapshotOptions
+XBullet.EasyTesting.Snapshots.HttpExchangeSnapshotOptions.Format.get -> XBullet.EasyTesting.Snapshots.HttpExchangeSnapshotFormat
+XBullet.EasyTesting.Snapshots.HttpExchangeSnapshotOptions.Format.set -> void
+XBullet.EasyTesting.Snapshots.HttpExchangeSnapshotOptionsDefaults
+XBullet.EasyTesting.Snapshots.HttpExchangeSnapshotOptionsDefaults.Create(System.Action<XBullet.EasyTesting.Snapshots.HttpExchangeSnapshotOptions!>? configure = null) -> XBullet.EasyTesting.Snapshots.HttpExchangeSnapshotOptions!
+XBullet.EasyTesting.Snapshots.HttpExchangeSnapshotOptionsDefaults.HttpExchangeSnapshotOptionsDefaults(System.Action<XBullet.EasyTesting.Snapshots.HttpExchangeSnapshotOptions!>! configure) -> void
+static XBullet.EasyTesting.Snapshots.HttpExchangeSnapshotOptionsDefaults.ExtendGlobal(System.Action<XBullet.EasyTesting.Snapshots.HttpExchangeSnapshotOptions!>! configure) -> XBullet.EasyTesting.Snapshots.HttpExchangeSnapshotOptions!
+static XBullet.EasyTesting.Snapshots.HttpExchangeSnapshotOptionsDefaults.Global.get -> XBullet.EasyTesting.Snapshots.HttpExchangeSnapshotOptionsDefaults?
+static XBullet.EasyTesting.Snapshots.HttpExchangeSnapshotOptionsDefaults.Global.set -> void
 XBullet.EasyTesting.Snapshots.HttpExchangeSnapshotOptions.HttpExchangeSnapshotOptions() -> void
 XBullet.EasyTesting.Snapshots.HttpExchangeSnapshotOptions.Request.get -> XBullet.EasyTesting.Snapshots.HttpExchangeRequestSnapshotOptions!
 XBullet.EasyTesting.Snapshots.HttpExchangeSnapshotOptions.Response.get -> XBullet.EasyTesting.Snapshots.HttpExchangeResponseSnapshotOptions!

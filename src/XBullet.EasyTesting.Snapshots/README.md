@@ -119,7 +119,9 @@ identifiers, are excluded by default. Header capture can be customized without e
 ```csharp
 var options = new ControllerSnapshotOptions()
     .RedactingHeaders("Set-Cookie", "X-Session-Token")
-    .RedactingQueryParameter("tenant_secret");
+    .RedactingQueryParameter("tenant_secret")
+    .ScrubbingUrlPathGuids()
+    .ScrubbingQueryParameters("timestamp", "requestId");
 
 await response.ShouldMatchControllerSnapshot(options);
 ```
@@ -129,6 +131,12 @@ including `access_token`, `api_key`, `client_secret`, `sas`, `secret`, `sig`, an
 redacted by default.
 Call `WithoutHeaders()` to omit the entire header collection, or `IncludingHeader(name)` and
 `IncludingQueryParameter(name)` to explicitly include a value known to be safe.
+
+URL scrubbing keeps the stable route while replacing volatile data. `ScrubbingUrlPathGuids()`
+replaces complete GUID path segments with `{Guid}`, and `ScrubbingQueryParameters(...)` replaces
+configured query values with `{Scrubbed}`. Use `ScrubbingUrlPath(path => ...)` for custom route
+transformations. The same URL APIs are available on HTTP exchange request options. Redaction takes
+precedence when the same query name is also configured for scrubbing.
 
 ### Complete HTTP exchanges
 
@@ -169,6 +177,11 @@ That is sufficient when its content remains readable; attach a recorder for Test
 pipelines that may consume or replace the request content. Use
 `recorder.ShouldMatchHttpExchangesSnapshot()` when one snapshot should contain every call made by
 the client.
+
+JSON remains the default snapshot format. Set `HttpExchangeSnapshotOptions.Format` to
+`HttpExchangeSnapshotFormat.Http` for an HTTP-style `.verified.txt` transcript, or to
+`HttpExchangeSnapshotFormat.Yaml` for `.verified.yaml`. Structured JSON scrubbers run before the
+selected renderer.
 
 ### Multiple snapshots and parameterized tests
 
@@ -228,8 +241,8 @@ Assert.Equal("$.orders[0].status", exception.DifferencePath);
 Console.WriteLine($"{exception.ExpectedValue} -> {exception.ActualValue}");
 ```
 
-Configure project-wide defaults once before test discovery by adding a module initializer to the
-test project:
+Configure project-wide snapshot, controller-capture, and HTTP-exchange defaults once before test
+discovery by adding a module initializer to the test project:
 
 ```csharp
 using System.Runtime.CompilerServices;
@@ -252,6 +265,13 @@ internal static class SnapshotConfiguration
         ControllerSnapshotOptionsDefaults.Global = new(options => options
             .IgnoringHeaders("ETag", "X-Request-Nonce")
             .RedactingHeaders("Authorization", "X-Session-Token"));
+
+        HttpExchangeSnapshotOptionsDefaults.Global = new(options =>
+        {
+            options.Format = HttpExchangeSnapshotFormat.Yaml;
+            options.Request.IgnoringHeaders("X-Request-Nonce");
+            options.Response.IgnoringHeaders("ETag");
+        });
     }
 }
 ```
@@ -296,9 +316,11 @@ await response.ShouldMatchControllerSnapshot(
         .IncludingHeader("ETag"));
 ```
 
-Configure each `Global` once before tests start. Assign `null` to restore package defaults. Complete
-HTTP-exchange header filtering remains configured through `HttpExchangeSnapshotOptions` or
-`HttpExchangeRecorder`.
+HTTP exchange options merge the same way. Use
+`HttpExchangeSnapshotOptionsDefaults.ExtendGlobal(...)` to create a configured independent copy
+for an `HttpExchangeRecorder` or an individual assertion.
+
+Configure each `Global` once before tests start. Assign `null` to restore package defaults.
 
 Track the snapshots exercised by a complete test scope to find obsolete verified files. A catalog
 can remain explicit and instance-scoped so parallel projects do not share its observed-file state:

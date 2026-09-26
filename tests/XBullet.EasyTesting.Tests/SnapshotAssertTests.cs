@@ -26,6 +26,8 @@ public sealed class SnapshotAssertTests
         Assert.Contains(typeof(StubHttpExchangeSnapshot), forwardedTypes);
         Assert.Contains(typeof(HttpExchangeRecorder), forwardedTypes);
         Assert.Contains(typeof(HttpExchangeFailureSnapshot), forwardedTypes);
+        Assert.Contains(typeof(HttpExchangeSnapshotFormat), forwardedTypes);
+        Assert.Contains(typeof(HttpExchangeSnapshotOptionsDefaults), forwardedTypes);
         Assert.Equal(
             "XBullet.EasyTesting.Snapshots.Core",
             typeof(SnapshotAssert).Assembly.GetName().Name);
@@ -218,6 +220,35 @@ public sealed class SnapshotAssertTests
 
         Assert.Equal(
             "/orders?API%5FKEY=visible&custom={Redacted}&custom={Redacted}#section",
+            snapshot.Request?.Url);
+    }
+
+    [Fact]
+    public async Task Controller_snapshot_scrubs_guid_routes_and_query_parameters()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var response = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            RequestMessage = new HttpRequestMessage(
+                HttpMethod.Get,
+                new Uri(
+                    "/api/system/settings/service-request/f5111111-1111-1111-1111-111111111111" +
+                    "?request%5Fid=one&REQUEST_ID&token=secret&view=full#section",
+                    UriKind.Relative)),
+            Content = new StringContent("{}", Encoding.UTF8, "application/json")
+        };
+        var options = new ControllerSnapshotOptions()
+            .ScrubbingUrlPathGuids()
+            .ScrubbingQueryParameters("Request_Id", "TOKEN");
+
+        var snapshot = await ControllerResponseSnapshot.FromResponseAsync(
+            response,
+            options,
+            cancellationToken);
+
+        Assert.Equal(
+            "/api/system/settings/service-request/{Guid}" +
+            "?request%5Fid={Scrubbed}&REQUEST_ID={Scrubbed}&token={Redacted}&view=full#section",
             snapshot.Request?.Url);
     }
 
@@ -1282,6 +1313,7 @@ public sealed class SnapshotAssertTests
             .RedactingHeaders("X-Correlation-ID", "X-Session-Token")
             .IncludingHeader("X-Correlation-ID")
             .RedactingQueryParameters("session", "signature")
+            .ScrubbingQueryParameters("volatile", "signature")
             .IncludingQueryParameter("signature");
 
         Assert.False(options.IncludeRequest);
@@ -1293,6 +1325,8 @@ public sealed class SnapshotAssertTests
         Assert.DoesNotContain("X-Correlation-ID", options.RedactedHeaders);
         Assert.Contains("session", options.RedactedQueryParameters);
         Assert.DoesNotContain("signature", options.RedactedQueryParameters);
+        Assert.Contains("volatile", options.ScrubbedQueryParameters);
+        Assert.DoesNotContain("signature", options.ScrubbedQueryParameters);
     }
 
     [Fact]
@@ -1305,6 +1339,7 @@ public sealed class SnapshotAssertTests
             .RedactingHeaders("X-Second", "X-Third")
             .IncludingHeader("X-Third")
             .RedactingQueryParameters("custom", "signature")
+            .ScrubbingQueryParameters("volatile", "signature")
             .IncludingQueryParameter("signature");
 
         Assert.False(options.IncludeHeaders);
@@ -1315,6 +1350,8 @@ public sealed class SnapshotAssertTests
         Assert.DoesNotContain("X-Third", options.RedactedHeaders);
         Assert.Contains("custom", options.RedactedQueryParameters);
         Assert.DoesNotContain("signature", options.RedactedQueryParameters);
+        Assert.Contains("volatile", options.ScrubbedQueryParameters);
+        Assert.DoesNotContain("signature", options.ScrubbedQueryParameters);
     }
 
     [Fact]
@@ -1366,6 +1403,25 @@ public sealed class SnapshotAssertTests
 
         Assert.Equal(
             "/orders?token=visible&CUSTOM={Redacted}&CUSTOM={Redacted}#section",
+            snapshot.Url);
+    }
+
+    [Fact]
+    public void Captured_request_snapshot_scrubs_custom_routes_and_query_parameters()
+    {
+        var request = new StubHttpRequest(
+            HttpMethod.Get,
+            new Uri("/orders/123?timestamp=one&TIMESTAMP#details", UriKind.Relative),
+            new Dictionary<string, string[]>(),
+            Body: null);
+        var options = new StubHttpRequestSnapshotOptions()
+            .ScrubbingUrlPath(path => path.Replace("/123", "/{OrderId}", StringComparison.Ordinal))
+            .ScrubbingQueryParameter("Timestamp");
+
+        var snapshot = StubHttpRequestSnapshot.FromRequest(request, options);
+
+        Assert.Equal(
+            "/orders/{OrderId}?timestamp={Scrubbed}&TIMESTAMP={Scrubbed}#details",
             snapshot.Url);
     }
 
@@ -1557,13 +1613,18 @@ public sealed class SnapshotAssertTests
     [Fact]
     public void Http_exchange_options_accept_empty_sets_and_reject_invalid_names()
     {
+        var exchange = new HttpExchangeSnapshotOptions();
+        var stubExchange = new StubHttpExchangeSnapshotOptions();
         var request = new HttpExchangeRequestSnapshotOptions();
         var response = new HttpExchangeResponseSnapshotOptions();
         var stubResponse = new StubHttpResponseSnapshotOptions();
 
+        Assert.Equal(HttpExchangeSnapshotFormat.Json, exchange.Format);
+        Assert.Equal(HttpExchangeSnapshotFormat.Json, stubExchange.Format);
         Assert.Same(request, request.IgnoringHeaders());
         Assert.Same(request, request.RedactingHeaders());
         Assert.Same(request, request.RedactingQueryParameters());
+        Assert.Same(request, request.ScrubbingQueryParameters());
         Assert.Same(response, response.IgnoringHeaders());
         Assert.Same(response, response.RedactingHeaders());
         Assert.Same(stubResponse, stubResponse.IgnoringHeaders());
@@ -1574,6 +1635,8 @@ public sealed class SnapshotAssertTests
         Assert.Throws<ArgumentNullException>(() => request.IgnoringHeaders(null!));
         Assert.Throws<ArgumentException>(() => request.RedactingHeaders(" "));
         Assert.Throws<ArgumentException>(() => request.RedactingQueryParameters(""));
+        Assert.Throws<ArgumentException>(() => request.ScrubbingQueryParameters(""));
+        Assert.Throws<ArgumentNullException>(() => request.ScrubbingUrlPath(null!));
         Assert.Throws<ArgumentException>(() => request.IncludingHeader(""));
         Assert.Throws<ArgumentException>(() => request.IncludingQueryParameter(" "));
         Assert.Throws<ArgumentNullException>(() => response.RedactingHeaders(null!));
@@ -1751,6 +1814,32 @@ public sealed class SnapshotAssertTests
 
         Assert.Equal(
             "/orders?SECRET={Redacted}&sAs={Redacted}&view=full",
+            snapshot.Request!.Url);
+    }
+
+    [Fact]
+    public async Task Http_exchange_snapshot_scrubs_guid_routes_and_query_parameters()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var response = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            RequestMessage = new HttpRequestMessage(
+                HttpMethod.Get,
+                "https://example.test/orders/f5111111-1111-1111-1111-111111111111?nonce=one&NONCE=two"),
+            Content = new ByteArrayContent([])
+        };
+        var options = new HttpExchangeSnapshotOptions();
+        options.Request
+            .ScrubbingUrlPathGuids()
+            .ScrubbingQueryParameter("Nonce");
+
+        var snapshot = await HttpExchangeSnapshot.FromResponseAsync(
+            response,
+            options,
+            cancellationToken);
+
+        Assert.Equal(
+            "/orders/{Guid}?nonce={Scrubbed}&NONCE={Scrubbed}",
             snapshot.Request!.Url);
     }
 
@@ -2550,7 +2639,8 @@ public sealed class SnapshotAssertTests
             {
                 RequestMessage = new HttpRequestMessage(
                     HttpMethod.Get,
-                    "/api/products?global_secret=one&local_secret=two"),
+                    "/api/products/f5111111-1111-1111-1111-111111111111" +
+                    "?global_secret=one&local_secret=two&GLOBAL_NONCE=three&local_nonce=four"),
                 Content = JsonContent.Create(new { Value = 42 })
             };
             response.Headers.TryAddWithoutValidation("X-Global-Ignored", "ignored");
@@ -2566,7 +2656,11 @@ public sealed class SnapshotAssertTests
                 .WithoutBody()
                 .IgnoringHeaders("X-Global-Ignored")
                 .RedactingHeader("X-Global-Redacted")
-                .RedactingQueryParameter("global_secret"));
+                .RedactingQueryParameter("global_secret")
+                .ScrubbingQueryParameter("global_nonce")
+                .ScrubbingUrlPathGuids()
+                .ScrubbingUrlPath(path =>
+                    path.Replace("/api", "/root", StringComparison.Ordinal)));
 
             using var defaultResponse = CreateResponse();
             var defaultSnapshot = await ControllerResponseSnapshot.FromResponseAsync(
@@ -2585,14 +2679,18 @@ public sealed class SnapshotAssertTests
             }
                 .IncludingHeader("X-Global-Redacted")
                 .IgnoringHeaders("X-Local-Ignored")
-                .RedactingQueryParameter("local_secret");
+                .RedactingQueryParameter("local_secret")
+                .ScrubbingQueryParameter("LOCAL_NONCE")
+                .ScrubbingUrlPath(path =>
+                    path.Replace("/products", "/items", StringComparison.Ordinal));
             var localSnapshot = await ControllerResponseSnapshot.FromResponseAsync(
                 localResponse,
                 localOptions,
                 cancellationToken);
 
             Assert.Equal(
-                "/api/products?global_secret={Redacted}&local_secret={Redacted}",
+                "/root/items/{Guid}?global_secret={Redacted}&local_secret={Redacted}" +
+                "&GLOBAL_NONCE={Scrubbed}&local_nonce={Scrubbed}",
                 localSnapshot.Request?.Url);
             Assert.NotNull(localSnapshot.Body);
             Assert.DoesNotContain("X-Global-Ignored", localSnapshot.Headers);
@@ -2642,6 +2740,349 @@ public sealed class SnapshotAssertTests
             SnapshotSettingsDefaults.Global = originalDefaults;
             DeleteTemporarySnapshotDirectory(snapshotDirectory);
         }
+    }
+
+    [Fact]
+    public void Http_exchange_option_defaults_merge_local_decisions_and_copy_independently()
+    {
+        var originalDefaults = HttpExchangeSnapshotOptionsDefaults.Global;
+
+        try
+        {
+            var defaults = new HttpExchangeSnapshotOptionsDefaults(options =>
+            {
+                options.Format = HttpExchangeSnapshotFormat.Yaml;
+                options.Request
+                    .WithoutBody()
+                    .IgnoringHeaders("X-Global-Ignored")
+                    .RedactingHeader("X-Global-Redacted")
+                    .RedactingQueryParameter("global_secret")
+                    .ScrubbingQueryParameter("global_nonce")
+                    .ScrubbingUrlPath(path => path.Replace("/api", "/root", StringComparison.Ordinal));
+                options.Response
+                    .WithoutHeaders()
+                    .IgnoringHeaders("X-Response-Ignored")
+                    .RedactingHeader("X-Response-Redacted");
+            });
+            HttpExchangeSnapshotOptionsDefaults.Global = defaults;
+
+            var first = defaults.Create();
+            var second = defaults.Create();
+            first.Request.IgnoredHeaders.Add("X-Only-First");
+
+            Assert.DoesNotContain("X-Only-First", second.Request.IgnoredHeaders);
+
+            var local = new HttpExchangeSnapshotOptions
+            {
+                Format = HttpExchangeSnapshotFormat.Http
+            };
+            local.Request.IncludeBody = true;
+            local.Request
+                .IncludingHeader("X-Global-Ignored")
+                .IgnoringHeaders("X-Local-Ignored")
+                .IncludingQueryParameter("global_secret")
+                .ScrubbingQueryParameter("local_nonce")
+                .ScrubbingUrlPath(path => path.Replace("/products", "/items", StringComparison.Ordinal));
+            local.Response.IncludeHeaders = true;
+            local.Response
+                .IncludingHeader("X-Response-Ignored")
+                .IgnoringHeaders("X-Local-Response");
+
+            var merged = HttpExchangeSnapshotOptionsDefaults.MergeGlobalOrDefault(local);
+
+            Assert.Equal(HttpExchangeSnapshotFormat.Http, merged.Format);
+            Assert.True(merged.Request.IncludeBody);
+            Assert.DoesNotContain("X-Global-Ignored", merged.Request.IgnoredHeaders);
+            Assert.Contains("X-Local-Ignored", merged.Request.IgnoredHeaders);
+            Assert.Contains("X-Global-Redacted", merged.Request.RedactedHeaders);
+            Assert.DoesNotContain("global_secret", merged.Request.RedactedQueryParameters);
+            Assert.Contains("global_nonce", merged.Request.ScrubbedQueryParameters);
+            Assert.Contains("local_nonce", merged.Request.ScrubbedQueryParameters);
+            Assert.True(merged.Response.IncludeHeaders);
+            Assert.DoesNotContain("X-Response-Ignored", merged.Response.IgnoredHeaders);
+            Assert.Contains("X-Local-Response", merged.Response.IgnoredHeaders);
+            Assert.Contains("X-Response-Redacted", merged.Response.RedactedHeaders);
+
+            var extended = HttpExchangeSnapshotOptionsDefaults.ExtendGlobal(options =>
+                options.Request.ScrubbingUrlPathGuids());
+            Assert.Equal(HttpExchangeSnapshotFormat.Yaml, extended.Format);
+            Assert.False(extended.Request.IncludeBody);
+            Assert.Equal(2, extended.Request.UrlPathScrubbers.Count);
+            Assert.Same(
+                extended,
+                HttpExchangeSnapshotOptionsDefaults.MergeGlobalOrDefault(extended));
+        }
+        finally
+        {
+            HttpExchangeSnapshotOptionsDefaults.Global = originalDefaults;
+        }
+    }
+
+    [Fact]
+    public async Task Http_exchange_global_options_apply_to_direct_captures_and_recorders()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var originalDefaults = HttpExchangeSnapshotOptionsDefaults.Global;
+
+        try
+        {
+            HttpExchangeSnapshotOptionsDefaults.Global = new(options =>
+            {
+                options.Format = HttpExchangeSnapshotFormat.Yaml;
+                options.Request.WithoutHeaders();
+                options.Response.WithoutBody();
+            });
+            using var response = new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                RequestMessage = new HttpRequestMessage(HttpMethod.Get, "/orders"),
+                Content = JsonContent.Create(new { Id = 42 })
+            };
+
+            var snapshot = await HttpExchangeSnapshot.FromResponseAsync(
+                response,
+                cancellationToken: cancellationToken);
+            using var recorder = new HttpExchangeRecorder();
+            var local = new HttpExchangeSnapshotOptions
+            {
+                Format = HttpExchangeSnapshotFormat.Http
+            };
+            using var localRecorder = new HttpExchangeRecorder(local)
+            {
+                InnerHandler = new CallbackHttpMessageHandler((request, _) => Task.FromResult(
+                    new HttpResponseMessage(HttpStatusCode.Accepted)
+                    {
+                        RequestMessage = request
+                    }))
+            };
+            using var client = new HttpClient(localRecorder);
+            using var recordedResponse = await client.GetAsync(
+                "https://orders.example.test/orders/42",
+                cancellationToken);
+            var recordedSnapshot = await HttpExchangeSnapshot.FromResponseAsync(
+                recordedResponse,
+                local,
+                cancellationToken);
+
+            Assert.Null(snapshot.Request!.Headers);
+            Assert.Null(snapshot.Response!.Body);
+            Assert.Equal(HttpExchangeSnapshotFormat.Yaml, recorder.Options.Format);
+            Assert.False(recorder.Options.Request.IncludeHeaders);
+            Assert.False(recorder.Options.Response.IncludeBody);
+            Assert.Equal((int)HttpStatusCode.Accepted, recordedSnapshot.Response!.StatusCode);
+            Assert.Equal(
+                HttpExchangeSnapshotFormat.Http,
+                HttpExchangeRecorder.ResolveFormat(recordedResponse, local));
+            Assert.Throws<InvalidOperationException>(() =>
+                HttpExchangeRecorder.ResolveFormat(
+                    recordedResponse,
+                    new HttpExchangeSnapshotOptions()));
+        }
+        finally
+        {
+            HttpExchangeSnapshotOptionsDefaults.Global = originalDefaults;
+        }
+    }
+
+    [Fact]
+    public async Task Http_exchange_assertion_can_store_an_http_transcript()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var settings = CreateUpdatingSettings(snapshotDirectory)
+            .Named("http-transcript")
+            .ScrubMember("id");
+        var options = new HttpExchangeSnapshotOptions
+        {
+            Format = HttpExchangeSnapshotFormat.Http
+        };
+        using var response = new HttpResponseMessage(HttpStatusCode.Created)
+        {
+            ReasonPhrase = "Created",
+            RequestMessage = new HttpRequestMessage(HttpMethod.Post, "/api/orders")
+            {
+                Content = JsonContent.Create(new { Id = 42, Name = "Keyboard" })
+            },
+            Content = JsonContent.Create(new { Id = 43, Accepted = true })
+        };
+
+        try
+        {
+            await response.ShouldMatchHttpExchangeSnapshot(
+                options,
+                settings,
+                cancellationToken);
+
+            var path = Directory.EnumerateFiles(snapshotDirectory, "*.verified.txt").Single();
+            var snapshot = await File.ReadAllTextAsync(path, cancellationToken);
+            Assert.Contains("=== Request ===", snapshot);
+            Assert.Contains("POST /api/orders", snapshot);
+            Assert.Contains("Content-Type: application/json; charset=utf-8", snapshot);
+            Assert.Contains("=== Response ===", snapshot);
+            Assert.Contains("201 Created", snapshot);
+            Assert.Contains("\"id\": \"{Scrubbed}\"", snapshot);
+            Assert.DoesNotContain("\"Request\":", snapshot);
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task Recorded_http_exchange_uses_the_recorders_yaml_format()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var settings = CreateUpdatingSettings(snapshotDirectory).Named("recorded-yaml");
+        var options = new HttpExchangeSnapshotOptions
+        {
+            Format = HttpExchangeSnapshotFormat.Yaml
+        };
+        using var recorder = new HttpExchangeRecorder(options)
+        {
+            InnerHandler = new CallbackHttpMessageHandler((request, _) => Task.FromResult(
+                new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    RequestMessage = request,
+                    Content = new StringContent("hello\nworld", Encoding.UTF8, "text/plain")
+                }))
+        };
+        using var client = new HttpClient(recorder);
+
+        try
+        {
+            using var response = await client.GetAsync(
+                "https://orders.example.test/orders/42",
+                cancellationToken);
+            _ = await response.Content.ReadAsStringAsync(cancellationToken);
+            await response.ShouldMatchHttpExchangeSnapshot(
+                snapshotSettings: settings,
+                cancellationToken: cancellationToken);
+
+            var path = Directory.EnumerateFiles(snapshotDirectory, "*.verified.yaml").Single();
+            var snapshot = await File.ReadAllTextAsync(path, cancellationToken);
+            Assert.Contains("Request:", snapshot);
+            Assert.Contains("Method: \"GET\"", snapshot);
+            Assert.Contains("Url: \"/orders/42\"", snapshot);
+            Assert.Contains("Response:", snapshot);
+            Assert.Contains("StatusCode: 200", snapshot);
+            Assert.Contains("Body: \"hello\\nworld\"", snapshot);
+            Assert.DoesNotContain("=== Request ===", snapshot);
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
+    public void Http_exchange_text_formatter_covers_collections_failures_and_body_kinds()
+    {
+        const string exchanges = """
+            [
+              {
+                "Request": null,
+                "Response": null,
+                "Failure": { "Type": "System.IO.IOException", "Message": "send failed\nnow" }
+              },
+              {
+                "Request": {
+                  "Method": null,
+                  "Url": null,
+                  "Headers": null,
+                  "Body": { "Encoding": "base64", "Value": "AAH/" }
+                },
+                "Response": {
+                  "Headers": {
+                    "X-Empty": [],
+                    "X-Invalid": "not-an-array",
+                    "X-Lines": ["first\r\nsecond", null]
+                  },
+                  "Body": "plain text\n",
+                  "BodyFailure": { "Type": "System.IO.IOException", "Message": "read failed" }
+                },
+                "Failure": null
+              },
+              {
+                "Request": {
+                  "Method": "POST",
+                  "Url": "/json",
+                  "Headers": { "Content-Type": ["application/problem+json"] },
+                  "Body": "json string"
+                },
+                "Response": {
+                  "StatusCode": 200,
+                  "ReasonPhrase": "",
+                  "Headers": { "Content-Type": ["application/octet-stream"] },
+                  "Body": { "Encoding": "base64", "Value": "AQI=" },
+                  "BodyFailure": 42
+                },
+                "Failure": 42
+              }
+            ]
+            """;
+
+        var formatted = HttpExchangeSnapshotFormatter
+            .Format(exchanges, HttpExchangeSnapshotFormat.Http)
+            .Replace("\r\n", "\n", StringComparison.Ordinal);
+
+        Assert.Contains("=== Exchange 1 ===", formatted);
+        Assert.Contains("=== Exchange 3 ===", formatted);
+        Assert.Contains("<unknown-method> <unknown-url>", formatted);
+        Assert.Contains("# Headers: <excluded>", formatted);
+        Assert.Contains("# Body encoding: base64\nAAH/", formatted);
+        Assert.Contains("X-Empty:", formatted);
+        Assert.Contains("X-Invalid:", formatted);
+        Assert.Contains("X-Lines: first\\r\\nsecond", formatted);
+        Assert.Contains("plain text", formatted);
+        Assert.Contains("=== Response Body Failure ===", formatted);
+        Assert.Contains("\"json string\"", formatted);
+        Assert.Contains("# Body encoding: base64\nAQI=", formatted);
+        Assert.Contains("=== Failure ===", formatted);
+        Assert.Contains("Type: <unknown>", formatted);
+        Assert.Contains("Message: \"\"", formatted);
+        Assert.Equal(
+            "=== Exchanges ===\n<none>",
+            HttpExchangeSnapshotFormatter.Format("[]", HttpExchangeSnapshotFormat.Http));
+        Assert.Throws<InvalidOperationException>(() =>
+            HttpExchangeSnapshotFormatter.Format("42", HttpExchangeSnapshotFormat.Http));
+    }
+
+    [Fact]
+    public void Http_exchange_yaml_formatter_emits_a_deterministic_json_compatible_subset()
+    {
+        const string json = """
+            {
+              "safe-key": {
+                "items": [true, false, null, 1.25, "text", {}, []],
+                "emptyObject": {},
+                "emptyArray": []
+              },
+              "1 unsafe:key": "quoted key",
+              "null": "quoted keyword"
+            }
+            """;
+
+        var yaml = HttpExchangeSnapshotFormatter.Format(json, HttpExchangeSnapshotFormat.Yaml);
+
+        Assert.Contains("safe-key:", yaml);
+        Assert.Contains("- true", yaml);
+        Assert.Contains("- false", yaml);
+        Assert.Contains("- null", yaml);
+        Assert.Contains("- 1.25", yaml);
+        Assert.Contains("- \"text\"", yaml);
+        Assert.Contains("- {}", yaml);
+        Assert.Contains("- []", yaml);
+        Assert.Contains("emptyObject: {}", yaml);
+        Assert.Contains("emptyArray: []", yaml);
+        Assert.Contains("\"1 unsafe:key\": \"quoted key\"", yaml);
+        Assert.Contains("\"null\": \"quoted keyword\"", yaml);
+        Assert.Equal("true", HttpExchangeSnapshotFormatter.Format("true", HttpExchangeSnapshotFormat.Yaml));
+        Assert.Equal("{}", HttpExchangeSnapshotFormatter.Format("{}", HttpExchangeSnapshotFormat.Yaml));
+        Assert.Equal("[]", HttpExchangeSnapshotFormatter.Format("[]", HttpExchangeSnapshotFormat.Yaml));
+        Assert.Equal(json, HttpExchangeSnapshotFormatter.Format(json, HttpExchangeSnapshotFormat.Json));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            HttpExchangeSnapshotFormatter.Format(json, (HttpExchangeSnapshotFormat)42));
     }
 
     [Fact]
@@ -3022,6 +3463,50 @@ public sealed class SnapshotAssertTests
             Assert.Contains("\"Response\"", exchangesVerified);
             Assert.Contains("\"StatusCode\": 201", exchangesVerified);
             Assert.Contains("\"accepted\": true", exchangesVerified);
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task Stub_http_exchanges_can_store_yaml_snapshots()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var settings = CreateUpdatingSettings(snapshotDirectory)
+            .Named("stub-yaml")
+            .ScrubMember("orderId");
+        var options = new StubHttpExchangeSnapshotOptions
+        {
+            Format = HttpExchangeSnapshotFormat.Yaml
+        };
+        using var handler = new StubHttpMessageHandler();
+        handler
+            .When(HttpMethod.Post, "/orders")
+            .RespondJson(new { OrderId = 42 }, HttpStatusCode.Created);
+        using var client = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("https://external.example.test/")
+        };
+
+        try
+        {
+            using var response = await client.PostAsJsonAsync(
+                "/orders",
+                new { OrderId = 41 },
+                cancellationToken);
+            await handler.ShouldMatchExchangesSnapshot(
+                options,
+                settings,
+                cancellationToken);
+
+            var path = Directory.EnumerateFiles(snapshotDirectory, "*.verified.yaml").Single();
+            var snapshot = await File.ReadAllTextAsync(path, cancellationToken);
+            Assert.StartsWith("-\n  Request:", snapshot);
+            Assert.Contains("StatusCode: 201", snapshot);
+            Assert.Contains("orderId: \"{Scrubbed}\"", snapshot);
         }
         finally
         {

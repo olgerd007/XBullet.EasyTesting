@@ -13,10 +13,14 @@ public sealed class HttpExchangeRecorder : DelegatingHandler
         RecordedExchanges = new();
     private readonly object _gate = new();
     private readonly List<PendingExchange> _exchanges = [];
+    private readonly HttpExchangeSnapshotOptions? _sourceOptions;
 
     /// <summary>Creates a recorder with optional request and response capture settings.</summary>
-    public HttpExchangeRecorder(HttpExchangeSnapshotOptions? options = null) =>
-        Options = options ?? new HttpExchangeSnapshotOptions();
+    public HttpExchangeRecorder(HttpExchangeSnapshotOptions? options = null)
+    {
+        _sourceOptions = options;
+        Options = HttpExchangeSnapshotOptionsDefaults.MergeGlobalOrDefault(options);
+    }
 
     /// <summary>Gets the options used to capture exchanges.</summary>
     public HttpExchangeSnapshotOptions Options { get; }
@@ -127,7 +131,7 @@ public sealed class HttpExchangeRecorder : DelegatingHandler
             return false;
         }
 
-        if (options is not null && !ReferenceEquals(options, recorded.Options))
+        if (!IsCompatible(options, recorded))
         {
             throw new InvalidOperationException(
                 "This response was captured by an HttpExchangeRecorder with different options. " +
@@ -139,18 +143,52 @@ public sealed class HttpExchangeRecorder : DelegatingHandler
         return true;
     }
 
+    internal static HttpExchangeSnapshotFormat ResolveFormat(
+        HttpResponseMessage response,
+        HttpExchangeSnapshotOptions? options)
+    {
+        RecordedExchange? recorded;
+        lock (RecordedExchangeGate)
+        {
+            RecordedExchanges.TryGetValue(response, out recorded);
+        }
+
+        if (recorded is null)
+        {
+            return HttpExchangeSnapshotOptionsDefaults.MergeGlobalOrDefault(options).Format;
+        }
+
+        if (!IsCompatible(options, recorded))
+        {
+            throw new InvalidOperationException(
+                "This response was captured by an HttpExchangeRecorder with different options. " +
+                "Configure the options when creating the recorder, then call the response " +
+                "snapshot assertion without separate exchange options.");
+        }
+
+        return recorded.Options.Format;
+    }
+
     private void Attach(HttpResponseMessage response, PendingExchange exchange)
     {
         lock (RecordedExchangeGate)
         {
             RecordedExchanges.Remove(response);
-            RecordedExchanges.Add(response, new RecordedExchange(exchange, Options));
+            RecordedExchanges.Add(response, new RecordedExchange(exchange, Options, _sourceOptions));
         }
     }
 
+    private static bool IsCompatible(
+        HttpExchangeSnapshotOptions? options,
+        RecordedExchange recorded) =>
+        options is null ||
+        ReferenceEquals(options, recorded.Options) ||
+        ReferenceEquals(options, recorded.SourceOptions);
+
     private sealed record RecordedExchange(
         PendingExchange Exchange,
-        HttpExchangeSnapshotOptions Options);
+        HttpExchangeSnapshotOptions Options,
+        HttpExchangeSnapshotOptions? SourceOptions);
 
     private sealed class PendingExchange(HttpExchangeRequestSnapshot request)
     {

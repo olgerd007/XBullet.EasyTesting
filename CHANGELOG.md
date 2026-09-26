@@ -6,8 +6,14 @@ The project follows Semantic Versioning. Package versions are produced from GitH
 
 ## [Unreleased]
 
+## [1.0.13] - 2026-09-26
+
 ### Added
 
+- Opt-in HTTP transcript (`.verified.txt`) and YAML (`.verified.yaml`) formats for complete
+  controller and outbound-stub HTTP exchange snapshots, while JSON remains the default.
+- `HttpExchangeSnapshotOptionsDefaults.Global`, `Create(...)`, and `ExtendGlobal(...)` for
+  module-wide complete HTTP exchange capture and format conventions.
 - `SnapshotSettingsDefaults.ExtendGlobal(Action<SnapshotSettings>)` for adding per-assertion
   configuration to an independent copy of the global snapshot defaults.
 - `ControllerSnapshotOptionsDefaults.Global` and `ExtendGlobal(...)` for reusable controller
