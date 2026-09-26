@@ -26,6 +26,17 @@ dotnet list XBullet.EasyTesting.sln package --vulnerable --include-transitive
 
 Restore fails when NuGet reports a moderate, high, or critical vulnerability. Builds also run all enabled-by-default .NET security analyzers.
 
+## Load testing
+
+Run the concurrent HTTP-stub workload in Release mode when changing request capture or rule matching:
+
+```shell
+dotnet run --project tests/XBullet.EasyTesting.LoadTests -c Release
+```
+
+Use `--requests`, `--concurrency`, and `--rules` after `--` to compare the same workload before
+and after a change. The harness reports throughput, latency percentiles, errors, and allocations.
+
 ## Pull requests
 
 - Keep changes focused and include tests for externally observable behavior.

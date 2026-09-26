@@ -699,6 +699,56 @@ public sealed class StubHttpMessageHandlerTests
     }
 
     [Fact]
+    public async Task Concurrent_requests_are_not_serialized_by_request_predicates()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var slowPredicateEntered = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseSlowPredicate = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        using var handler = new StubHttpMessageHandler();
+        handler
+            .When(HttpMethod.Get, "/slow")
+            .WithRequest(_ =>
+            {
+                slowPredicateEntered.TrySetResult();
+                releaseSlowPredicate.Task.GetAwaiter().GetResult();
+                return true;
+            })
+            .Respond(HttpStatusCode.OK)
+            .When(HttpMethod.Get, "/fast")
+            .Respond(HttpStatusCode.NoContent);
+        using var client = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("https://external.example.test/")
+        };
+
+        var slowRequest = Task.Run(
+            () => client.GetAsync("/slow", cancellationToken),
+            cancellationToken);
+        await slowPredicateEntered.Task.WaitAsync(cancellationToken);
+
+        try
+        {
+            var fastRequest = Task.Run(
+                () => client.GetAsync("/fast", cancellationToken),
+                cancellationToken);
+            using var fastResponse = await fastRequest.WaitAsync(
+                TimeSpan.FromSeconds(2),
+                cancellationToken);
+
+            Assert.Equal(HttpStatusCode.NoContent, fastResponse.StatusCode);
+        }
+        finally
+        {
+            releaseSlowPredicate.TrySetResult();
+        }
+
+        using var slowResponse = await slowRequest;
+        Assert.Equal(HttpStatusCode.OK, slowResponse.StatusCode);
+    }
+
+    [Fact]
     public async Task Delayed_response_observes_the_configured_delay()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
