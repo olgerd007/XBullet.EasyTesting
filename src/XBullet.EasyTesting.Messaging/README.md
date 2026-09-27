@@ -12,7 +12,8 @@ dotnet add package XBullet.EasyTesting.Messaging
 
 ## Example
 
-Adapt your application's publisher interface to a `RecordedMessageBus`, then assert the captured transport, destination, headers, and typed payload:
+Adapt your application's publisher interface to a `RecordedMessageBus`, then assert the captured
+transport, destination, headers, and typed payload:
 
 ```csharp
 await messages.RecordAsync(
@@ -33,5 +34,6 @@ while custom transports remain supported.
 
 ## Documentation
 
-- [Messaging and application-boundary guide](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/application-boundaries.md)
+- [API reference](https://olgerd007.github.io/XBullet.EasyTesting/api/packages/xbullet-easytesting-messaging.html)
+- [Published messages guide](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/messaging.md)
 - [Executable messaging examples](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/tests/XBullet.EasyTesting.Tests/RecordedMessageBusTests.cs)

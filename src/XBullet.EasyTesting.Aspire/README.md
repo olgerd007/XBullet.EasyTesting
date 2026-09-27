@@ -56,5 +56,6 @@ var diagnostics = await application.CaptureDiagnosticsAsync(cancellationToken);
 
 ## Documentation
 
-- [Documentation home and package selection](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/index.md)
+- [API reference](https://olgerd007.github.io/XBullet.EasyTesting/api/packages/xbullet-easytesting-aspire.html)
+- [Aspire distributed application guide](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/aspire.md)
 - [Executable Aspire examples](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/tests/TestApi.IntegrationTests/AspireTests.cs)

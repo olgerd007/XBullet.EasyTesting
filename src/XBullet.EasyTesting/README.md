@@ -1,6 +1,7 @@
 # XBullet.EasyTesting
 
-Reusable infrastructure for integration-testing authenticated ASP.NET Core applications through an in-memory `TestServer`.
+Reusable infrastructure for integration-testing authenticated ASP.NET Core applications through an
+in-memory `TestServer`.
 
 The package targets .NET 8, .NET 9, and .NET 10.
 
@@ -31,7 +32,9 @@ using var response = await client.GetAsync("/api/orders");
 response.EnsureSuccessStatusCode();
 ```
 
-The fluent host also supports configuration overrides, authentication profiles, per-test scenario isolation, and arrange-and-request workflows. Scenario results provide test-framework-agnostic status, header, success, and generic structural JSON body assertions through `result.Should()`.
+The fluent host also supports configuration overrides, authentication profiles, per-test scenario
+isolation, and arrange-and-request workflows. Scenario results provide test-framework-agnostic
+status, header, success, and generic structural JSON body assertions through `result.Should()`.
 
 For an existing `IntegrationTestStartup` pipeline, derive from
 `StartupAuthenticatedWebApplicationFactory<IntegrationTestStartup>`. It creates a `TestServer`
@@ -68,6 +71,9 @@ diagnostics, and are disposed after the scenario host.
 
 ## Documentation
 
+- [API reference](https://olgerd007.github.io/XBullet.EasyTesting/api/packages/xbullet-easytesting.html)
 - [Authentication and scenarios guide](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/authentication-and-scenarios.md)
+- [Test hosts, lifecycle, and authentication concepts](https://github.com/olgerd007/XBullet.EasyTesting/tree/main/docs/concepts)
+- [Response assertions](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/response-assertions.md)
 - [Documentation home and package selection](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/index.md)
 - [Executable integration-test examples](https://github.com/olgerd007/XBullet.EasyTesting/tree/main/tests/TestApi.IntegrationTests)

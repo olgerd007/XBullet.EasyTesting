@@ -21,6 +21,7 @@ namespace TestApi.IntegrationTests;
 
 public sealed class StartupHostTests
 {
+    #region docs-startup-host
     [Fact]
     public async Task Startup_authenticated_host_runs_without_an_entry_point()
     {
@@ -43,6 +44,7 @@ public sealed class StartupHostTests
             TestAuthenticationDefaults.ApiUserIdentityAuthenticationType,
             body.GetProperty("authenticationTypes")[1].GetString());
     }
+    #endregion
 
     [Fact]
     public async Task Startup_host_combines_injected_configuration_federated_user_and_scenario_database()

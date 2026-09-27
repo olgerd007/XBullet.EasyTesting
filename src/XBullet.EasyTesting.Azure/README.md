@@ -78,5 +78,6 @@ query strings, and body content so credentials and payloads are not exposed.
 
 ## Documentation
 
-- [Documentation home and package selection](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/index.md)
+- [API reference](https://olgerd007.github.io/XBullet.EasyTesting/api/packages/xbullet-easytesting-azure.html)
+- [Azure SDK testing guide](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/azure-sdk.md)
 - [Executable Azure SDK examples](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/tests/XBullet.EasyTesting.Tests/AzureTestingTests.cs)

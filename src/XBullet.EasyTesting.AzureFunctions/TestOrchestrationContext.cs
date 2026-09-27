@@ -106,7 +106,15 @@ public sealed class TestOrchestrationContext : TaskOrchestrationContext
             $"which cannot be assigned to {typeof(TResult).FullName}.");
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Reports that durable timer scheduling is outside the supported in-process test boundary.
+    /// </summary>
+    /// <param name="fireAt">The time at which the durable timer would fire.</param>
+    /// <param name="cancellationToken">The token that would cancel the timer wait.</param>
+    /// <returns>This method does not return a task because the operation is unsupported.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// Always thrown because durable timer scheduling requires the Durable Functions runtime.
+    /// </exception>
     public override Task CreateTimer(DateTime fireAt, CancellationToken cancellationToken) =>
         throw Unsupported();
 

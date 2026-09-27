@@ -69,6 +69,7 @@ public sealed class DatabaseControllerTests : IClassFixture<TestApiFactory>
                 cancellationToken: cancellationToken);
         });
 
+    #region docs-ef-database-actions
     [Fact]
     public Task Generic_database_actions_support_seed_query_update_and_transactions() =>
         Run(async (scope, cancellationToken) =>
@@ -118,6 +119,7 @@ public sealed class DatabaseControllerTests : IClassFixture<TestApiFactory>
                 product => Assert.Equal("Updated", product.Name),
                 product => Assert.Equal("Transactional", product.Name));
         });
+    #endregion
 
     [Fact]
     public Task Fluent_database_scenario_seeds_and_mutates_isolated_data() =>

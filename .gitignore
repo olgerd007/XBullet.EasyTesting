@@ -4,6 +4,7 @@
 TestResults/
 artifacts/
 coverage/
+docs/api/generated/
 *.trx
 *.received.*
 *.user

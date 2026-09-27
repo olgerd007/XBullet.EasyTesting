@@ -64,6 +64,8 @@ public sealed class AspireTests
     }
 
 #if NET10_0
+    #region docs-aspire-timeout
+
     [Fact(Explicit = true)]
     public async Task Startup_timeout_is_reported_as_timeout_and_cleans_partial_state()
     {
@@ -72,6 +74,8 @@ public sealed class AspireTests
                 .WithStartupTimeout(TimeSpan.FromMilliseconds(1))
                 .StartAsync(TestContext.Current.CancellationToken));
     }
+
+    #endregion
 
     [Fact(Explicit = true)]
     public async Task Caller_cancellation_is_preserved_instead_of_reported_as_timeout()
@@ -85,6 +89,8 @@ public sealed class AspireTests
 
         Assert.IsNotType<TimeoutException>(exception);
     }
+
+    #region docs-aspire-run-diagnostics
 
     [Fact(Explicit = true)]
     public async Task Distributed_app_waits_for_health_serves_http_and_attaches_failure_diagnostics()
@@ -116,6 +122,10 @@ public sealed class AspireTests
         Assert.Equal("Healthy", api.HealthStatus);
         Assert.NotEmpty(api.Logs);
     }
+
+    #endregion
+
+    #region docs-aspire-manual-lifecycle
 
     [Fact(Explicit = true)]
     public async Task Distributed_app_exposes_all_resource_operations_and_disposes_idempotently()
@@ -162,6 +172,8 @@ public sealed class AspireTests
         await application.DisposeAsync();
         Assert.Throws<ObjectDisposedException>(() => application.GetEndpoint("api"));
     }
+
+    #endregion
 #endif
 
     private sealed class BuilderMarker;

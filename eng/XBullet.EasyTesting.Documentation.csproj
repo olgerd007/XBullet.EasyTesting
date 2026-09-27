@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\src\XBullet.EasyTesting\XBullet.EasyTesting.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\src\XBullet.EasyTesting.Aspire\XBullet.EasyTesting.Aspire.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\src\XBullet.EasyTesting.Azure\XBullet.EasyTesting.Azure.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\src\XBullet.EasyTesting.AzureFunctions\XBullet.EasyTesting.AzureFunctions.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\src\XBullet.EasyTesting.EntityFrameworkCore\XBullet.EasyTesting.EntityFrameworkCore.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\src\XBullet.EasyTesting.Http\XBullet.EasyTesting.Http.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\src\XBullet.EasyTesting.Messaging\XBullet.EasyTesting.Messaging.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\src\XBullet.EasyTesting.Observability\XBullet.EasyTesting.Observability.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\src\XBullet.EasyTesting.Snapshots\XBullet.EasyTesting.Snapshots.Core.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\src\XBullet.EasyTesting.Snapshots.Http\XBullet.EasyTesting.Snapshots.Http.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\src\XBullet.EasyTesting.Testcontainers\XBullet.EasyTesting.Testcontainers.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\src\XBullet.EasyTesting.Verify.Xunit\XBullet.EasyTesting.Verify.Xunit.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <Target
+    Name="VerifyDocumentation"
+    AfterTargets="Build"
+    Condition="'$(VerifyDocumentationOnBuild)' == 'true' and '$(DesignTimeBuild)' != 'true'">
+    <Message
+      Importance="high"
+      Text="Verifying documentation (disable with -p:VerifyDocumentationOnBuild=false)..." />
+    <Exec
+      Command="pwsh -NoLogo -NoProfile -File &quot;$(MSBuildThisFileDirectory)verify-documentation.ps1&quot; -NoBuild -WarningsAsErrors"
+      WorkingDirectory="$(MSBuildThisFileDirectory).." />
+  </Target>
+</Project>

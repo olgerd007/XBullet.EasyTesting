@@ -13,6 +13,8 @@ namespace TestFunctions.IntegrationTests;
 
 public sealed class FunctionTriggerTests
 {
+    #region docs-functions-context
+
     [Fact]
     public async Task Context_exposes_complete_worker_state()
     {
@@ -37,6 +39,10 @@ public sealed class FunctionTriggerTests
         Assert.Equal("item-value", context.Items["item"]);
         Assert.Equal(cancellation.Token, context.CancellationToken);
     }
+
+    #endregion
+
+    #region docs-functions-http-trigger
 
     [Fact]
     public async Task Http_trigger_accepts_an_order_and_records_the_invocation()
@@ -67,6 +73,10 @@ public sealed class FunctionTriggerTests
             Assert.Single(recorder.Invocations));
     }
 
+    #endregion
+
+    #region docs-functions-timer-trigger
+
     [Fact]
     public async Task Timer_trigger_exposes_schedule_and_past_due_state()
     {
@@ -95,6 +105,10 @@ public sealed class FunctionTriggerTests
             Assert.Single(recorder.Invocations));
     }
 
+    #endregion
+
+    #region docs-functions-kafka-trigger
+
     [Fact]
     public async Task Kafka_trigger_deserializes_and_records_an_order()
     {
@@ -117,6 +131,10 @@ public sealed class FunctionTriggerTests
             new TriggerInvocation("kafka", "order-kafka", 7),
             Assert.Single(recorder.Invocations));
     }
+
+    #endregion
+
+    #region docs-functions-kafka-realistic
 
     [Fact]
     public async Task Kafka_pricing_function_calls_external_api_and_records_the_enriched_order()
@@ -151,6 +169,8 @@ public sealed class FunctionTriggerTests
             Assert.Single(recorder.Invocations));
     }
 
+    #endregion
+
     [Fact]
     public async Task Kafka_pricing_function_propagates_external_failure_for_retry()
     {
@@ -174,6 +194,8 @@ public sealed class FunctionTriggerTests
         pricingApi.VerifyCalled(HttpMethod.Get, "/products/43/price");
         Assert.Empty(recorder.Invocations);
     }
+
+    #region docs-functions-servicebus-trigger
 
     [Fact]
     public async Task Service_Bus_trigger_captures_body_and_broker_metadata()
@@ -211,6 +233,10 @@ public sealed class FunctionTriggerTests
             Assert.Single(recorder.Invocations));
     }
 
+    #endregion
+
+    #region docs-functions-queue-trigger
+
     [Fact]
     public async Task Queue_trigger_captures_dequeue_metadata()
     {
@@ -233,6 +259,10 @@ public sealed class FunctionTriggerTests
             new TriggerInvocation("queue", "order-queue", 5),
             Assert.Single(recorder.Invocations));
     }
+
+    #endregion
+
+    #region docs-functions-blob-trigger
 
     [Fact]
     public async Task Blob_trigger_provides_content_stream_and_path_metadata()
@@ -257,6 +287,10 @@ public sealed class FunctionTriggerTests
             Assert.Single(recorder.Invocations));
     }
 
+    #endregion
+
+    #region docs-functions-eventgrid-trigger
+
     [Fact]
     public async Task Event_Grid_trigger_provides_envelope_and_event_metadata()
     {
@@ -280,6 +314,10 @@ public sealed class FunctionTriggerTests
             new TriggerInvocation("event-grid", "order-event-grid", 8),
             Assert.Single(recorder.Invocations));
     }
+
+    #endregion
+
+    #region docs-functions-eventhubs-trigger
 
     [Fact]
     public async Task Event_Hubs_trigger_supports_batches()
@@ -307,6 +345,10 @@ public sealed class FunctionTriggerTests
             new TriggerInvocation("event-hubs", "order-event-hubs-2", 10),
             recorder.Invocations);
     }
+
+    #endregion
+
+    #region docs-functions-middleware-outputs
 
     [Fact]
     public async Task Invocation_pipeline_runs_middleware_and_asserts_multiple_outputs()
@@ -365,6 +407,8 @@ public sealed class FunctionTriggerTests
         Assert.Throws<KeyNotFoundException>(() => bindings.GetOutput<string>("missing"));
         Assert.Throws<InvalidCastException>(() => bindings.GetOutput<int>("QueueMessage"));
     }
+
+    #endregion
 
     [Fact]
     public void Function_bindings_capture_null_scalar_and_composite_invocation_results()

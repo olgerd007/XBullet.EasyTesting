@@ -6,6 +6,8 @@ namespace XBullet.EasyTesting.Tests;
 
 public sealed class RecordedMessageBusTests
 {
+    #region docs-message-recording
+
     [Fact]
     public async Task Recorder_captures_serialized_payload_headers_and_destination()
     {
@@ -34,6 +36,10 @@ public sealed class RecordedMessageBusTests
         Assert.Empty(recorder.Messages);
     }
 
+    #endregion
+
+    #region docs-message-diagnostics
+
     [Fact]
     public void Assertions_describe_message_count_header_and_payload_mismatches()
     {
@@ -58,6 +64,8 @@ public sealed class RecordedMessageBusTests
         Assert.Contains("\"id\": 43", payloadFailure.Message);
         Assert.Contains("\"id\": 42", payloadFailure.Message);
     }
+
+    #endregion
 
     [Fact]
     public void Assertions_describe_missing_and_ambiguous_messages_and_headers()

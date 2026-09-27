@@ -12,7 +12,9 @@ dotnet add package XBullet.EasyTesting.EntityFrameworkCore
 
 ## Example
 
-Derive your test factory from `EntityFrameworkWebApplicationFactory<TEntryPoint, TDbContext>` to configure an isolated database for each scenario. Tests can seed, query, and execute scoped database actions through the factory while requests still run through the in-memory ASP.NET Core host.
+Derive your test factory from `EntityFrameworkWebApplicationFactory<TEntryPoint, TDbContext>` to
+configure an isolated database for each scenario. Tests can seed, query, and execute scoped database
+actions through the factory while requests still run through the in-memory ASP.NET Core host.
 
 For fast tests that do not require relational database behavior, derive from
 `InMemoryEntityFrameworkWebApplicationFactory<TEntryPoint, TDbContext>` instead. It registers
@@ -48,7 +50,6 @@ var product = await factory.QueryDatabaseAsync(
     (database, cancellationToken) => database.Products
         .SingleAsync(item => item.Id == 42, cancellationToken));
 ```
-
 `AddDbContextFactory<TContext>` is supported as a test registration. Database replacement removes
 both the application's context and `IDbContextFactory<TContext>` registrations before adding the
 test provider.
@@ -64,5 +65,6 @@ SQLite file cleanup clears connection pools, retries transient lock failures, an
 
 ## Documentation
 
-- [Database and application-boundary guide](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/application-boundaries.md)
+- [API reference](https://olgerd007.github.io/XBullet.EasyTesting/api/packages/xbullet-easytesting-entityframeworkcore.html)
+- [Entity Framework Core guide](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/entity-framework-core.md)
 - [Executable database examples](https://github.com/olgerd007/XBullet.EasyTesting/tree/main/tests/TestApi.IntegrationTests)

@@ -1,0 +1,87 @@
+{
+  "metadata": [
+    {
+      "src": [
+        {
+          "files": [
+            "XBullet.EasyTesting/XBullet.EasyTesting.csproj",
+            "XBullet.EasyTesting.Aspire/XBullet.EasyTesting.Aspire.csproj",
+            "XBullet.EasyTesting.Azure/XBullet.EasyTesting.Azure.csproj",
+            "XBullet.EasyTesting.AzureFunctions/XBullet.EasyTesting.AzureFunctions.csproj",
+            "XBullet.EasyTesting.EntityFrameworkCore/XBullet.EasyTesting.EntityFrameworkCore.csproj",
+            "XBullet.EasyTesting.Http/XBullet.EasyTesting.Http.csproj",
+            "XBullet.EasyTesting.Messaging/XBullet.EasyTesting.Messaging.csproj",
+            "XBullet.EasyTesting.Observability/XBullet.EasyTesting.Observability.csproj",
+            "XBullet.EasyTesting.Snapshots/XBullet.EasyTesting.Snapshots.Core.csproj",
+            "XBullet.EasyTesting.Snapshots.Http/XBullet.EasyTesting.Snapshots.Http.csproj",
+            "XBullet.EasyTesting.Testcontainers/XBullet.EasyTesting.Testcontainers.csproj",
+            "XBullet.EasyTesting.Verify.Xunit/XBullet.EasyTesting.Verify.Xunit.csproj"
+          ],
+          "src": "../src"
+        }
+      ],
+      "dest": "api/generated",
+      "properties": {
+        "Configuration": "Release",
+        "TargetFramework": "net10.0"
+      },
+      "noRestore": true,
+      "namespaceLayout": "flattened",
+      "memberLayout": "samePage"
+    }
+  ],
+  "build": {
+    "content": [
+      {
+        "files": [
+          "**/*.{md,yml}"
+        ],
+        "exclude": [
+          "api/generated/**",
+          "api/overrides/**"
+        ]
+      },
+      {
+        "files": [
+          "api/generated/**/*.yml"
+        ]
+      }
+    ],
+    "resource": [
+      {
+        "files": [
+          "CONTRIBUTING.md",
+          "README.md",
+          "SECURITY.md",
+          "src/*/README.md",
+          "tests/**/*.cs"
+        ],
+        "src": ".."
+      }
+    ],
+    "overwrite": [
+      {
+        "files": [
+          "api/overrides/*.md"
+        ]
+      }
+    ],
+    "output": "../artifacts/docs",
+    "template": [
+      "default",
+      "modern"
+    ],
+    "globalMetadata": {
+      "_appName": "XBullet.EasyTesting",
+      "_appTitle": "XBullet.EasyTesting documentation",
+      "_enableSearch": true,
+      "_enableNewTab": true,
+      "_gitContribute": {
+        "repo": "https://github.com/olgerd007/XBullet.EasyTesting",
+        "branch": "main"
+      },
+      "_gitUrlPattern": "github",
+      "_lang": "en"
+    }
+  }
+}

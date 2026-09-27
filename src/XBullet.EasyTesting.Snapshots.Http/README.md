@@ -86,6 +86,9 @@ Use `ScrubbingUrlPath(path => ...)` for other route transformations. Scrubbed qu
 
 ## Documentation
 
+- [API reference](https://olgerd007.github.io/XBullet.EasyTesting/api/packages/xbullet-easytesting-snapshots-http.html)
 - [Built-in snapshot guide](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/snapshots.md)
+- [Outbound HTTP snapshot recipe](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/snapshots/recipes.md#outbound-http-stub-requests-and-exchanges)
+- [Stabilization and redaction](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/snapshots/stabilizing-data.md)
 - [Snapshot core package](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/src/XBullet.EasyTesting.Snapshots/README.md)
 - [Compatibility facade](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/src/XBullet.EasyTesting.Snapshots.Compatibility/README.md)

@@ -44,5 +44,6 @@ when no names are configured, all sources and meters are captured.
 
 ## Documentation
 
-- [Documentation home and package selection](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/index.md)
+- [API reference](https://olgerd007.github.io/XBullet.EasyTesting/api/packages/xbullet-easytesting-observability.html)
+- [Observability guide](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/observability.md)
 - [Executable observability examples](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/tests/TestApi.IntegrationTests/ObservabilityTests.cs)

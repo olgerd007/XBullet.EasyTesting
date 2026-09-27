@@ -7,6 +7,8 @@
     <AnalysisModeSecurity>AllEnabledByDefault</AnalysisModeSecurity>
     <Deterministic>true</Deterministic>
     <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+    <VerifyDocumentationOnBuild
+      Condition="'$(VerifyDocumentationOnBuild)' == '' and '$(GITHUB_ACTIONS)' != 'true'">true</VerifyDocumentationOnBuild>
     <NuGetAudit>true</NuGetAudit>
     <NuGetAuditMode>all</NuGetAuditMode>
     <NuGetAuditLevel>moderate</NuGetAuditLevel>

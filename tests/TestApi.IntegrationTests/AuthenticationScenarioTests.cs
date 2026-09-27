@@ -15,6 +15,7 @@ public sealed class AuthenticationScenarioTests : IClassFixture<TestApiFactory>
         _factory = factory;
     }
 
+    #region docs-simulated-azure-ad-user
     [Fact]
     public Task Azure_ad_profile_can_access_its_scheme_and_policy() =>
         Run(async (scope, cancellationToken) =>
@@ -33,6 +34,7 @@ public sealed class AuthenticationScenarioTests : IClassFixture<TestApiFactory>
             Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
             Assert.Equal(HttpStatusCode.OK, genericResponse.StatusCode);
         });
+    #endregion
 
     [Fact]
     public Task Azure_ad_profile_is_rejected_by_api_key_scheme() =>

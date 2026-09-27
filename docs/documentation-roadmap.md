@@ -78,18 +78,23 @@ behavior, and documentation sections.
 
 **Goal:** make documentation examples readable and continuously verifiable.
 
-- [ ] Decide where canonical examples live: a dedicated examples test project or clearly marked
+**Status:** foundation complete. New canonical examples live in the multi-target integration-test
+projects, named source regions feed generated Markdown blocks, and CI rejects stale snippets.
+Existing package examples will adopt the mechanism as their focused guides are revised in
+Milestones 3 through 6.
+
+- [x] Decide where canonical examples live: a dedicated examples test project or clearly marked
   documentation scenarios in the existing integration-test projects.
-- [ ] Create small example applications and fixtures only where existing test applications are too
-  complex for teaching.
-- [ ] Define named source regions or another single-source snippet mechanism for Markdown examples.
-- [ ] Add a minimal example, a realistic example, and a failure example pattern.
-- [ ] Compile and run all canonical examples on supported target frameworks in CI.
-- [ ] Document how contributors add or update an example.
+- [x] Reuse existing sample applications and fixtures where they are clear; create smaller ones only
+  when unrelated setup would obscure the documented behavior.
+- [x] Define named source regions and a single-source synchronization mechanism for Markdown examples.
+- [x] Add a minimal example, a realistic example, and a failure example pattern.
+- [x] Compile and run all canonical examples on supported target frameworks in CI.
+- [x] Document how contributors add or update an example.
 
 **Exit criteria**
 
-- Documentation does not depend on untested, manually duplicated code samples.
+- New and migrated canonical examples do not depend on untested, manually duplicated code samples.
 - At least one example demonstrates the complete arrange, act, assert, and cleanup lifecycle.
 - A deliberately broken example causes the documentation validation job to fail.
 
@@ -98,16 +103,19 @@ behavior, and documentation sections.
 **Goal:** completely document the path from an empty test project to maintainable authenticated
 ASP.NET Core integration tests.
 
-- [ ] Write the first-controller-test tutorial.
-- [ ] Explain `AuthenticatedWebApplicationFactory`, `StartupAuthenticatedWebApplicationFactory`,
+**Status:** complete. Core concepts and task guides now cover host selection, authentication,
+scenario isolation, resources, overrides, response assertions, and EF Core with executable examples.
+
+- [x] Write the first-controller-test tutorial.
+- [x] Explain `AuthenticatedWebApplicationFactory`, `StartupAuthenticatedWebApplicationFactory`,
   and the composable `EasyTestHost` path, including when to select each.
-- [ ] Document anonymous users, custom users, claims, roles, multiple schemes, API keys, Azure AD
+- [x] Document anonymous users, custom users, claims, roles, multiple schemes, API keys, Azure AD
   identities, certificates, JWTs, and end-to-end authentication.
-- [ ] Explain scenario scopes, per-test isolation, environment resources, cleanup, cancellation, and
+- [x] Explain scenario scopes, per-test isolation, environment resources, cleanup, cancellation, and
   terminal diagnostics.
-- [ ] Document HTTP response assertions, including representative failure output.
-- [ ] Document service replacement and configuration overrides.
-- [ ] Write Entity Framework Core recipes for in-memory, SQLite, production-like providers,
+- [x] Document HTTP response assertions, including representative failure output.
+- [x] Document service replacement and configuration overrides.
+- [x] Write Entity Framework Core recipes for in-memory, SQLite, production-like providers,
   seeding, querying, migrations, database recreation, and cleanup failures.
 
 **Exit criteria**
@@ -120,16 +128,21 @@ ASP.NET Core integration tests.
 
 **Goal:** document how tests observe or replace the application's external interactions.
 
-- [ ] Document outbound HTTP request matching by method, path, query, headers, text, JSON, and
+**Status:** complete. Focused guides cover [outbound HTTP](guides/outbound-http.md),
+[messaging](guides/messaging.md), [observability](guides/observability.md), and
+[Azure SDK clients](guides/azure-sdk.md), with the
+[application-boundary hub](guides/application-boundaries.md) explaining combined scenarios.
+
+- [x] Document outbound HTTP request matching by method, path, query, headers, text, JSON, and
   custom predicates.
-- [ ] Cover response sequences, delays, cancellation, timeouts, malformed responses, faults, call
+- [x] Cover response sequences, delays, cancellation, timeouts, malformed responses, faults, call
   recording, and verification diagnostics.
-- [ ] Document message recording for Kafka, Azure Service Bus, Azure Notification Hubs, and custom
+- [x] Document message recording for Kafka, Azure Service Bus, Azure Notification Hubs, and custom
   transports.
-- [ ] Show assertions for message destinations, headers, typed payloads, counts, and ordering.
-- [ ] Document structured log, activity, and metric capture with realistic assertions.
-- [ ] Explain deterministic time and observability cleanup.
-- [ ] Document Azure SDK responses, paging, credentials, dependency injection, pipeline transport,
+- [x] Show assertions for message destinations, headers, typed payloads, counts, and ordering.
+- [x] Document structured log, activity, and metric capture with realistic assertions.
+- [x] Explain deterministic time and observability cleanup.
+- [x] Document Azure SDK responses, paging, credentials, dependency injection, pipeline transport,
   request recording, and failure verification.
 
 **Exit criteria**
@@ -142,17 +155,23 @@ ASP.NET Core integration tests.
 
 **Goal:** document tests that require real infrastructure, multiple processes, or Azure Functions.
 
-- [ ] Document built-in PostgreSQL, SQL Server, Kafka, Redis, RabbitMQ, Azurite, and Service Bus
+**Status:** complete. The [container infrastructure guide](guides/testcontainers.md),
+[Aspire guide](guides/aspire.md), [Azure Functions host guide](guides/azure-functions.md),
+[trigger recipes](guides/azure-functions-triggers.md), and
+[Durable boundary](guides/azure-functions-durable.md) use executable examples for supported
+infrastructure and invocation behavior.
+
+- [x] Document built-in PostgreSQL, SQL Server, Kafka, Redis, RabbitMQ, Azurite, and Service Bus
   emulator Testcontainers modules.
-- [ ] Show arbitrary-container configuration, readiness, resource sharing, cleanup, and failure
+- [x] Show arbitrary-container configuration, readiness, resource sharing, cleanup, and failure
   diagnostics.
-- [ ] Document Aspire application startup, resource discovery, endpoint access, readiness waits,
+- [x] Document Aspire application startup, resource discovery, endpoint access, readiness waits,
   logs, diagnostics, and shutdown.
-- [ ] Document the Azure Functions test host and direct function invocation.
-- [ ] Add trigger-specific recipes for HTTP, timer, Kafka, Service Bus, Queue Storage, Blob, Event
+- [x] Document the Azure Functions test host and direct function invocation.
+- [x] Add trigger-specific recipes for HTTP, timer, Kafka, Service Bus, Queue Storage, Blob, Event
   Grid, and Event Hubs.
-- [ ] Document output bindings, middleware, retry state, function contexts, and invocation results.
-- [ ] Explain supported Durable activity dispatch and unsupported Durable runtime behavior.
+- [x] Document output bindings, middleware, retry state, function contexts, and invocation results.
+- [x] Explain supported Durable activity dispatch and unsupported Durable runtime behavior.
 
 **Exit criteria**
 
@@ -165,17 +184,27 @@ ASP.NET Core integration tests.
 **Goal:** provide one coherent snapshot-testing story across core, HTTP adapters, the compatibility
 facade, and Verify.Xunit.
 
-- [ ] Split the existing detailed material into getting-started, concepts, recipes, maintenance,
-  and reference pages.
-- [ ] Explain snapshot file locations, naming, variants, and parallel execution.
-- [ ] Document JSON, text, controller response, complete HTTP exchange, and outbound stub snapshots.
-- [ ] Cover scrubbing, redaction, ignoring, hashing, canonicalization, and sorting with before/after
-  examples.
-- [ ] Document mismatch diagnostics, diff tools, acceptance, guarded updates, obsolete-file
-  detection, and CI behavior.
-- [ ] Explain project-wide and reusable defaults, including precedence rules.
-- [ ] Add a migration guide for the package split and compatibility facade.
-- [ ] Document when to use built-in assertions versus Verify.Xunit.
+**Status:** complete. The [snapshot workflow](guides/snapshots.md) now routes users from package
+selection through executable recipes, stabilization, review, and maintenance without requiring
+knowledge of the package's implementation history.
+
+- [x] Split the existing detailed material into [getting started](guides/snapshots/getting-started.md),
+  concepts, [recipes](guides/snapshots/recipes.md),
+  [maintenance](guides/snapshots/maintenance.md), and reference-oriented pages.
+- [x] Explain snapshot [file locations, naming, variants, and parallel
+  execution](guides/snapshots/files-and-naming.md).
+- [x] Document JSON, text, controller response, complete HTTP exchange, and outbound stub snapshots
+  in the [recipe collection](guides/snapshots/recipes.md).
+- [x] Cover scrubbing, redaction, ignoring, hashing, canonicalization, and sorting with before/after
+  examples in [stabilizing snapshot data](guides/snapshots/stabilizing-data.md).
+- [x] Document mismatch diagnostics, diff tools, acceptance, guarded updates, obsolete-file
+  detection, and CI behavior in [snapshot maintenance](guides/snapshots/maintenance.md).
+- [x] Explain project-wide and reusable defaults, including precedence rules, in [snapshot
+  defaults](guides/snapshots/defaults.md).
+- [x] Add a [migration guide](guides/snapshots/migration.md) for the package split and compatibility
+  facade.
+- [x] Document when to use [built-in assertions versus
+  Verify.Xunit](guides/snapshots/choose-engine.md).
 
 **Exit criteria**
 
@@ -187,14 +216,18 @@ facade, and Verify.Xunit.
 
 **Goal:** make the existing XML documentation available as searchable public reference material.
 
-- [ ] Select and configure a .NET-compatible documentation generator.
-- [ ] Generate pages for every shipped public namespace, type, member, parameter, return value, and
+**Status:** complete. The [searchable API reference](api/index.md) is generated by repository-pinned
+Docfx from the validated public Release surface, checked in CI with warnings treated as errors, and
+published from `main` and release tags.
+
+- [x] Select and configure a .NET-compatible documentation generator.
+- [x] Generate pages for every shipped public namespace, type, member, parameter, return value, and
   exception where applicable.
-- [ ] Group reference navigation by package and namespace.
-- [ ] Add conceptual links from important entry-point APIs to the relevant guides.
-- [ ] Resolve missing or unclear XML comments discovered by reference generation.
-- [ ] Exclude compatibility-only implementation details while documenting supported facade usage.
-- [ ] Publish a versioned or release-aligned documentation site.
+- [x] Group reference navigation by package and namespace.
+- [x] Add conceptual links from important entry-point APIs to the relevant guides.
+- [x] Resolve missing or unclear XML comments discovered by reference generation.
+- [x] Exclude compatibility-only implementation details while documenting supported facade usage.
+- [x] Publish a release-aligned documentation site through GitHub Pages automation.
 
 **Exit criteria**
 
@@ -207,14 +240,19 @@ facade, and Verify.Xunit.
 
 **Goal:** make documentation quality part of the normal development and release process.
 
-- [ ] Add Markdown formatting and style validation.
-- [ ] Add internal and external link checking with an explicit policy for transient external
+**Status:** complete. The consolidated documentation verifier now gates pull requests, publication,
+and package releases. The [maintenance policy](contributing/documentation-maintenance.md) defines
+link-failure handling, ownership, review intervals, and coverage responsibilities.
+
+- [x] Add Markdown formatting and style validation.
+- [x] Add internal and external link checking with an explicit policy for transient external
   failures.
-- [ ] Validate generated snippets and API pages in CI.
-- [ ] Add a pull-request checklist requiring documentation for public behavior changes.
-- [ ] Add a release checklist for versioned documentation, migration notes, and changelog links.
-- [ ] Add periodic review metadata or a documented review schedule for high-change pages.
-- [ ] Track documentation coverage in the feature matrix.
+- [x] Validate generated snippets and API pages in CI.
+- [x] Add a pull-request checklist requiring documentation for public behavior changes.
+- [x] Add a [release checklist](contributing/release-checklist.md) for versioned documentation,
+  migration notes, and changelog links.
+- [x] Add periodic review metadata or a documented review schedule for high-change pages.
+- [x] Track documentation coverage in the feature matrix.
 
 **Exit criteria**
 
@@ -239,9 +277,8 @@ A feature is documented when all applicable items below are complete:
 - [ ] Related guides, APIs, and canonical tests are linked.
 - [ ] The page passes automated documentation checks.
 
-## Recommended first delivery
+## Delivery status
 
-The first useful documentation release should complete Milestones 0 through 3. It provides stable
-navigation, verified examples, and a complete core user journey before the package-specific guides
-are expanded. Milestones 4 through 6 can then proceed largely independently, followed by the API
-reference and repository-wide quality gates.
+Milestones 0 through 8 are complete. Future documentation work follows the feature definition of
+done above, the [coverage matrix](documentation-coverage.md), and the
+[maintenance schedule](contributing/documentation-maintenance.md).

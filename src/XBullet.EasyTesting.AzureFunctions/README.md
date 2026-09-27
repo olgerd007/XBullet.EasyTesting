@@ -1,6 +1,8 @@
 # XBullet.EasyTesting.AzureFunctions
 
-In-memory test infrastructure for .NET isolated Azure Functions, including function contexts, middleware, bindings, retry state, Durable orchestration activity dispatch, and fluent trigger data.
+In-memory test infrastructure for .NET isolated Azure Functions, including function contexts,
+middleware, bindings, retry state, Durable orchestration activity dispatch, and fluent trigger
+data.
 
 The package targets .NET 8, .NET 9, and .NET 10.
 
@@ -27,9 +29,11 @@ var function = host.GetRequiredService<ProcessOrderHttpFunction>();
 var response = await function.RunAsync(request, request.FunctionContext);
 ```
 
-Builders are available for HTTP, timer, Kafka, Service Bus, Queue Storage, Blob, Event Grid, and Event Hubs triggers.
+Builders are available for HTTP, timer, Kafka, Service Bus, Queue Storage, Blob, Event Grid, and
+Event Hubs triggers.
 
-Durable orchestrators can use `TestOrchestrationContext` to record activity scheduling and dispatch each call to a real activity instance:
+Durable orchestrators can use `TestOrchestrationContext` to record activity scheduling and dispatch
+each call to a real activity instance:
 
 ```csharp
 var activity = new CreateOrderActivity(dependency);
@@ -53,5 +57,8 @@ sub-orchestrators, and replay state throw `NotSupportedException`.
 
 ## Documentation
 
+- [API reference](https://olgerd007.github.io/XBullet.EasyTesting/api/packages/xbullet-easytesting-azurefunctions.html)
 - [Detailed Azure Functions guide](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/azure-functions.md)
+- [Trigger recipes](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/azure-functions-triggers.md)
+- [Durable activity-dispatch boundary](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/azure-functions-durable.md)
 - [Executable Functions examples](https://github.com/olgerd007/XBullet.EasyTesting/tree/main/tests/TestFunctions.IntegrationTests)

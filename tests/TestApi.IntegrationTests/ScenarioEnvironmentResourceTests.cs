@@ -8,6 +8,7 @@ namespace TestApi.IntegrationTests;
 
 public sealed class ScenarioEnvironmentResourceTests
 {
+    #region docs-environment-resource-lifecycle
     [Fact]
     public async Task Environment_resource_starts_before_host_configuration_and_is_disposed_after_host()
     {
@@ -40,6 +41,7 @@ public sealed class ScenarioEnvironmentResourceTests
 
         Assert.Equal("disposed", events[^1]);
     }
+    #endregion
 
     [Fact]
     public async Task Environment_resource_diagnostics_are_captured_before_cleanup()
