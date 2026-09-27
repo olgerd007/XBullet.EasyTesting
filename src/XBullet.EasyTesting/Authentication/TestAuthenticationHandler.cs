@@ -17,6 +17,18 @@ public sealed class TestAuthenticationHandler : AuthenticationHandler<TestAuthen
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
 
     /// <summary>Initializes the test authentication handler.</summary>
+    /// <param name="options">
+    /// The framework-owned monitor that supplies options for each registered test authentication
+    /// scheme. The handler retains the monitor and does not dispose it.
+    /// </param>
+    /// <param name="logger">
+    /// The framework-owned factory used to create handler loggers. The handler retains the factory
+    /// and does not dispose it.
+    /// </param>
+    /// <param name="encoder">
+    /// The framework-owned URL encoder used by the authentication-handler base class. The handler
+    /// retains the encoder and does not dispose it.
+    /// </param>
     public TestAuthenticationHandler(
         IOptionsMonitor<TestAuthenticationOptions> options,
         ILoggerFactory logger,

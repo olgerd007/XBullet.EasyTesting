@@ -12,9 +12,17 @@ public sealed class TestScenarioResult : IDisposable
     }
 
     /// <summary>Gets the HTTP response produced by the scenario.</summary>
+    /// <value>
+    /// The response owned by this result. Disposing the result also disposes the response; callers
+    /// must not use it afterward.
+    /// </value>
     public HttpResponseMessage Response { get; }
 
     /// <summary>Starts a fluent assertion chain over the response.</summary>
+    /// <returns>
+    /// A new assertion wrapper over <see cref="Response"/>. The wrapper does not own or dispose the
+    /// response.
+    /// </returns>
     public TestHttpResponseAssertions Should() => new(Response);
 
     /// <inheritdoc />

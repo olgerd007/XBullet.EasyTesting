@@ -14,6 +14,10 @@ public sealed class SnapshotSettingsDefaults
     /// once while the test assembly is initialized. Each assertion receives an independent copy;
     /// explicit settings are merged into it and locally configured scalar values take precedence.
     /// </summary>
+    /// <value>
+    /// The process-wide template reference, or <see langword="null"/> to use package and environment
+    /// defaults. Reads and writes are atomic; configure it during test assembly initialization.
+    /// </value>
     public static SnapshotSettingsDefaults? Global
     {
         get => Volatile.Read(ref _global);
@@ -21,6 +25,10 @@ public sealed class SnapshotSettingsDefaults
     }
 
     /// <summary>Creates reusable defaults from a one-time configuration callback.</summary>
+    /// <param name="configure">
+    /// A non-null callback invoked synchronously once with a new mutable template. The callback must
+    /// not retain the template for later mutation.
+    /// </param>
     public SnapshotSettingsDefaults(Action<SnapshotSettings> configure)
     {
         ArgumentNullException.ThrowIfNull(configure);
@@ -29,6 +37,11 @@ public sealed class SnapshotSettingsDefaults
     }
 
     /// <summary>Creates an independent settings object and optionally applies local overrides.</summary>
+    /// <param name="configure">
+    /// An optional callback invoked synchronously once on the independent copy, or
+    /// <see langword="null"/> for no local overrides.
+    /// </param>
+    /// <returns>A new settings object whose mutable collections and JSON options are independent.</returns>
     public SnapshotSettings Create(Action<SnapshotSettings>? configure = null)
     {
         var settings = _template.Copy();
@@ -44,6 +57,8 @@ public sealed class SnapshotSettingsDefaults
     /// Creates settings from the global template, or package defaults when no global template is
     /// configured, and then applies per-assertion configuration.
     /// </summary>
+    /// <param name="configure">A non-null callback invoked synchronously once on the new settings object.</param>
+    /// <returns>Independent settings based on the global template or current package/environment defaults.</returns>
     public static SnapshotSettings ExtendGlobal(Action<SnapshotSettings> configure)
     {
         ArgumentNullException.ThrowIfNull(configure);

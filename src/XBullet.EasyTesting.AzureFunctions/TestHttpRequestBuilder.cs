@@ -23,6 +23,8 @@ public sealed class TestHttpRequestBuilder
     }
 
     /// <summary>Sets the HTTP method.</summary>
+    /// <param name="method">The non-null HTTP method whose method text is copied.</param>
+    /// <returns>This builder, for chaining.</returns>
     public TestHttpRequestBuilder WithMethod(HttpMethod method)
     {
         ArgumentNullException.ThrowIfNull(method);
@@ -30,6 +32,8 @@ public sealed class TestHttpRequestBuilder
     }
 
     /// <summary>Sets the HTTP method.</summary>
+    /// <param name="method">The non-empty method text retained without normalization. The default is <c>GET</c>.</param>
+    /// <returns>This builder, for chaining.</returns>
     public TestHttpRequestBuilder WithMethod(string method)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(method);
@@ -38,6 +42,8 @@ public sealed class TestHttpRequestBuilder
     }
 
     /// <summary>Sets an absolute URL, or a URL relative to <c>http://localhost/</c>.</summary>
+    /// <param name="url">The non-empty absolute or relative URL text.</param>
+    /// <returns>This builder, for chaining, with relative input resolved against <c>http://localhost/</c>.</returns>
     public TestHttpRequestBuilder WithUrl(string url)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(url);
@@ -45,6 +51,8 @@ public sealed class TestHttpRequestBuilder
     }
 
     /// <summary>Sets the request URL.</summary>
+    /// <param name="url">The non-null absolute or relative URI.</param>
+    /// <returns>This builder, for chaining, with relative input resolved against <c>http://localhost/</c>.</returns>
     public TestHttpRequestBuilder WithUrl(Uri url)
     {
         ArgumentNullException.ThrowIfNull(url);
@@ -53,6 +61,9 @@ public sealed class TestHttpRequestBuilder
     }
 
     /// <summary>Adds a request header.</summary>
+    /// <param name="name">The non-empty header name.</param>
+    /// <param name="value">The non-null header value; empty text is accepted.</param>
+    /// <returns>This builder, for chaining. Repeated calls can add multiple values.</returns>
     public TestHttpRequestBuilder WithHeader(string name, string value)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -62,6 +73,12 @@ public sealed class TestHttpRequestBuilder
     }
 
     /// <summary>Sets a UTF-8 text body and its content type.</summary>
+    /// <param name="value">The non-null text encoded immediately as UTF-8; empty text is accepted.</param>
+    /// <param name="contentType">
+    /// A non-empty syntactically valid media type. The default is <c>text/plain; charset=utf-8</c>.
+    /// Any existing content-type header is replaced.
+    /// </param>
+    /// <returns>This builder, for chaining, replacing the previous body.</returns>
     public TestHttpRequestBuilder WithTextBody(
         string value,
         string contentType = "text/plain; charset=utf-8")
@@ -74,6 +91,13 @@ public sealed class TestHttpRequestBuilder
     }
 
     /// <summary>Serializes a value as a JSON request body.</summary>
+    /// <typeparam name="T">The value type to serialize.</typeparam>
+    /// <param name="value">The value serialized immediately; null is emitted when <typeparamref name="T"/> permits it.</param>
+    /// <param name="options">
+    /// JSON options to use, or <see langword="null"/> for new web defaults. The content type is set to
+    /// <c>application/json; charset=utf-8</c>.
+    /// </param>
+    /// <returns>This builder, for chaining, replacing the previous body.</returns>
     public TestHttpRequestBuilder WithJsonBody<T>(
         T value,
         JsonSerializerOptions? options = null)
@@ -86,6 +110,10 @@ public sealed class TestHttpRequestBuilder
     }
 
     /// <summary>Adds an authenticated or unauthenticated claims identity.</summary>
+    /// <param name="identity">
+    /// The non-null identity reference to retain. It is not cloned, so later identity mutations are visible.
+    /// </param>
+    /// <returns>This builder, for chaining. Identities retain insertion order.</returns>
     public TestHttpRequestBuilder WithIdentity(ClaimsIdentity identity)
     {
         ArgumentNullException.ThrowIfNull(identity);
@@ -94,6 +122,11 @@ public sealed class TestHttpRequestBuilder
     }
 
     /// <summary>Creates the HTTP request data instance.</summary>
+    /// <returns>
+    /// A new request with a caller-owned read-only body stream, also captured as the context's
+    /// <c>request</c> HTTP-trigger input. Headers and identities reflect the builder's collections;
+    /// avoid further builder mutation while using the request.
+    /// </returns>
     public HttpRequestData Build()
     {
         var request = new TestHttpRequestData(

@@ -8,6 +8,7 @@ public sealed class HttpExchangeSnapshotOptions
     private bool _includesGlobalDefaults;
 
     /// <summary>Gets or sets the committed snapshot file format. The default is JSON.</summary>
+    /// <value>The JSON, HTTP text, or YAML output format.</value>
     public HttpExchangeSnapshotFormat Format
     {
         get => _format;
@@ -19,9 +20,11 @@ public sealed class HttpExchangeSnapshotOptions
     }
 
     /// <summary>Gets the request snapshot options.</summary>
+    /// <value>The mutable request options owned by this instance.</value>
     public HttpExchangeRequestSnapshotOptions Request { get; } = new();
 
     /// <summary>Gets the response snapshot options.</summary>
+    /// <value>The mutable response options owned by this instance.</value>
     public HttpExchangeResponseSnapshotOptions Response { get; } = new();
 
     internal HttpExchangeSnapshotOptions Copy()
@@ -67,6 +70,7 @@ public sealed class HttpExchangeRequestSnapshotOptions
     private OptionOverrides _overrides;
 
     /// <summary>Gets or sets whether request headers are included.</summary>
+    /// <value><see langword="true"/> by default; <see langword="false"/> omits all request headers.</value>
     public bool IncludeHeaders
     {
         get => _includeHeaders;
@@ -78,6 +82,7 @@ public sealed class HttpExchangeRequestSnapshotOptions
     }
 
     /// <summary>Gets or sets whether request content is included.</summary>
+    /// <value><see langword="true"/> by default; <see langword="false"/> omits the request body.</value>
     public bool IncludeBody
     {
         get => _includeBody;
@@ -89,24 +94,29 @@ public sealed class HttpExchangeRequestSnapshotOptions
     }
 
     /// <summary>Gets request headers excluded from snapshots.</summary>
+    /// <value>A live case-insensitive set prepopulated with volatile and credential-bearing headers.</value>
     public ISet<string> IgnoredHeaders { get; } = CreateIgnoredHeaders();
 
     /// <summary>Gets request headers whose values are replaced with <c>{Redacted}</c>.</summary>
+    /// <value>A live case-insensitive set. Redaction preserves header presence and overrides inclusion.</value>
     public ISet<string> RedactedHeaders { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Gets query parameters whose values are replaced with <c>{Redacted}</c>.</summary>
+    /// <value>A live case-insensitive set prepopulated with common credential parameter names.</value>
     public ISet<string> RedactedQueryParameters { get; } = SensitiveQueryParameterDefaults.Create();
 
     /// <summary>
     /// Gets query parameters whose values are replaced with <c>{Scrubbed}</c>. Security redaction
     /// takes precedence when a name appears in both query-parameter sets.
     /// </summary>
+    /// <value>A live case-insensitive set for volatile, non-secret values.</value>
     public ISet<string> ScrubbedQueryParameters { get; } =
         new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
     internal List<Func<string, string>> UrlPathScrubbers { get; } = [];
 
     /// <summary>Excludes request headers and returns this instance.</summary>
+    /// <returns>This options instance, for chaining.</returns>
     public HttpExchangeRequestSnapshotOptions WithoutHeaders()
     {
         IncludeHeaders = false;
@@ -114,6 +124,7 @@ public sealed class HttpExchangeRequestSnapshotOptions
     }
 
     /// <summary>Excludes request content and returns this instance.</summary>
+    /// <returns>This options instance, for chaining.</returns>
     public HttpExchangeRequestSnapshotOptions WithoutBody()
     {
         IncludeBody = false;
@@ -121,6 +132,8 @@ public sealed class HttpExchangeRequestSnapshotOptions
     }
 
     /// <summary>Excludes request headers and returns this instance.</summary>
+    /// <param name="headerNames">A non-null array of non-empty names, matched case-insensitively.</param>
+    /// <returns>This options instance, for chaining. Exclusion removes any redaction decision.</returns>
     public HttpExchangeRequestSnapshotOptions IgnoringHeaders(params string[] headerNames)
     {
         ArgumentNullException.ThrowIfNull(headerNames);
@@ -136,6 +149,8 @@ public sealed class HttpExchangeRequestSnapshotOptions
     }
 
     /// <summary>Includes a request header that was excluded by default.</summary>
+    /// <param name="headerName">The non-empty case-insensitive name to include with its original values.</param>
+    /// <returns>This options instance, for chaining, clearing ignore and redaction decisions.</returns>
     public HttpExchangeRequestSnapshotOptions IncludingHeader(string headerName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(headerName);
@@ -146,10 +161,14 @@ public sealed class HttpExchangeRequestSnapshotOptions
     }
 
     /// <summary>Redacts a request header value while preserving the header.</summary>
+    /// <param name="headerName">The non-empty case-insensitive name to preserve with a redacted value.</param>
+    /// <returns>This options instance, for chaining.</returns>
     public HttpExchangeRequestSnapshotOptions RedactingHeader(string headerName) =>
         RedactingHeaders(headerName);
 
     /// <summary>Redacts request header values while preserving the headers.</summary>
+    /// <param name="headerNames">A non-null array of non-empty names, matched case-insensitively.</param>
+    /// <returns>This options instance, for chaining, removing those names from ignored headers.</returns>
     public HttpExchangeRequestSnapshotOptions RedactingHeaders(params string[] headerNames)
     {
         ArgumentNullException.ThrowIfNull(headerNames);
@@ -165,10 +184,14 @@ public sealed class HttpExchangeRequestSnapshotOptions
     }
 
     /// <summary>Redacts one query-parameter value and returns this instance.</summary>
+    /// <param name="parameterName">The non-empty case-insensitive parameter name.</param>
+    /// <returns>This options instance, for chaining.</returns>
     public HttpExchangeRequestSnapshotOptions RedactingQueryParameter(string parameterName) =>
         RedactingQueryParameters(parameterName);
 
     /// <summary>Redacts query-parameter values and returns this instance.</summary>
+    /// <param name="parameterNames">A non-null array of non-empty names, matched case-insensitively.</param>
+    /// <returns>This options instance, for chaining. Security redaction removes ordinary scrubbing.</returns>
     public HttpExchangeRequestSnapshotOptions RedactingQueryParameters(params string[] parameterNames)
     {
         ArgumentNullException.ThrowIfNull(parameterNames);
@@ -184,10 +207,14 @@ public sealed class HttpExchangeRequestSnapshotOptions
     }
 
     /// <summary>Scrubs one volatile query-parameter value and returns this instance.</summary>
+    /// <param name="parameterName">The non-empty case-insensitive parameter name.</param>
+    /// <returns>This options instance, for chaining; existing security redaction remains authoritative.</returns>
     public HttpExchangeRequestSnapshotOptions ScrubbingQueryParameter(string parameterName) =>
         ScrubbingQueryParameters(parameterName);
 
     /// <summary>Scrubs volatile query-parameter values and returns this instance.</summary>
+    /// <param name="parameterNames">A non-null array of non-empty names, matched case-insensitively.</param>
+    /// <returns>This options instance, for chaining; redacted names are not downgraded to scrubbing.</returns>
     public HttpExchangeRequestSnapshotOptions ScrubbingQueryParameters(params string[] parameterNames)
     {
         ArgumentNullException.ThrowIfNull(parameterNames);
@@ -205,6 +232,8 @@ public sealed class HttpExchangeRequestSnapshotOptions
     }
 
     /// <summary>Adds a transformation applied to the request URL path before it is snapshotted.</summary>
+    /// <param name="scrubber">A non-null transformation retained and applied in registration order to the path only.</param>
+    /// <returns>This options instance, for chaining.</returns>
     public HttpExchangeRequestSnapshotOptions ScrubbingUrlPath(Func<string, string> scrubber)
     {
         ArgumentNullException.ThrowIfNull(scrubber);
@@ -213,10 +242,13 @@ public sealed class HttpExchangeRequestSnapshotOptions
     }
 
     /// <summary>Replaces complete GUID request-path segments with <c>{Guid}</c>.</summary>
+    /// <returns>This options instance, for chaining.</returns>
     public HttpExchangeRequestSnapshotOptions ScrubbingUrlPathGuids() =>
         ScrubbingUrlPath(SnapshotUrlFormatter.ScrubGuidsInPath);
 
     /// <summary>Includes the original value of a query parameter.</summary>
+    /// <param name="parameterName">The non-empty case-insensitive name whose original value is safe to expose.</param>
+    /// <returns>This options instance, for chaining, clearing redaction and scrubbing for the name.</returns>
     public HttpExchangeRequestSnapshotOptions IncludingQueryParameter(string parameterName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(parameterName);
@@ -352,6 +384,7 @@ public sealed class HttpExchangeResponseSnapshotOptions
     private OptionOverrides _overrides;
 
     /// <summary>Gets or sets whether response headers are included.</summary>
+    /// <value><see langword="true"/> by default; <see langword="false"/> omits all response headers.</value>
     public bool IncludeHeaders
     {
         get => _includeHeaders;
@@ -363,6 +396,7 @@ public sealed class HttpExchangeResponseSnapshotOptions
     }
 
     /// <summary>Gets or sets whether response content is included.</summary>
+    /// <value><see langword="true"/> by default; <see langword="false"/> omits the response body.</value>
     public bool IncludeBody
     {
         get => _includeBody;
@@ -374,12 +408,15 @@ public sealed class HttpExchangeResponseSnapshotOptions
     }
 
     /// <summary>Gets response headers excluded from snapshots.</summary>
+    /// <value>A live case-insensitive set prepopulated with volatile and security-sensitive headers.</value>
     public ISet<string> IgnoredHeaders { get; } = CreateIgnoredHeaders();
 
     /// <summary>Gets response headers whose values are replaced with <c>{Redacted}</c>.</summary>
+    /// <value>A live case-insensitive set. Redaction preserves header presence.</value>
     public ISet<string> RedactedHeaders { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Excludes response headers and returns this instance.</summary>
+    /// <returns>This options instance, for chaining.</returns>
     public HttpExchangeResponseSnapshotOptions WithoutHeaders()
     {
         IncludeHeaders = false;
@@ -387,6 +424,7 @@ public sealed class HttpExchangeResponseSnapshotOptions
     }
 
     /// <summary>Excludes response content and returns this instance.</summary>
+    /// <returns>This options instance, for chaining.</returns>
     public HttpExchangeResponseSnapshotOptions WithoutBody()
     {
         IncludeBody = false;
@@ -394,6 +432,8 @@ public sealed class HttpExchangeResponseSnapshotOptions
     }
 
     /// <summary>Excludes response headers and returns this instance.</summary>
+    /// <param name="headerNames">A non-null array of non-empty names, matched case-insensitively.</param>
+    /// <returns>This options instance, for chaining. Exclusion removes any redaction decision.</returns>
     public HttpExchangeResponseSnapshotOptions IgnoringHeaders(params string[] headerNames)
     {
         ArgumentNullException.ThrowIfNull(headerNames);
@@ -409,6 +449,8 @@ public sealed class HttpExchangeResponseSnapshotOptions
     }
 
     /// <summary>Includes a response header that was excluded by default.</summary>
+    /// <param name="headerName">The non-empty case-insensitive name to include with original values.</param>
+    /// <returns>This options instance, for chaining, clearing ignore and redaction decisions.</returns>
     public HttpExchangeResponseSnapshotOptions IncludingHeader(string headerName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(headerName);
@@ -419,10 +461,14 @@ public sealed class HttpExchangeResponseSnapshotOptions
     }
 
     /// <summary>Redacts a response header value while preserving the header.</summary>
+    /// <param name="headerName">The non-empty case-insensitive name to preserve with a redacted value.</param>
+    /// <returns>This options instance, for chaining.</returns>
     public HttpExchangeResponseSnapshotOptions RedactingHeader(string headerName) =>
         RedactingHeaders(headerName);
 
     /// <summary>Redacts response header values while preserving the headers.</summary>
+    /// <param name="headerNames">A non-null array of non-empty names, matched case-insensitively.</param>
+    /// <returns>This options instance, for chaining, removing those names from ignored headers.</returns>
     public HttpExchangeResponseSnapshotOptions RedactingHeaders(params string[] headerNames)
     {
         ArgumentNullException.ThrowIfNull(headerNames);

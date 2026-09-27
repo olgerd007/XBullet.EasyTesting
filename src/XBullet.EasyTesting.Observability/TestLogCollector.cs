@@ -14,6 +14,14 @@ public sealed class TestLogCollector : ILoggerProvider, ISupportExternalScope, I
     private IExternalScopeProvider _scopeProvider = new LoggerExternalScopeProvider();
 
     /// <summary>Creates a collector with an optional clock and bounded entry count.</summary>
+    /// <param name="timeProvider">
+    /// The clock used for capture timestamps, or <see langword="null"/> to use
+    /// <see cref="TimeProvider.System"/>. The provider is retained but not owned or disposed.
+    /// </param>
+    /// <param name="maximumEntries">
+    /// The positive maximum number of entries retained. The default is 1,000; when the bound is
+    /// exceeded, the oldest entries are discarded first.
+    /// </param>
     public TestLogCollector(TimeProvider? timeProvider = null, int maximumEntries = 1_000)
     {
         if (maximumEntries <= 0)
@@ -26,6 +34,10 @@ public sealed class TestLogCollector : ILoggerProvider, ISupportExternalScope, I
     }
 
     /// <summary>Gets a stable copy of captured entries in recording order.</summary>
+    /// <value>
+    /// A newly allocated snapshot in recording order. The caller may retain the list. Entries can
+    /// contain unredacted messages, state, scopes, and exceptions with sensitive data.
+    /// </value>
     public IReadOnlyList<TestLogEntry> Entries
     {
         get
@@ -38,6 +50,7 @@ public sealed class TestLogCollector : ILoggerProvider, ISupportExternalScope, I
     }
 
     /// <summary>Gets the number of currently captured entries.</summary>
+    /// <value>A value from zero through the configured maximum entry count.</value>
     public int Count
     {
         get
@@ -50,6 +63,7 @@ public sealed class TestLogCollector : ILoggerProvider, ISupportExternalScope, I
     }
 
     /// <summary>Starts a fluent assertion chain over the captured logs.</summary>
+    /// <returns>A new assertion object that reads this collector's current snapshots.</returns>
     public TestLogCollectorAssertions Should() => new(this);
 
     /// <inheritdoc />
@@ -67,6 +81,7 @@ public sealed class TestLogCollector : ILoggerProvider, ISupportExternalScope, I
     }
 
     /// <summary>Removes every captured log entry and returns this collector.</summary>
+    /// <returns>This collector, for chaining. Its clock, scope provider, and maximum remain unchanged.</returns>
     public TestLogCollector Reset()
     {
         lock (_gate)

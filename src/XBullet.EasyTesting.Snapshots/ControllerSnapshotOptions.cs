@@ -12,6 +12,7 @@ public sealed class ControllerSnapshotOptions
     private bool _includesGlobalDefaults;
 
     /// <summary>Gets or sets whether the request method and relative URL are included.</summary>
+    /// <value><see langword="true"/> by default; <see langword="false"/> omits request context.</value>
     public bool IncludeRequest
     {
         get => _includeRequest;
@@ -23,6 +24,7 @@ public sealed class ControllerSnapshotOptions
     }
 
     /// <summary>Gets or sets whether response content is included.</summary>
+    /// <value><see langword="true"/> by default; <see langword="false"/> omits the response body.</value>
     public bool IncludeBody
     {
         get => _includeBody;
@@ -34,6 +36,7 @@ public sealed class ControllerSnapshotOptions
     }
 
     /// <summary>Gets or sets whether response headers are included.</summary>
+    /// <value><see langword="true"/> by default; <see langword="false"/> emits an empty header dictionary.</value>
     public bool IncludeHeaders
     {
         get => _includeHeaders;
@@ -48,18 +51,21 @@ public sealed class ControllerSnapshotOptions
     /// Gets headers excluded from snapshots. Volatile infrastructure headers are excluded by default.
     /// Header names are matched without regard to case.
     /// </summary>
+    /// <value>A live case-insensitive set prepopulated with volatile and sensitive response headers.</value>
     public ISet<string> IgnoredHeaders { get; } = CreateIgnoredHeaders();
 
     /// <summary>
     /// Gets headers whose presence is captured while their values are replaced with
     /// <c>{Redacted}</c>. Header names are matched without regard to case.
     /// </summary>
+    /// <value>A live case-insensitive set. Redaction preserves header presence.</value>
     public ISet<string> RedactedHeaders { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Gets request query parameters whose values are replaced with <c>{Redacted}</c>.
     /// Names are matched without regard to case.
     /// </summary>
+    /// <value>A live case-insensitive set prepopulated with common credential parameter names.</value>
     public ISet<string> RedactedQueryParameters { get; } = SensitiveQueryParameterDefaults.Create();
 
     /// <summary>
@@ -67,12 +73,14 @@ public sealed class ControllerSnapshotOptions
     /// Names are matched without regard to case. Security redaction takes precedence when a name
     /// appears in both query-parameter sets.
     /// </summary>
+    /// <value>A live case-insensitive set for volatile, non-secret request values.</value>
     public ISet<string> ScrubbedQueryParameters { get; } =
         new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
     internal List<Func<string, string>> UrlPathScrubbers { get; } = [];
 
     /// <summary>Excludes request details and returns this instance.</summary>
+    /// <returns>This options instance, for chaining.</returns>
     public ControllerSnapshotOptions WithoutRequest()
     {
         IncludeRequest = false;
@@ -80,6 +88,7 @@ public sealed class ControllerSnapshotOptions
     }
 
     /// <summary>Excludes the response body and returns this instance.</summary>
+    /// <returns>This options instance, for chaining.</returns>
     public ControllerSnapshotOptions WithoutBody()
     {
         IncludeBody = false;
@@ -87,6 +96,7 @@ public sealed class ControllerSnapshotOptions
     }
 
     /// <summary>Excludes all response headers and returns this instance.</summary>
+    /// <returns>This options instance, for chaining.</returns>
     public ControllerSnapshotOptions WithoutHeaders()
     {
         IncludeHeaders = false;
@@ -94,6 +104,8 @@ public sealed class ControllerSnapshotOptions
     }
 
     /// <summary>Excludes response headers and returns this instance.</summary>
+    /// <param name="headerNames">A non-null array of non-empty names, matched case-insensitively.</param>
+    /// <returns>This options instance, for chaining. Exclusion removes redaction for those names.</returns>
     public ControllerSnapshotOptions IgnoringHeaders(params string[] headerNames)
     {
         ArgumentNullException.ThrowIfNull(headerNames);
@@ -109,6 +121,8 @@ public sealed class ControllerSnapshotOptions
     }
 
     /// <summary>Includes a header that was excluded by default and returns this instance.</summary>
+    /// <param name="headerName">The non-empty case-insensitive name whose original values are safe to expose.</param>
+    /// <returns>This options instance, for chaining, clearing ignore and redaction decisions.</returns>
     public ControllerSnapshotOptions IncludingHeader(string headerName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(headerName);
@@ -119,10 +133,14 @@ public sealed class ControllerSnapshotOptions
     }
 
     /// <summary>Redacts response header values while preserving the header and returns this instance.</summary>
+    /// <param name="headerName">The non-empty case-insensitive name to preserve with a redacted value.</param>
+    /// <returns>This options instance, for chaining.</returns>
     public ControllerSnapshotOptions RedactingHeader(string headerName) =>
         RedactingHeaders(headerName);
 
     /// <summary>Redacts response header values while preserving the headers and returns this instance.</summary>
+    /// <param name="headerNames">A non-null array of non-empty names, matched case-insensitively.</param>
+    /// <returns>This options instance, for chaining, removing those names from ignored headers.</returns>
     public ControllerSnapshotOptions RedactingHeaders(params string[] headerNames)
     {
         ArgumentNullException.ThrowIfNull(headerNames);
@@ -138,10 +156,14 @@ public sealed class ControllerSnapshotOptions
     }
 
     /// <summary>Redacts one request query-parameter value and returns this instance.</summary>
+    /// <param name="parameterName">The non-empty case-insensitive request parameter name.</param>
+    /// <returns>This options instance, for chaining.</returns>
     public ControllerSnapshotOptions RedactingQueryParameter(string parameterName) =>
         RedactingQueryParameters(parameterName);
 
     /// <summary>Redacts request query-parameter values and returns this instance.</summary>
+    /// <param name="parameterNames">A non-null array of non-empty names, matched case-insensitively.</param>
+    /// <returns>This options instance, for chaining. Security redaction removes ordinary scrubbing.</returns>
     public ControllerSnapshotOptions RedactingQueryParameters(params string[] parameterNames)
     {
         ArgumentNullException.ThrowIfNull(parameterNames);
@@ -157,10 +179,14 @@ public sealed class ControllerSnapshotOptions
     }
 
     /// <summary>Scrubs one volatile request query-parameter value and returns this instance.</summary>
+    /// <param name="parameterName">The non-empty case-insensitive request parameter name.</param>
+    /// <returns>This options instance, for chaining; existing security redaction remains authoritative.</returns>
     public ControllerSnapshotOptions ScrubbingQueryParameter(string parameterName) =>
         ScrubbingQueryParameters(parameterName);
 
     /// <summary>Scrubs volatile request query-parameter values and returns this instance.</summary>
+    /// <param name="parameterNames">A non-null array of non-empty names, matched case-insensitively.</param>
+    /// <returns>This options instance, for chaining; redacted names are not downgraded.</returns>
     public ControllerSnapshotOptions ScrubbingQueryParameters(params string[] parameterNames)
     {
         ArgumentNullException.ThrowIfNull(parameterNames);
@@ -178,6 +204,8 @@ public sealed class ControllerSnapshotOptions
     }
 
     /// <summary>Adds a transformation applied to the request URL path before it is snapshotted.</summary>
+    /// <param name="scrubber">A non-null callback retained and applied in registration order to the path only.</param>
+    /// <returns>This options instance, for chaining.</returns>
     public ControllerSnapshotOptions ScrubbingUrlPath(Func<string, string> scrubber)
     {
         ArgumentNullException.ThrowIfNull(scrubber);
@@ -186,10 +214,13 @@ public sealed class ControllerSnapshotOptions
     }
 
     /// <summary>Replaces complete GUID request-path segments with <c>{Guid}</c>.</summary>
+    /// <returns>This options instance, for chaining.</returns>
     public ControllerSnapshotOptions ScrubbingUrlPathGuids() =>
         ScrubbingUrlPath(SnapshotUrlFormatter.ScrubGuidsInPath);
 
     /// <summary>Includes the original value of a query parameter and returns this instance.</summary>
+    /// <param name="parameterName">The non-empty case-insensitive name whose original value is safe to expose.</param>
+    /// <returns>This options instance, for chaining, clearing redaction and scrubbing.</returns>
     public ControllerSnapshotOptions IncludingQueryParameter(string parameterName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(parameterName);

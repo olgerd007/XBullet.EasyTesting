@@ -14,6 +14,9 @@ namespace XBullet.EasyTesting.Hosting;
 /// <see cref="AuthenticatedWebApplicationFactory{TEntryPoint}"/> without executing an application
 /// entry point.
 /// </remarks>
+/// <typeparam name="TStartup">
+/// The application <c>Startup</c> type used to configure the in-memory test server.
+/// </typeparam>
 public class StartupAuthenticatedWebApplicationFactory<TStartup>
     : AuthenticatedWebApplicationFactory<TStartup>
     where TStartup : class

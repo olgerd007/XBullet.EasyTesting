@@ -14,6 +14,8 @@ namespace XBullet.EasyTesting.EntityFrameworkCore;
 /// Use <see cref="EntityFrameworkWebApplicationFactory{TEntryPoint, TDbContext}"/>
 /// with a relational provider when relational behavior is part of the test.
 /// </remarks>
+/// <typeparam name="TEntryPoint">The application entry-point type hosted by the test factory.</typeparam>
+/// <typeparam name="TDbContext">The EF Core context type registered with the in-memory provider.</typeparam>
 public class InMemoryEntityFrameworkWebApplicationFactory<TEntryPoint, TDbContext>
     : EntityFrameworkWebApplicationFactory<TEntryPoint, TDbContext>
     where TEntryPoint : class
@@ -35,6 +37,11 @@ public class InMemoryEntityFrameworkWebApplicationFactory<TEntryPoint, TDbContex
     /// <summary>
     /// Configures options shared by the factory database and every scenario database.
     /// </summary>
+    /// <param name="options">
+    /// The mutable options builder to configure in place. The factory owns it; implementations must
+    /// not retain it. The in-memory provider and isolated database name have already been configured.
+    /// </param>
+    /// <remarks>This callback may run more than once as dependency-injection providers build context options.</remarks>
     protected virtual void ConfigureInMemoryDatabase(DbContextOptionsBuilder options)
     {
     }

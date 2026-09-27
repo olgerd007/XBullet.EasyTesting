@@ -6,6 +6,11 @@ namespace XBullet.EasyTesting.AzureFunctions;
 public sealed class TestRetryContext : RetryContext
 {
     /// <summary>Creates retry state for an invocation.</summary>
+    /// <param name="retryCount">The non-negative current retry count. The default is zero.</param>
+    /// <param name="maxRetryCount">
+    /// The non-negative maximum retry count, greater than or equal to <paramref name="retryCount"/>.
+    /// The default is zero.
+    /// </param>
     public TestRetryContext(int retryCount = 0, int maxRetryCount = 0)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(retryCount);

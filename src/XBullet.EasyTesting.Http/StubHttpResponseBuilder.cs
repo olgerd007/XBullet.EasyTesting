@@ -7,7 +7,12 @@ using XBullet.EasyTesting.Diagnostics;
 
 namespace XBullet.EasyTesting.Http;
 
-/// <summary>Defines the response returned by one outbound HTTP request rule.</summary>
+/// <summary>Defines matchers and responses for one outbound HTTP request rule.</summary>
+/// <remarks>
+/// This mutable builder is not thread-safe. Matcher values are snapshotted when a terminal
+/// response method adds the rule to the handler; stored predicates and factories may subsequently
+/// be invoked concurrently by matching requests.
+/// </remarks>
 public sealed class StubHttpResponseBuilder
 {
     private static readonly JsonSerializerOptions DefaultSerializerOptions =
@@ -31,6 +36,12 @@ public sealed class StubHttpResponseBuilder
     }
 
     /// <summary>Requires the request to contain an exact header value.</summary>
+    /// <param name="name">The non-empty, case-insensitive HTTP header name to inspect.</param>
+    /// <param name="value">
+    /// The non-null header value to match using ordinal, case-sensitive comparison. An empty value
+    /// is accepted.
+    /// </param>
+    /// <returns>This builder so additional request matchers can be configured.</returns>
     public StubHttpResponseBuilder WithRequestHeader(string name, string value)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -44,6 +55,15 @@ public sealed class StubHttpResponseBuilder
     }
 
     /// <summary>Requires the request query string to contain an exact parameter value.</summary>
+    /// <param name="name">
+    /// The non-empty, case-sensitive decoded query-parameter name. Adding a query matcher changes
+    /// the rule's URI comparison to ignore the query string itself.
+    /// </param>
+    /// <param name="value">
+    /// The non-null decoded value to match using ordinal, case-sensitive comparison. An empty value
+    /// is accepted. Values of recognized sensitive parameters are redacted from diagnostics.
+    /// </param>
+    /// <returns>This builder so additional request matchers can be configured.</returns>
     public StubHttpResponseBuilder WithQueryParameter(string name, string value)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -60,6 +80,16 @@ public sealed class StubHttpResponseBuilder
     }
 
     /// <summary>Requires the values of a request query parameter to satisfy a predicate.</summary>
+    /// <param name="name">
+    /// The non-empty, case-sensitive decoded query-parameter name. Adding a query matcher changes
+    /// the rule's URI comparison to ignore the query string itself.
+    /// </param>
+    /// <param name="predicate">
+    /// The non-null predicate invoked for each request that reaches this matcher with all decoded
+    /// values in request order, or an empty list when the parameter is absent. It may run more than
+    /// once and concurrently. Exceptions are reported as rule mismatches. Do not retain the list.
+    /// </param>
+    /// <returns>This builder so additional request matchers can be configured.</returns>
     public StubHttpResponseBuilder WithQueryParameter(
         string name,
         Func<IReadOnlyList<string>, bool> predicate)
@@ -74,6 +104,11 @@ public sealed class StubHttpResponseBuilder
     }
 
     /// <summary>Requires the request body to exactly match the supplied text.</summary>
+    /// <param name="body">
+    /// The non-null expected body compared using ordinal, case-sensitive comparison. An empty body
+    /// is accepted.
+    /// </param>
+    /// <returns>This builder so additional request matchers can be configured.</returns>
     public StubHttpResponseBuilder WithRequestBody(string body)
     {
         ArgumentNullException.ThrowIfNull(body);
@@ -84,6 +119,16 @@ public sealed class StubHttpResponseBuilder
     }
 
     /// <summary>Requires the request JSON body to structurally match the supplied value.</summary>
+    /// <typeparam name="T">The type of value serialized into the expected JSON tree.</typeparam>
+    /// <param name="value">
+    /// The value serialized immediately and compared structurally with the request JSON. The
+    /// builder does not retain or own the supplied value.
+    /// </param>
+    /// <param name="serializerOptions">
+    /// Options used for the immediate serialization, or <see langword="null"/> to use web JSON
+    /// defaults. The options are read but not retained, owned, or mutated.
+    /// </param>
+    /// <returns>This builder so additional request matchers can be configured.</returns>
     public StubHttpResponseBuilder WithJsonRequestBody<T>(
         T value,
         JsonSerializerOptions? serializerOptions = null)
@@ -98,6 +143,20 @@ public sealed class StubHttpResponseBuilder
     }
 
     /// <summary>Requires a root JSON property to structurally match the supplied value.</summary>
+    /// <typeparam name="T">The type of value serialized into the expected JSON tree.</typeparam>
+    /// <param name="propertyName">
+    /// The non-empty, case-sensitive root property name. Nested paths are not interpreted here;
+    /// use <see cref="WithJsonPath{T}(string, T, JsonSerializerOptions?)"/> for nested values.
+    /// </param>
+    /// <param name="expectedValue">
+    /// The value serialized immediately and compared structurally with the selected property. The
+    /// builder does not retain or own the supplied value.
+    /// </param>
+    /// <param name="serializerOptions">
+    /// Options used for the immediate serialization, or <see langword="null"/> to use web JSON
+    /// defaults. The options are read but not retained, owned, or mutated.
+    /// </param>
+    /// <returns>This builder so additional request matchers can be configured.</returns>
     public StubHttpResponseBuilder WithJsonProperty<T>(
         string propertyName,
         T expectedValue,
@@ -114,6 +173,13 @@ public sealed class StubHttpResponseBuilder
     }
 
     /// <summary>Requires a root JSON property to satisfy a predicate.</summary>
+    /// <param name="propertyName">The non-empty, case-sensitive root property name.</param>
+    /// <param name="predicate">
+    /// The non-null predicate invoked with the selected JSON element for each request that reaches
+    /// this matcher. It may run more than once and concurrently. Exceptions are reported as rule
+    /// mismatches. The element is valid only during the callback and must not be retained.
+    /// </param>
+    /// <returns>This builder so additional request matchers can be configured.</returns>
     public StubHttpResponseBuilder WithJsonProperty(
         string propertyName,
         Func<JsonElement, bool> predicate)
@@ -130,6 +196,20 @@ public sealed class StubHttpResponseBuilder
     /// Requires a JSON path to structurally match the supplied value. Dot-separated properties and
     /// zero-based array indexes are supported, for example <c>$.items[0].sku</c>.
     /// </summary>
+    /// <typeparam name="T">The type of value serialized into the expected JSON tree.</typeparam>
+    /// <param name="path">
+    /// The non-empty, case-sensitive path to a property or non-negative array index. A leading
+    /// <c>$</c> is optional. Invalid syntax is rejected when the rule is configured.
+    /// </param>
+    /// <param name="expectedValue">
+    /// The value serialized immediately and compared structurally with the selected JSON element.
+    /// The builder does not retain or own the supplied value.
+    /// </param>
+    /// <param name="serializerOptions">
+    /// Options used for the immediate serialization, or <see langword="null"/> to use web JSON
+    /// defaults. The options are read but not retained, owned, or mutated.
+    /// </param>
+    /// <returns>This builder so additional request matchers can be configured.</returns>
     public StubHttpResponseBuilder WithJsonPath<T>(
         string path,
         T expectedValue,
@@ -149,6 +229,16 @@ public sealed class StubHttpResponseBuilder
     /// Requires a JSON path to satisfy a predicate. Dot-separated properties and zero-based array
     /// indexes are supported, for example <c>$.items[0].quantity</c>.
     /// </summary>
+    /// <param name="path">
+    /// The non-empty, case-sensitive path to a property or non-negative array index. A leading
+    /// <c>$</c> is optional. Invalid syntax is rejected when the rule is configured.
+    /// </param>
+    /// <param name="predicate">
+    /// The non-null predicate invoked with the selected JSON element for each request that reaches
+    /// this matcher. It may run more than once and concurrently. Exceptions are reported as rule
+    /// mismatches. The element is valid only during the callback and must not be retained.
+    /// </param>
+    /// <returns>This builder so additional request matchers can be configured.</returns>
     public StubHttpResponseBuilder WithJsonPath(
         string path,
         Func<JsonElement, bool> predicate)
@@ -162,6 +252,16 @@ public sealed class StubHttpResponseBuilder
     }
 
     /// <summary>Adds a custom request predicate to this response rule.</summary>
+    /// <param name="predicate">
+    /// The non-null predicate invoked with the captured request after method and URI matching. It
+    /// may run more than once and concurrently. Returning <see langword="false"/> or throwing an
+    /// exception makes the rule a mismatch. The handler owns the captured request object.
+    /// </param>
+    /// <param name="description">
+    /// Text used in mismatch diagnostics. When <see langword="null"/>, empty, or whitespace,
+    /// <c>the custom request predicate</c> is used. Do not include secrets in this text.
+    /// </param>
+    /// <returns>This builder so additional request matchers can be configured.</returns>
     public StubHttpResponseBuilder WithRequest(
         Func<StubHttpRequest, bool> predicate,
         string? description = null)
@@ -176,6 +276,11 @@ public sealed class StubHttpResponseBuilder
     }
 
     /// <summary>Delays the arranged response while observing request cancellation.</summary>
+    /// <param name="delay">
+    /// The non-negative delay applied before the configured response factory runs. Zero disables
+    /// the delay. <see cref="System.Threading.Timeout.InfiniteTimeSpan"/> is not accepted.
+    /// </param>
+    /// <returns>This builder so a terminal response can be configured.</returns>
     public StubHttpResponseBuilder WithDelay(TimeSpan delay)
     {
         ValidateDelay(delay, nameof(delay));
@@ -184,6 +289,8 @@ public sealed class StubHttpResponseBuilder
     }
 
     /// <summary>Adds a response containing no body.</summary>
+    /// <param name="statusCode">The HTTP status code returned for every matching request.</param>
+    /// <returns>The owning handler so more rules or verifications can be configured.</returns>
     public StubHttpMessageHandler Respond(HttpStatusCode statusCode)
     {
         return AddResponse(
@@ -191,6 +298,19 @@ public sealed class StubHttpResponseBuilder
     }
 
     /// <summary>Adds a JSON response.</summary>
+    /// <typeparam name="T">The type serialized as the JSON response body.</typeparam>
+    /// <param name="value">
+    /// The response value captured for use by each matching request. The handler does not own or
+    /// dispose it; callers must not mutate it concurrently with response serialization.
+    /// </param>
+    /// <param name="statusCode">
+    /// The HTTP status code for each response. The default is <see cref="HttpStatusCode.OK"/>.
+    /// </param>
+    /// <param name="serializerOptions">
+    /// Options passed to each new JSON content instance, or <see langword="null"/> to use the
+    /// framework's web defaults. The handler retains but does not own or mutate non-null options.
+    /// </param>
+    /// <returns>The owning handler so more rules or verifications can be configured.</returns>
     public StubHttpMessageHandler RespondJson<T>(
         T value,
         HttpStatusCode statusCode = HttpStatusCode.OK,
@@ -204,6 +324,14 @@ public sealed class StubHttpResponseBuilder
     }
 
     /// <summary>Adds a UTF-8 text response.</summary>
+    /// <param name="value">The non-null text returned for every matching request.</param>
+    /// <param name="statusCode">
+    /// The HTTP status code for each response. The default is <see cref="HttpStatusCode.OK"/>.
+    /// </param>
+    /// <param name="mediaType">
+    /// The non-empty response media type. The default is <c>text/plain</c>; UTF-8 is always used.
+    /// </param>
+    /// <returns>The owning handler so more rules or verifications can be configured.</returns>
     public StubHttpMessageHandler RespondText(
         string value,
         HttpStatusCode statusCode = HttpStatusCode.OK,
@@ -219,6 +347,12 @@ public sealed class StubHttpResponseBuilder
     }
 
     /// <summary>Adds a response created from the captured request.</summary>
+    /// <param name="responseFactory">
+    /// The non-null factory invoked once per matching request with the handler-owned captured
+    /// request. It may run more than once and concurrently and must return a non-null response,
+    /// normally a new instance whose ownership passes to the HTTP caller.
+    /// </param>
+    /// <returns>The owning handler so more rules or verifications can be configured.</returns>
     public StubHttpMessageHandler Respond(
         Func<StubHttpRequest, HttpResponseMessage> responseFactory)
     {
@@ -228,6 +362,13 @@ public sealed class StubHttpResponseBuilder
     }
 
     /// <summary>Adds an asynchronous response created from the captured request.</summary>
+    /// <param name="responseFactory">
+    /// The non-null factory invoked once per matching request with the handler-owned captured
+    /// request and that send operation's cancellation token. It may run more than once and
+    /// concurrently and must return a task producing a non-null response whose ownership passes to
+    /// the HTTP caller. Cancellation or other failures are recorded and propagated.
+    /// </param>
+    /// <returns>The owning handler so more rules or verifications can be configured.</returns>
     public StubHttpMessageHandler RespondAsync(
         Func<StubHttpRequest, CancellationToken, Task<HttpResponseMessage>> responseFactory)
     {
@@ -236,6 +377,12 @@ public sealed class StubHttpResponseBuilder
     }
 
     /// <summary>Throws an exception when this rule matches.</summary>
+    /// <param name="exceptionFactory">
+    /// The non-null factory invoked once per matching request with the handler-owned captured
+    /// request. It may run more than once and concurrently and must return a non-null exception.
+    /// The exception is recorded and then propagated to the HTTP caller.
+    /// </param>
+    /// <returns>The owning handler so more rules or verifications can be configured.</returns>
     public StubHttpMessageHandler Throw(Func<StubHttpRequest, Exception> exceptionFactory)
     {
         ArgumentNullException.ThrowIfNull(exceptionFactory);
@@ -244,10 +391,17 @@ public sealed class StubHttpResponseBuilder
     }
 
     /// <summary>Cancels the arranged response immediately.</summary>
+    /// <returns>The owning handler so more rules or verifications can be configured.</returns>
     public StubHttpMessageHandler Cancel() =>
         AddResponse((_, _) => Task.FromCanceled<HttpResponseMessage>(new CancellationToken(true)));
 
     /// <summary>Cancels the arranged response after the supplied delay.</summary>
+    /// <param name="delay">
+    /// The non-negative delay before arranged cancellation. Zero cancels without waiting.
+    /// <see cref="System.Threading.Timeout.InfiniteTimeSpan"/> is not accepted. Request cancellation
+    /// can end the delay earlier.
+    /// </param>
+    /// <returns>The owning handler so more rules or verifications can be configured.</returns>
     public StubHttpMessageHandler CancelAfter(TimeSpan delay)
     {
         ValidateDelay(delay, nameof(delay));
@@ -261,6 +415,14 @@ public sealed class StubHttpResponseBuilder
     }
 
     /// <summary>Returns intentionally invalid JSON with a JSON content type.</summary>
+    /// <param name="content">
+    /// The non-null invalid JSON text returned as UTF-8 <c>application/json</c>. The default is
+    /// <c>{"incomplete":</c>. Valid JSON is rejected when the rule is configured.
+    /// </param>
+    /// <param name="statusCode">
+    /// The HTTP status code for each response. The default is <see cref="HttpStatusCode.OK"/>.
+    /// </param>
+    /// <returns>The owning handler so more rules or verifications can be configured.</returns>
     public StubHttpMessageHandler RespondMalformedJson(
         string content = "{\"incomplete\":",
         HttpStatusCode statusCode = HttpStatusCode.OK)
@@ -273,6 +435,17 @@ public sealed class StubHttpResponseBuilder
     }
 
     /// <summary>Returns content that throws an I/O exception while it is being consumed.</summary>
+    /// <param name="partialContent">
+    /// The non-null text made available before content consumption fails. An empty value is
+    /// accepted.
+    /// </param>
+    /// <param name="statusCode">
+    /// The HTTP status code for each response. The default is <see cref="HttpStatusCode.OK"/>.
+    /// </param>
+    /// <param name="mediaType">
+    /// The non-empty content media type. The default is <c>application/octet-stream</c>.
+    /// </param>
+    /// <returns>The owning handler so more rules or verifications can be configured.</returns>
     public StubHttpMessageHandler RespondTruncated(
         string partialContent,
         HttpStatusCode statusCode = HttpStatusCode.OK,
@@ -287,10 +460,17 @@ public sealed class StubHttpResponseBuilder
     }
 
     /// <summary>Waits until the request is cancelled or its <see cref="HttpClient"/> times out.</summary>
+    /// <returns>The owning handler so more rules or verifications can be configured.</returns>
     public StubHttpMessageHandler Timeout() =>
         AddResponse(WaitForCancellationAsync);
 
     /// <summary>Throws <see cref="TimeoutException"/> after the supplied delay.</summary>
+    /// <param name="delay">
+    /// The non-negative delay before the exception is thrown. Zero throws without waiting.
+    /// <see cref="System.Threading.Timeout.InfiniteTimeSpan"/> is not accepted. Request cancellation
+    /// can end the delay earlier instead.
+    /// </param>
+    /// <returns>The owning handler so more rules or verifications can be configured.</returns>
     public StubHttpMessageHandler TimeoutAfter(TimeSpan delay)
     {
         ValidateDelay(delay, nameof(delay));
@@ -302,6 +482,12 @@ public sealed class StubHttpResponseBuilder
     }
 
     /// <summary>Adds an ordered set of responses for consecutive matching requests.</summary>
+    /// <param name="configure">
+    /// The non-null callback invoked synchronously once with a new sequence builder. It must add at
+    /// least one response and may not leave a delay without a following response. The callback is
+    /// not retained or invoked concurrently; the built response delegates may run concurrently.
+    /// </param>
+    /// <returns>The owning handler so more rules or verifications can be configured.</returns>
     public StubHttpMessageHandler RespondSequence(
         Action<StubHttpResponseSequenceBuilder> configure)
     {

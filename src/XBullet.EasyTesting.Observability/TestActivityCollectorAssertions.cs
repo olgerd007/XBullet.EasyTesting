@@ -13,6 +13,8 @@ public sealed class TestActivityCollectorAssertions
     }
 
     /// <summary>Requires exactly the supplied number of captured activities.</summary>
+    /// <param name="expected">The non-negative activity count required at assertion time.</param>
+    /// <returns>This assertion object, for chaining, when the exact count matches.</returns>
     public TestActivityCollectorAssertions HaveCount(int expected)
     {
         if (expected < 0)
@@ -29,6 +31,14 @@ public sealed class TestActivityCollectorAssertions
     }
 
     /// <summary>Requires a completed activity matching the supplied operation and optional filters.</summary>
+    /// <param name="operationName">The non-empty operation name to match exactly and case-sensitively.</param>
+    /// <param name="status">
+    /// The status code to require, or <see langword="null"/> to accept any status.
+    /// </param>
+    /// <param name="sourceName">
+    /// The exact, case-sensitive source name to require, or <see langword="null"/> to accept any source.
+    /// </param>
+    /// <returns>This assertion object, for chaining, when at least one completed activity matches.</returns>
     public TestActivityCollectorAssertions ContainActivity(
         string operationName,
         ActivityStatusCode? status = null,
@@ -53,6 +63,11 @@ public sealed class TestActivityCollectorAssertions
     }
 
     /// <summary>Requires no completed activity matching the supplied operation and optional source.</summary>
+    /// <param name="operationName">The non-empty operation name to match exactly and case-sensitively.</param>
+    /// <param name="sourceName">
+    /// The exact, case-sensitive source name to match, or <see langword="null"/> to match every source.
+    /// </param>
+    /// <returns>This assertion object, for chaining, when no completed activity matches.</returns>
     public TestActivityCollectorAssertions NotContainActivity(
         string operationName,
         string? sourceName = null)
@@ -86,4 +101,5 @@ public sealed class TestActivityCollectorAssertions
 }
 
 /// <summary>Thrown when captured activities do not satisfy a fluent assertion.</summary>
+/// <param name="message">The non-null failure description, which can include captured activity names and status values.</param>
 public sealed class TestActivityVerificationException(string message) : Exception(message);

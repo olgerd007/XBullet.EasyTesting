@@ -13,6 +13,8 @@ public sealed class TestLogCollectorAssertions
     }
 
     /// <summary>Requires exactly the supplied number of captured log entries.</summary>
+    /// <param name="expected">The non-negative log-entry count required at assertion time.</param>
+    /// <returns>This assertion object, for chaining, when the exact count matches.</returns>
     public TestLogCollectorAssertions HaveCount(int expected)
     {
         if (expected < 0)
@@ -29,6 +31,12 @@ public sealed class TestLogCollectorAssertions
     }
 
     /// <summary>Requires a captured log whose message contains the supplied text.</summary>
+    /// <param name="expectedText">The non-empty text that the formatted message must contain using ordinal matching.</param>
+    /// <param name="level">The exact log level to require, or <see langword="null"/> to accept any level.</param>
+    /// <param name="category">
+    /// The exact, case-sensitive category to require, or <see langword="null"/> to accept any category.
+    /// </param>
+    /// <returns>This assertion object, for chaining, when at least one entry matches.</returns>
     public TestLogCollectorAssertions ContainMessage(
         string expectedText,
         LogLevel? level = null,
@@ -53,6 +61,12 @@ public sealed class TestLogCollectorAssertions
     }
 
     /// <summary>Requires no captured log whose message contains the supplied text.</summary>
+    /// <param name="unexpectedText">The non-empty text matched ordinally against formatted messages.</param>
+    /// <param name="level">The exact log level to match, or <see langword="null"/> to match any level.</param>
+    /// <param name="category">
+    /// The exact, case-sensitive category to match, or <see langword="null"/> to match any category.
+    /// </param>
+    /// <returns>This assertion object, for chaining, when no entry matches.</returns>
     public TestLogCollectorAssertions NotContainMessage(
         string unexpectedText,
         LogLevel? level = null,
@@ -87,4 +101,7 @@ public sealed class TestLogCollectorAssertions
 }
 
 /// <summary>Thrown when captured logs do not satisfy a fluent assertion.</summary>
+/// <param name="message">
+/// The non-null failure description, which can include unredacted captured categories and messages.
+/// </param>
 public sealed class TestLogVerificationException(string message) : Exception(message);

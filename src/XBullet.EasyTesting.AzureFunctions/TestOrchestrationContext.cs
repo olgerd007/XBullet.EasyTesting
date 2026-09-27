@@ -17,6 +17,10 @@ public sealed class TestOrchestrationContext : TaskOrchestrationContext
     private Func<RecordedActivityCall, Task<object?>> _activityHandler;
 
     /// <summary>Initializes a context that dispatches activity calls through <paramref name="activityHandler"/>.</summary>
+    /// <param name="activityHandler">
+    /// A non-null asynchronous callback retained by the context and invoked once for every scheduled
+    /// activity after the call is recorded. It must return a value assignable to the requested result type.
+    /// </param>
     public TestOrchestrationContext(Func<RecordedActivityCall, Task<object?>> activityHandler)
     {
         ArgumentNullException.ThrowIfNull(activityHandler);
@@ -24,6 +28,10 @@ public sealed class TestOrchestrationContext : TaskOrchestrationContext
     }
 
     /// <summary>Gets or sets the delegate used to execute scheduled activities.</summary>
+    /// <value>
+    /// The non-null callback used for future calls. Assigning a new callback does not affect calls
+    /// already recorded or awaiting a previous handler.
+    /// </value>
     public Func<RecordedActivityCall, Task<object?>> ActivityHandler
     {
         get => _activityHandler;
@@ -35,6 +43,9 @@ public sealed class TestOrchestrationContext : TaskOrchestrationContext
     }
 
     /// <summary>Gets activity calls in scheduling order.</summary>
+    /// <value>
+    /// A live read-only view in scheduling order. Calls retain their input and options without cloning.
+    /// </value>
     public IReadOnlyList<RecordedActivityCall> ActivityCalls => _activityCalls;
 
     /// <inheritdoc />

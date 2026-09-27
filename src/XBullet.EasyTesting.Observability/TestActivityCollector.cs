@@ -14,6 +14,14 @@ public sealed class TestActivityCollector : ITestScenarioResource, IDisposable
     private readonly ActivityListener _listener;
 
     /// <summary>Creates a bounded collector, optionally restricted to exact source names.</summary>
+    /// <param name="sourceNames">
+    /// Exact, case-sensitive activity-source names to capture, or <see langword="null"/> or an empty
+    /// sequence to capture every source. The sequence is enumerated immediately and duplicates are ignored.
+    /// </param>
+    /// <param name="maximumEntries">
+    /// The positive maximum number of completed activities retained. The default is 1,000; when the
+    /// bound is exceeded, the oldest entries are discarded first.
+    /// </param>
     public TestActivityCollector(
         IEnumerable<string>? sourceNames = null,
         int maximumEntries = 1_000)
@@ -39,6 +47,10 @@ public sealed class TestActivityCollector : ITestScenarioResource, IDisposable
     }
 
     /// <summary>Gets a stable copy of captured completed activities.</summary>
+    /// <value>
+    /// A newly allocated snapshot in completion order. The caller may retain the list. Entries can
+    /// contain unredacted tags, baggage, and events with sensitive values.
+    /// </value>
     public IReadOnlyList<TestActivityEntry> Entries
     {
         get
@@ -51,6 +63,7 @@ public sealed class TestActivityCollector : ITestScenarioResource, IDisposable
     }
 
     /// <summary>Gets the number of currently captured completed activities.</summary>
+    /// <value>A value from zero through the configured maximum entry count.</value>
     public int Count
     {
         get
@@ -63,9 +76,11 @@ public sealed class TestActivityCollector : ITestScenarioResource, IDisposable
     }
 
     /// <summary>Starts a fluent assertion chain over captured activities.</summary>
+    /// <returns>A new assertion object that reads this collector's current snapshots.</returns>
     public TestActivityCollectorAssertions Should() => new(this);
 
     /// <summary>Removes every captured activity and returns this collector.</summary>
+    /// <returns>This collector, for chaining. The listener, filters, and maximum remain unchanged.</returns>
     public TestActivityCollector Reset()
     {
         lock (_gate)

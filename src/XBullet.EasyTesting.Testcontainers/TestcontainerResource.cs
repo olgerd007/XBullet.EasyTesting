@@ -8,6 +8,7 @@ namespace XBullet.EasyTesting.Testcontainers;
 /// <summary>
 /// Owns a Testcontainers container for one scenario and publishes values after it is ready.
 /// </summary>
+/// <typeparam name="TContainer">The concrete Testcontainers container type owned by this resource.</typeparam>
 public sealed class TestcontainerResource<TContainer> : ITestScenarioEnvironmentResource
     where TContainer : class, IContainer
 {
@@ -18,6 +19,23 @@ public sealed class TestcontainerResource<TContainer> : ITestScenarioEnvironment
     private bool _disposed;
 
     /// <summary>Creates a scenario-owned container resource.</summary>
+    /// <param name="container">
+    /// The non-null, unstarted container whose ownership transfers to this resource immediately.
+    /// It is disposed even if it is never started.
+    /// </param>
+    /// <param name="configurationValues">
+    /// An optional callback invoked by <see cref="ConfigureConfiguration"/> after readiness. It must
+    /// return a non-null dictionary with non-empty keys; null values are accepted. The callback must
+    /// not dispose the container. The default publishes no values.
+    /// </param>
+    /// <param name="configureServices">
+    /// An optional callback invoked by <see cref="ConfigureServices"/> after the container is registered
+    /// as a singleton. It may update services in place but must not retain the collection or dispose the container.
+    /// </param>
+    /// <param name="maximumDiagnosticCharacters">
+    /// The non-negative maximum trailing character count retained independently for standard output
+    /// and standard error. The default is 20,000 characters; zero retains empty log strings.
+    /// </param>
     public TestcontainerResource(
         TContainer container,
         Func<TContainer, IReadOnlyDictionary<string, string?>>? configurationValues = null,
@@ -34,9 +52,21 @@ public sealed class TestcontainerResource<TContainer> : ITestScenarioEnvironment
     }
 
     /// <summary>Gets the native Testcontainers container.</summary>
+    /// <value>
+    /// The container owned by this resource. Callers may use it until resource disposal but must not
+    /// dispose it separately.
+    /// </value>
     public TContainer Container { get; }
 
     /// <summary>Starts the container and waits for its configured readiness strategy.</summary>
+    /// <param name="cancellationToken">
+    /// A token passed to Testcontainers startup and readiness operations. The default token does not
+    /// request cancellation.
+    /// </param>
+    /// <returns>
+    /// A value task that completes when the container is ready. A successful start may occur only
+    /// once; a failed or canceled start leaves the resource eligible for another attempt.
+    /// </returns>
     public async ValueTask StartAsync(CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -50,6 +80,10 @@ public sealed class TestcontainerResource<TContainer> : ITestScenarioEnvironment
     }
 
     /// <summary>Adds values resolved from the ready container to application configuration.</summary>
+    /// <param name="configuration">
+    /// The non-null mutable configuration builder to update in place. The published values are
+    /// resolved on this call and may contain secrets; they are not included in resource diagnostics.
+    /// </param>
     public void ConfigureConfiguration(IConfigurationBuilder configuration)
     {
         ArgumentNullException.ThrowIfNull(configuration);
@@ -66,6 +100,10 @@ public sealed class TestcontainerResource<TContainer> : ITestScenarioEnvironment
     }
 
     /// <summary>Registers the native container and applies optional scenario service overrides.</summary>
+    /// <param name="services">
+    /// The non-null mutable scenario service collection. The container is added as a singleton before
+    /// the optional service callback runs; the scenario retains container disposal ownership.
+    /// </param>
     public void ConfigureServices(IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -75,6 +113,16 @@ public sealed class TestcontainerResource<TContainer> : ITestScenarioEnvironment
     }
 
     /// <summary>Captures container identity, state, ports, and bounded standard output and error.</summary>
+    /// <param name="cancellationToken">
+    /// A token passed to log retrieval. The default token does not request cancellation. Cancellation
+    /// is propagated; other log failures are represented in the returned diagnostics.
+    /// </param>
+    /// <returns>
+    /// A value task whose result reports only <c>Started = false</c> before startup. After startup it
+    /// includes identity, image, hostname, state, health, mapped ports, the trailing configured number
+    /// of log characters, and any log-capture error. Logs and error text are not redacted and may
+    /// contain sensitive data; published configuration values are excluded.
+    /// </returns>
     public async ValueTask<object?> CaptureDiagnosticsAsync(
         CancellationToken cancellationToken = default)
     {

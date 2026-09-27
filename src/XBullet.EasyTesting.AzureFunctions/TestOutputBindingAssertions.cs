@@ -8,6 +8,8 @@ public sealed class TestOutputBindingAssertions
     internal TestOutputBindingAssertions(TestFunctionBindings bindings) => _bindings = bindings;
 
     /// <summary>Requires exactly <paramref name="expected"/> captured output bindings.</summary>
+    /// <param name="expected">The exact required count. Negative values are accepted but can never match.</param>
+    /// <returns>This assertion object, for chaining, when the count matches.</returns>
     public TestOutputBindingAssertions HaveCount(int expected)
     {
         if (_bindings.Outputs.Count != expected)
@@ -19,6 +21,8 @@ public sealed class TestOutputBindingAssertions
     }
 
     /// <summary>Requires an output binding with the supplied name.</summary>
+    /// <param name="name">The non-empty binding name, matched case-insensitively.</param>
+    /// <returns>This assertion object, for chaining, when the binding exists, including with a null value.</returns>
     public TestOutputBindingAssertions Contain(string name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -31,6 +35,10 @@ public sealed class TestOutputBindingAssertions
     }
 
     /// <summary>Requires an output binding to equal the supplied value.</summary>
+    /// <typeparam name="T">The expected value type; no conversion is performed.</typeparam>
+    /// <param name="name">The non-empty binding name, matched case-insensitively.</param>
+    /// <param name="expected">The expected value, compared with <see cref="EqualityComparer{T}.Default"/>.</param>
+    /// <returns>This assertion object, for chaining, when the typed values are equal.</returns>
     public TestOutputBindingAssertions HaveValue<T>(string name, T expected)
     {
         Contain(name);
@@ -48,6 +56,8 @@ public sealed class TestOutputBindingAssertions
     }
 
     /// <summary>Requires that an output binding was not captured.</summary>
+    /// <param name="name">The non-empty binding name, matched case-insensitively.</param>
+    /// <returns>This assertion object, for chaining, when the binding is absent.</returns>
     public TestOutputBindingAssertions NotContain(string name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -68,4 +78,5 @@ public sealed class TestOutputBindingAssertions
 }
 
 /// <summary>Thrown when captured output bindings do not match an assertion.</summary>
+/// <param name="message">The non-null failure description, which can include unredacted binding names and values.</param>
 public sealed class TestOutputBindingVerificationException(string message) : Exception(message);

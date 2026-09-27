@@ -13,6 +13,7 @@ public sealed class HttpExchangeSnapshotOptionsDefaults
     /// Gets or sets the optional defaults used as the base for HTTP exchange snapshots. Configure
     /// this once while the test assembly is initialized.
     /// </summary>
+    /// <value>The process-wide defaults template, or <see langword="null"/> to use package defaults. Reads and writes are atomic.</value>
     public static HttpExchangeSnapshotOptionsDefaults? Global
     {
         get => Volatile.Read(ref _global);
@@ -20,6 +21,7 @@ public sealed class HttpExchangeSnapshotOptionsDefaults
     }
 
     /// <summary>Creates reusable defaults from a one-time configuration callback.</summary>
+    /// <param name="configure">Non-null callback invoked once immediately with a new mutable template. The callback is not retained.</param>
     public HttpExchangeSnapshotOptionsDefaults(Action<HttpExchangeSnapshotOptions> configure)
     {
         ArgumentNullException.ThrowIfNull(configure);
@@ -28,6 +30,8 @@ public sealed class HttpExchangeSnapshotOptionsDefaults
     }
 
     /// <summary>Creates an independent options object and optionally applies local overrides.</summary>
+    /// <param name="configure">Optional callback invoked once with the copied mutable options. <see langword="null"/> applies no overrides.</param>
+    /// <returns>A new caller-owned mutable options object; changing it does not change this template.</returns>
     public HttpExchangeSnapshotOptions Create(Action<HttpExchangeSnapshotOptions>? configure = null)
     {
         var options = _template.Copy();
@@ -44,6 +48,8 @@ public sealed class HttpExchangeSnapshotOptionsDefaults
     /// Creates options from the global template, or package defaults when no global template is
     /// configured, and then applies per-assertion configuration.
     /// </summary>
+    /// <param name="configure">Non-null callback invoked once with the new mutable options after global or package defaults are applied.</param>
+    /// <returns>A new caller-owned mutable options object marked as already containing global defaults.</returns>
     public static HttpExchangeSnapshotOptions ExtendGlobal(
         Action<HttpExchangeSnapshotOptions> configure)
     {

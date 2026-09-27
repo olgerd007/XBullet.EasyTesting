@@ -6,6 +6,16 @@ The project follows Semantic Versioning. Package versions are produced from GitH
 
 ## [Unreleased]
 
+## [1.0.14] - 2026-09-27
+
+### Changed
+
+- Expanded public API XML documentation across all packages to describe parameters, generic
+  parameters, nullable and default behavior, callbacks, cancellation, return values, ownership,
+  units, accepted values, and side effects.
+- Added a repository-wide XML documentation verifier for enforcing the documentation review
+  requirements.
+
 ## [1.0.13] - 2026-09-26
 
 ### Added

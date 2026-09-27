@@ -8,6 +8,11 @@ namespace XBullet.EasyTesting.Http;
 /// <summary>
 /// A fluent, in-memory HTTP handler that returns arranged responses and records outbound requests.
 /// </summary>
+/// <remarks>
+/// Rule registration, request recording, snapshots, verification, and reset are safe to call from
+/// multiple threads. User-supplied matcher predicates and response factories can run concurrently.
+/// Raw recorded requests are not redacted and can contain sensitive values.
+/// </remarks>
 public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioResource
 {
     private readonly object _gate = new();
@@ -16,6 +21,11 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
     private readonly List<StubHttpExchange> _exchanges = [];
 
     /// <summary>Gets a stable copy of the requests received by this handler.</summary>
+    /// <value>
+    /// A newly allocated array containing the recorded request objects in arrival order. Later
+    /// requests and resets do not change the array. The handler owns the records and their nested
+    /// header values; callers must not mutate them. Values are not redacted.
+    /// </value>
     public IReadOnlyList<StubHttpRequest> Requests
     {
         get
@@ -28,6 +38,11 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
     }
 
     /// <summary>Gets a stable copy of the request/response exchanges observed by this handler.</summary>
+    /// <value>
+    /// A newly allocated array containing the handler-owned exchange objects in arrival order.
+    /// Later requests and resets do not change the array, but an exchange's response body state may
+    /// update when the HTTP caller subsequently consumes its content.
+    /// </value>
     public IReadOnlyList<StubHttpExchange> Exchanges
     {
         get
@@ -40,6 +55,7 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
     }
 
     /// <summary>Gets the number of requests received since construction or the last reset.</summary>
+    /// <value>The current request count as a thread-safe point-in-time value.</value>
     public int CallCount
     {
         get
@@ -52,6 +68,15 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
     }
 
     /// <summary>Starts an exact method-and-URI response rule.</summary>
+    /// <param name="method">
+    /// The non-null HTTP method to match. The handler reads but does not own or mutate it.
+    /// </param>
+    /// <param name="requestUri">
+    /// The non-empty URI text to match. HTTP and HTTPS absolute URIs match the full absolute URI;
+    /// other values match a relative request's original text or an absolute request's path and
+    /// query. Adding a query-parameter matcher later changes comparison to the path only.
+    /// </param>
+    /// <returns>A new mutable response builder associated with this handler.</returns>
     public StubHttpResponseBuilder When(HttpMethod method, string requestUri)
     {
         ArgumentNullException.ThrowIfNull(method);
@@ -60,6 +85,21 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
     }
 
     /// <summary>Verifies that an exact method-and-URI request was recorded the expected number of times.</summary>
+    /// <param name="method">
+    /// The non-null HTTP method to match. The handler reads but does not own or mutate it.
+    /// </param>
+    /// <param name="requestUri">
+    /// The non-empty URI text compared using the same exact absolute-or-relative rules as
+    /// <see cref="When"/> before additional matchers are applied.
+    /// </param>
+    /// <param name="expectedCount">
+    /// The non-negative number of matching requests required. The default is one.
+    /// </param>
+    /// <returns>This handler so additional verification calls can be chained.</returns>
+    /// <exception cref="StubHttpVerificationException">
+    /// The point-in-time count does not equal <paramref name="expectedCount"/>. Recognized
+    /// sensitive query values are redacted from the exception message.
+    /// </exception>
     public StubHttpMessageHandler VerifyCalled(
         HttpMethod method,
         string requestUri,
@@ -89,10 +129,33 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
     }
 
     /// <summary>Verifies that an exact method-and-URI request was not recorded.</summary>
+    /// <param name="method">
+    /// The non-null HTTP method to match. The handler reads but does not own or mutate it.
+    /// </param>
+    /// <param name="requestUri">
+    /// The non-empty URI text compared using the same exact absolute-or-relative rules as
+    /// <see cref="When"/> before additional matchers are applied.
+    /// </param>
+    /// <returns>This handler so additional verification calls can be chained.</returns>
+    /// <exception cref="StubHttpVerificationException">A matching request was recorded.</exception>
     public StubHttpMessageHandler VerifyNotCalled(HttpMethod method, string requestUri) =>
         VerifyCalled(method, requestUri, expectedCount: 0);
 
     /// <summary>Verifies the number of recorded requests accepted by a custom predicate.</summary>
+    /// <param name="predicate">
+    /// The non-null predicate invoked once, sequentially, for each request in a point-in-time
+    /// snapshot. The handler owns each supplied request; the predicate must not mutate it.
+    /// Exceptions from the predicate are propagated unchanged.
+    /// </param>
+    /// <param name="expectedCount">The non-negative number of accepted requests required.</param>
+    /// <param name="description">
+    /// Text used in a failed verification message. When <see langword="null"/>, empty, or
+    /// whitespace, <c>the request predicate</c> is used. Do not include secrets in this value.
+    /// </param>
+    /// <returns>This handler so additional verification calls can be chained.</returns>
+    /// <exception cref="StubHttpVerificationException">
+    /// The point-in-time accepted count does not equal <paramref name="expectedCount"/>.
+    /// </exception>
     public StubHttpMessageHandler Verify(
         Func<StubHttpRequest, bool> predicate,
         int expectedCount,
@@ -123,6 +186,10 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
     }
 
     /// <summary>Removes all arranged responses and recorded requests.</summary>
+    /// <returns>
+    /// This handler for reuse. Requests or rules added concurrently after the reset lock is
+    /// released are retained.
+    /// </returns>
     public StubHttpMessageHandler Reset()
     {
         lock (_gate)
@@ -135,7 +202,12 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
         return this;
     }
 
-    /// <inheritdoc />
+    /// <summary>Removes all arranged responses and recorded exchanges.</summary>
+    /// <param name="cancellationToken">
+    /// Cancels the reset before any state is changed. Once cancellation is checked, reset completes
+    /// synchronously. The default token does not request cancellation.
+    /// </param>
+    /// <returns>A value task that is already complete after the reset finishes.</returns>
     public ValueTask ResetAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -143,7 +215,16 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
         return ValueTask.CompletedTask;
     }
 
-    /// <inheritdoc />
+    /// <summary>Captures recorded requests for scenario-failure diagnostics.</summary>
+    /// <param name="cancellationToken">
+    /// Cancels capture before a snapshot is created. The default token does not request
+    /// cancellation.
+    /// </param>
+    /// <returns>
+    /// An already-completed value task containing a newly allocated serializable snapshot with the
+    /// call count and requests. Recognized sensitive query values are redacted from request URIs;
+    /// captured headers and bodies are included unchanged and can contain sensitive data.
+    /// </returns>
     public ValueTask<object?> CaptureDiagnosticsAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -423,6 +504,10 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
     /// Keeps this in-memory handler reusable when a scenario-specific service provider disposes its
     /// HTTP pipeline. The handler owns no operating-system resources; call <see cref="Reset"/> to clear it.
     /// </summary>
+    /// <param name="disposing">
+    /// Ignored. Both explicit disposal and finalization leave the in-memory handler usable and do
+    /// not clear its rules or recordings.
+    /// </param>
     protected override void Dispose(bool disposing)
     {
     }

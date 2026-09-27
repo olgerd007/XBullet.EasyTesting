@@ -5,6 +5,7 @@ namespace XBullet.EasyTesting.Snapshots;
 /// <summary>
 /// Records HTTP exchanges without replacing the underlying transport. Add this handler to a real
 /// or in-memory client pipeline to snapshot requests, responses, and send failures.
+/// The owning <see cref="HttpClient"/> or caller remains responsible for disposing the handler.
 /// </summary>
 public sealed class HttpExchangeRecorder : DelegatingHandler
 {
@@ -16,6 +17,7 @@ public sealed class HttpExchangeRecorder : DelegatingHandler
     private readonly HttpExchangeSnapshotOptions? _sourceOptions;
 
     /// <summary>Creates a recorder with optional request and response capture settings.</summary>
+    /// <param name="options">Optional mutable capture options. <see langword="null"/> resolves the effective global or package defaults when the recorder is constructed.</param>
     public HttpExchangeRecorder(HttpExchangeSnapshotOptions? options = null)
     {
         _sourceOptions = options;
@@ -23,9 +25,11 @@ public sealed class HttpExchangeRecorder : DelegatingHandler
     }
 
     /// <summary>Gets the options used to capture exchanges.</summary>
+    /// <value>The mutable effective options resolved at construction. Configure them before sending requests and do not mutate them concurrently with capture.</value>
     public HttpExchangeSnapshotOptions Options { get; }
 
     /// <summary>Gets the number of requests observed since construction or the last reset.</summary>
+    /// <value>The count of recorded attempts, including requests still in progress and requests that failed while sending.</value>
     public int CallCount
     {
         get
@@ -37,7 +41,12 @@ public sealed class HttpExchangeRecorder : DelegatingHandler
         }
     }
 
-    /// <summary>Creates stable snapshots for all completed exchanges in request order.</summary>
+    /// <summary>
+    /// Creates stable snapshots for all exchanges in request order. A response body configured for
+    /// capture remains <c>{NotRead}</c> until its replacement content is consumed.
+    /// </summary>
+    /// <param name="cancellationToken">Token checked before snapshot creation. The default token does not cancel the operation.</param>
+    /// <returns>A completed task containing a new snapshot array. It throws when a send operation has not yet produced either a response or failure.</returns>
     public Task<IReadOnlyList<HttpExchangeSnapshot>> CreateSnapshotsAsync(
         CancellationToken cancellationToken = default)
     {
@@ -57,7 +66,8 @@ public sealed class HttpExchangeRecorder : DelegatingHandler
         return Task.FromResult<IReadOnlyList<HttpExchangeSnapshot>>(snapshots);
     }
 
-    /// <summary>Clears all recorded exchanges and returns this recorder.</summary>
+    /// <summary>Clears the recorder's current exchange list and resets <see cref="CallCount"/> to zero.</summary>
+    /// <returns>This recorder instance for fluent reuse. Responses already returned to callers are not disposed or modified.</returns>
     public HttpExchangeRecorder Reset()
     {
         lock (_gate)
