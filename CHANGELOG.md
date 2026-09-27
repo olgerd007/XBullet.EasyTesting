@@ -8,6 +8,14 @@ The project follows Semantic Versioning. Package versions are produced from GitH
 
 ## [1.0.14] - 2026-09-27
 
+### Added
+
+- Added a task-oriented documentation site with getting-started material, package guides,
+  cross-cutting concepts, snapshot workflows, troubleshooting guidance, and searchable Docfx API
+  reference pages.
+- Added executable documentation examples synchronized from the multi-target test suite, plus
+  Markdown, snippet, generated-reference, and link validation in local builds and CI.
+
 ### Changed
 
 - Expanded public API XML documentation across all packages to describe parameters, generic
