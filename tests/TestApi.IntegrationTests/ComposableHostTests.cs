@@ -8,6 +8,7 @@ namespace TestApi.IntegrationTests;
 
 public sealed class ComposableHostTests
 {
+    #region docs-composable-host
     [Fact]
     public async Task Builder_composes_multiple_authentication_modules()
     {
@@ -54,6 +55,7 @@ public sealed class ComposableHostTests
             factory.Services.GetRequiredService<HostMarker>().Value);
         Assert.Throws<InvalidOperationException>(() => builder.Build());
     }
+    #endregion
 
     [Fact]
     public async Task Scenario_requires_exactly_one_request_and_executes_only_once()

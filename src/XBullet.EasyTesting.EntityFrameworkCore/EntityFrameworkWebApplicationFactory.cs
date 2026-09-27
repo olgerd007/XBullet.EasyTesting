@@ -9,6 +9,13 @@ namespace XBullet.EasyTesting.EntityFrameworkCore;
 /// <summary>
 /// An authenticated application factory with scoped, serialized actions for an EF Core test database.
 /// </summary>
+/// <typeparam name="TEntryPoint">The application entry-point type hosted by the test factory.</typeparam>
+/// <typeparam name="TDbContext">The EF Core context type replaced and resolved for database operations.</typeparam>
+/// <remarks>
+/// Operations against the factory database are serialized and use a fresh factory-owned dependency-
+/// injection scope and context. Scenario operations use the specified scenario's isolated services.
+/// Callbacks must not retain or dispose contexts supplied by this factory.
+/// </remarks>
 public abstract class EntityFrameworkWebApplicationFactory<TEntryPoint, TDbContext>
     : AuthenticatedWebApplicationFactory<TEntryPoint>
     where TEntryPoint : class
@@ -20,6 +27,10 @@ public abstract class EntityFrameworkWebApplicationFactory<TEntryPoint, TDbConte
     /// Replaces the application's concrete context registration and delegates provider configuration
     /// to <see cref="ConfigureDatabaseServices"/>.
     /// </summary>
+    /// <param name="services">
+    /// The mutable test-host service collection. Existing context, context-factory, and options
+    /// registrations for <typeparamref name="TDbContext"/> are removed before replacements are added.
+    /// </param>
     protected sealed override void ConfigureServicesForTests(IServiceCollection services)
     {
         RemoveDatabaseServices(services);
@@ -30,9 +41,17 @@ public abstract class EntityFrameworkWebApplicationFactory<TEntryPoint, TDbConte
     /// <summary>
     /// Registers <typeparamref name="TDbContext"/> with the chosen test provider and connection.
     /// </summary>
+    /// <param name="services">
+    /// The mutable test-host service collection to update in place. The host owns the collection and
+    /// all registered services.
+    /// </param>
     protected abstract void ConfigureDatabaseServices(IServiceCollection services);
 
     /// <summary>Allows derived factories to replace services unrelated to the database.</summary>
+    /// <param name="services">
+    /// The mutable factory-host service collection to update in place after database registration.
+    /// The host owns the collection and all registered services.
+    /// </param>
     protected virtual void ConfigureAdditionalServicesForTests(IServiceCollection services)
     {
     }
@@ -41,11 +60,26 @@ public abstract class EntityFrameworkWebApplicationFactory<TEntryPoint, TDbConte
     /// Registers the database used by one scenario. Override this to allocate a distinct database,
     /// schema, or connection and register its cleanup through <paramref name="context"/>.
     /// </summary>
+    /// <param name="services">
+    /// The mutable scenario-host service collection to update in place. Existing registrations for
+    /// <typeparamref name="TDbContext"/> have already been removed.
+    /// </param>
+    /// <param name="context">
+    /// The scenario configuration context. Use it to identify the scenario and register resources
+    /// whose ownership is transferred to the scenario for cleanup; do not retain the context.
+    /// </param>
     protected virtual void ConfigureScenarioDatabaseServices(
         IServiceCollection services,
         TestScenarioContext context) => ConfigureDatabaseServices(services);
 
     /// <summary>Allows derived factories to add services that exist only in scenario hosts.</summary>
+    /// <param name="services">
+    /// The mutable scenario-host service collection to update in place after database registration.
+    /// </param>
+    /// <param name="context">
+    /// The scenario configuration context. It may be used to register scenario-owned resources and
+    /// must not be retained after configuration.
+    /// </param>
     protected virtual void ConfigureAdditionalServicesForScenario(
         IServiceCollection services,
         TestScenarioContext context)
@@ -53,9 +87,15 @@ public abstract class EntityFrameworkWebApplicationFactory<TEntryPoint, TDbConte
     }
 
     /// <summary>Starts a fluent database scenario definition.</summary>
+    /// <returns>A new mutable, single-use builder targeting the factory database.</returns>
     public DatabaseScenarioBuilder<TEntryPoint, TDbContext> Database() => new(this);
 
     /// <summary>Starts a fluent database scenario against a test scenario's isolated database.</summary>
+    /// <param name="scope">
+    /// The non-null, active scenario scope whose service provider supplies the context. The caller
+    /// retains ownership of the scope.
+    /// </param>
+    /// <returns>A new mutable, single-use builder targeting the scope's isolated database.</returns>
     public DatabaseScenarioBuilder<TEntryPoint, TDbContext> Database(
         TestScenarioScope<TEntryPoint> scope)
     {
@@ -64,6 +104,11 @@ public abstract class EntityFrameworkWebApplicationFactory<TEntryPoint, TDbConte
     }
 
     /// <summary>Creates the test database schema if it does not already exist.</summary>
+    /// <param name="cancellationToken">
+    /// A token that cancels waiting for serialized access and schema creation. The default token does
+    /// not request cancellation.
+    /// </param>
+    /// <returns>A task that completes after EF Core has ensured the factory database exists.</returns>
     public Task InitializeDatabaseAsync(CancellationToken cancellationToken = default) =>
         WithDbContextAsync(
             async (database, token) =>
@@ -75,6 +120,11 @@ public abstract class EntityFrameworkWebApplicationFactory<TEntryPoint, TDbConte
     /// <summary>
     /// Deletes and recreates the complete test database. Only use this with an isolated test database.
     /// </summary>
+    /// <param name="cancellationToken">
+    /// A token that cancels waiting for serialized access, deletion, or creation. The default token
+    /// does not request cancellation.
+    /// </param>
+    /// <returns>A task that completes after the factory database has been deleted and recreated.</returns>
     public Task RecreateDatabaseAsync(CancellationToken cancellationToken = default) =>
         WithDbContextAsync(
             async (database, token) =>
@@ -85,6 +135,16 @@ public abstract class EntityFrameworkWebApplicationFactory<TEntryPoint, TDbConte
             cancellationToken);
 
     /// <summary>Executes a scoped database action and persists its tracked changes.</summary>
+    /// <param name="action">
+    /// A non-null asynchronous callback invoked once with a fresh factory-owned context and the
+    /// supplied token. It must not retain or dispose the context. The factory saves tracked changes
+    /// after the callback succeeds.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A token that cancels waiting for serialized access and is passed to the callback and save.
+    /// The default token does not request cancellation.
+    /// </param>
+    /// <returns>A task that completes after the callback, save, and scoped-context disposal.</returns>
     public Task ExecuteDatabaseAsync(
         Func<TDbContext, CancellationToken, Task> action,
         CancellationToken cancellationToken = default)
@@ -101,6 +161,19 @@ public abstract class EntityFrameworkWebApplicationFactory<TEntryPoint, TDbConte
     }
 
     /// <summary>Executes a read operation in a fresh dependency-injection scope.</summary>
+    /// <typeparam name="TResult">The materialized result type returned by the query.</typeparam>
+    /// <param name="query">
+    /// A non-null asynchronous callback invoked once with a fresh factory-owned context and the
+    /// supplied token. It must fully materialize its result and must not retain or dispose the context.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A token that cancels waiting for serialized access and is passed to the query. The default
+    /// token does not request cancellation.
+    /// </param>
+    /// <returns>
+    /// A task whose result is the materialized value produced by <paramref name="query"/>. The caller
+    /// owns the value; it must not require the disposed context for later enumeration or loading.
+    /// </returns>
     public Task<TResult> QueryDatabaseAsync<TResult>(
         Func<TDbContext, CancellationToken, Task<TResult>> query,
         CancellationToken cancellationToken = default)
@@ -110,6 +183,18 @@ public abstract class EntityFrameworkWebApplicationFactory<TEntryPoint, TDbConte
     }
 
     /// <summary>Executes an action and saves changes in a scenario's isolated database.</summary>
+    /// <param name="scope">
+    /// The non-null, active scenario scope whose service provider supplies the context. The caller
+    /// retains ownership of the scope.
+    /// </param>
+    /// <param name="action">
+    /// A non-null asynchronous callback invoked once with a scenario-owned scoped context and the
+    /// supplied token. It must not retain or dispose the context. Tracked changes are saved after it succeeds.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A token passed to the callback and save operation. The default token does not request cancellation.
+    /// </param>
+    /// <returns>A task that completes after the callback, save, and scoped-context disposal.</returns>
     public Task ExecuteDatabaseAsync(
         TestScenarioScope<TEntryPoint> scope,
         Func<TDbContext, CancellationToken, Task> action,
@@ -127,6 +212,22 @@ public abstract class EntityFrameworkWebApplicationFactory<TEntryPoint, TDbConte
     }
 
     /// <summary>Executes a query in a scenario's isolated database.</summary>
+    /// <typeparam name="TResult">The materialized result type returned by the query.</typeparam>
+    /// <param name="scope">
+    /// The non-null, active scenario scope whose service provider supplies the context. The caller
+    /// retains ownership of the scope.
+    /// </param>
+    /// <param name="query">
+    /// A non-null asynchronous callback invoked once with a scenario-owned scoped context and the
+    /// supplied token. It must fully materialize its result and must not retain or dispose the context.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A token passed to the query. The default token does not request cancellation.
+    /// </param>
+    /// <returns>
+    /// A task whose result is the materialized value produced by <paramref name="query"/>. The caller
+    /// owns the value; it must not depend on the disposed context.
+    /// </returns>
     public Task<TResult> QueryDatabaseAsync<TResult>(
         TestScenarioScope<TEntryPoint> scope,
         Func<TDbContext, CancellationToken, Task<TResult>> query,
@@ -137,6 +238,19 @@ public abstract class EntityFrameworkWebApplicationFactory<TEntryPoint, TDbConte
     }
 
     /// <summary>Executes a scoped database action against a scenario's isolated context.</summary>
+    /// <param name="scope">
+    /// The non-null, active scenario scope whose service provider supplies the context. The caller
+    /// retains ownership of the scope.
+    /// </param>
+    /// <param name="action">
+    /// A non-null asynchronous callback invoked once with a scenario-owned scoped context and the
+    /// supplied token. It must not retain or dispose the context. Changes are not saved automatically.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A token passed unchanged to the callback. The default token does not request cancellation;
+    /// the callback decides which operations observe it.
+    /// </param>
+    /// <returns>A task that completes after the callback and scoped-context disposal.</returns>
     public async Task WithScenarioDbContextAsync(
         TestScenarioScope<TEntryPoint> scope,
         Func<TDbContext, CancellationToken, Task> action,
@@ -150,6 +264,23 @@ public abstract class EntityFrameworkWebApplicationFactory<TEntryPoint, TDbConte
     }
 
     /// <summary>Executes a scoped database query against a scenario's isolated context.</summary>
+    /// <typeparam name="TResult">The materialized result type returned by the callback.</typeparam>
+    /// <param name="scope">
+    /// The non-null, active scenario scope whose service provider supplies the context. The caller
+    /// retains ownership of the scope.
+    /// </param>
+    /// <param name="action">
+    /// A non-null asynchronous callback invoked once with a scenario-owned scoped context and the
+    /// supplied token. It must fully materialize its result and must not retain or dispose the context.
+    /// Changes are not saved automatically.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A token passed unchanged to the callback. The default token does not request cancellation.
+    /// </param>
+    /// <returns>
+    /// A task whose result is the materialized value produced by <paramref name="action"/>. The caller
+    /// owns the value; it must not depend on the disposed context.
+    /// </returns>
     public async Task<TResult> WithScenarioDbContextAsync<TResult>(
         TestScenarioScope<TEntryPoint> scope,
         Func<TDbContext, CancellationToken, Task<TResult>> action,
@@ -163,6 +294,16 @@ public abstract class EntityFrameworkWebApplicationFactory<TEntryPoint, TDbConte
     }
 
     /// <summary>Adds entities to the test database and persists them.</summary>
+    /// <typeparam name="TEntity">The mapped reference-entity type to add.</typeparam>
+    /// <param name="entities">
+    /// A non-null sequence of entities accepted by EF Core. The sequence is enumerated immediately
+    /// and its elements are retained until the database operation completes.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A token that cancels waiting for serialized access, adding entities, or saving changes. The
+    /// default token does not request cancellation.
+    /// </param>
+    /// <returns>A task that completes after all entities have been added and tracked changes saved.</returns>
     public Task SeedDatabaseAsync<TEntity>(
         IEnumerable<TEntity> entities,
         CancellationToken cancellationToken = default)
@@ -182,6 +323,16 @@ public abstract class EntityFrameworkWebApplicationFactory<TEntryPoint, TDbConte
     /// <summary>
     /// Executes an action in a database transaction, saves tracked changes, and commits on success.
     /// </summary>
+    /// <param name="action">
+    /// A non-null asynchronous callback invoked once inside the transaction with a fresh factory-owned
+    /// context and the supplied token. It must not retain or dispose the context.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A token that cancels waiting for serialized access and is passed to transaction, callback,
+    /// save, and commit operations. The default token does not request cancellation.
+    /// </param>
+    /// <returns>A task that completes after the transaction commits and owned resources are disposed.</returns>
+    /// <remarks>The configured provider must support transactions. Failure before commit causes rollback on disposal.</remarks>
     public Task ExecuteInTransactionAsync(
         Func<TDbContext, CancellationToken, Task> action,
         CancellationToken cancellationToken = default)
@@ -202,6 +353,15 @@ public abstract class EntityFrameworkWebApplicationFactory<TEntryPoint, TDbConte
     /// <summary>
     /// Runs an action against a fresh scoped context without automatically saving tracked changes.
     /// </summary>
+    /// <param name="action">
+    /// A non-null asynchronous callback invoked once with a fresh factory-owned context and the
+    /// supplied token. It must not retain or dispose the context.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A token that cancels waiting for serialized access and is passed unchanged to the callback.
+    /// The default token does not request cancellation.
+    /// </param>
+    /// <returns>A task that completes after the callback and scoped-context disposal.</returns>
     public async Task WithDbContextAsync(
         Func<TDbContext, CancellationToken, Task> action,
         CancellationToken cancellationToken = default)
@@ -224,6 +384,19 @@ public abstract class EntityFrameworkWebApplicationFactory<TEntryPoint, TDbConte
     /// <summary>
     /// Runs a function against a fresh scoped context without automatically saving tracked changes.
     /// </summary>
+    /// <typeparam name="TResult">The materialized result type returned by the callback.</typeparam>
+    /// <param name="action">
+    /// A non-null asynchronous callback invoked once with a fresh factory-owned context and the
+    /// supplied token. It must fully materialize its result and must not retain or dispose the context.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A token that cancels waiting for serialized access and is passed unchanged to the callback.
+    /// The default token does not request cancellation.
+    /// </param>
+    /// <returns>
+    /// A task whose result is the materialized value produced by <paramref name="action"/>. The caller
+    /// owns the value; it must not depend on the disposed context.
+    /// </returns>
     public async Task<TResult> WithDbContextAsync<TResult>(
         Func<TDbContext, CancellationToken, Task<TResult>> action,
         CancellationToken cancellationToken = default)
@@ -276,6 +449,14 @@ public abstract class EntityFrameworkWebApplicationFactory<TEntryPoint, TDbConte
     /// Initializes a scenario database. Override this to run application migrations, invoke a
     /// schema verifier, restore a template, or apply another application-specific lifecycle.
     /// </summary>
+    /// <param name="database">
+    /// The scenario-owned scoped context. Use it only for this callback and do not retain or dispose it.
+    /// </param>
+    /// <param name="cancellationToken">A token that cancels initialization operations.</param>
+    /// <returns>
+    /// A task that completes after initialization. The default implementation deletes and recreates
+    /// the complete isolated scenario database.
+    /// </returns>
     protected virtual async Task InitializeScenarioDatabaseAsync(
         TDbContext database,
         CancellationToken cancellationToken)
@@ -314,6 +495,16 @@ public abstract class EntityFrameworkWebApplicationFactory<TEntryPoint, TDbConte
     /// attaches <see cref="SqliteDatabaseCleanupDiagnostics"/> to terminal cleanup failures.
     /// Override this when the application owns database disposal or cleanup.
     /// </summary>
+    /// <param name="database">
+    /// The scenario-owned scoped context. Use it only for this callback and do not retain or dispose it.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A token that cancels deletion and transient SQLite retry delays.
+    /// </param>
+    /// <returns>
+    /// A task that completes after cleanup. The default deletes the database; for SQLite it clears
+    /// connection pools and retries transient file-lock failures before attaching terminal diagnostics.
+    /// </returns>
     protected virtual Task CleanupScenarioDatabaseAsync(
         TDbContext database,
         CancellationToken cancellationToken) =>

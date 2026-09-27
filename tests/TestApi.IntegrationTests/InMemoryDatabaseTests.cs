@@ -198,7 +198,9 @@ public sealed class InMemoryDatabaseTests : IClassFixture<InMemoryTestApiFactory
     }
 }
 
+#region docs-in-memory-ef-factory
 public sealed class InMemoryTestApiFactory
     : InMemoryEntityFrameworkWebApplicationFactory<Program, TestApiDbContext>
 {
 }
+#endregion

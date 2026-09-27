@@ -1,0 +1,33 @@
+items:
+- name: Overview
+  href: index.md
+- name: Packages
+  items:
+  - name: XBullet.EasyTesting
+    href: packages/xbullet-easytesting.md
+  - name: XBullet.EasyTesting.Aspire
+    href: packages/xbullet-easytesting-aspire.md
+  - name: XBullet.EasyTesting.Azure
+    href: packages/xbullet-easytesting-azure.md
+  - name: XBullet.EasyTesting.AzureFunctions
+    href: packages/xbullet-easytesting-azurefunctions.md
+  - name: XBullet.EasyTesting.EntityFrameworkCore
+    href: packages/xbullet-easytesting-entityframeworkcore.md
+  - name: XBullet.EasyTesting.Http
+    href: packages/xbullet-easytesting-http.md
+  - name: XBullet.EasyTesting.Messaging
+    href: packages/xbullet-easytesting-messaging.md
+  - name: XBullet.EasyTesting.Observability
+    href: packages/xbullet-easytesting-observability.md
+  - name: XBullet.EasyTesting.Snapshots.Core
+    href: packages/xbullet-easytesting-snapshots-core.md
+  - name: XBullet.EasyTesting.Snapshots.Http
+    href: packages/xbullet-easytesting-snapshots-http.md
+  - name: XBullet.EasyTesting.Snapshots
+    href: packages/xbullet-easytesting-snapshots.md
+  - name: XBullet.EasyTesting.Testcontainers
+    href: packages/xbullet-easytesting-testcontainers.md
+  - name: XBullet.EasyTesting.Verify.Xunit
+    href: packages/xbullet-easytesting-verify-xunit.md
+- name: Namespaces and members
+  href: generated/toc.yml

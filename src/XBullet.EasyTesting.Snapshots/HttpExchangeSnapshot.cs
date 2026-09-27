@@ -5,12 +5,22 @@ using System.Text.Json.Serialization;
 namespace XBullet.EasyTesting.Snapshots;
 
 /// <summary>A stable representation of an HTTP request/response exchange.</summary>
+/// <param name="Request">Captured request, or <see langword="null"/> when the response has no associated request.</param>
+/// <param name="Response">Captured response, or <see langword="null"/> when a send failure prevented a response.</param>
+/// <param name="Failure">Captured send failure, or <see langword="null"/> when the exchange produced a response.</param>
 public sealed record HttpExchangeSnapshot(
     HttpExchangeRequestSnapshot? Request,
     HttpExchangeResponseSnapshot? Response,
     HttpExchangeFailureSnapshot? Failure)
 {
     /// <summary>Creates a deterministic exchange snapshot from an HTTP response.</summary>
+    /// <param name="response">The caller-owned, non-null response to capture. It and its request and content are read but not disposed or modified.</param>
+    /// <param name="options">
+    /// Optional capture and redaction options. <see langword="null"/> uses options attached by an <see cref="HttpExchangeRecorder"/> when present,
+    /// otherwise the effective global or default options. Different options are not accepted for a recorded response.
+    /// </param>
+    /// <param name="cancellationToken">Token that cancels direct response-content reading. The default token does not cancel the operation.</param>
+    /// <returns>A task whose result is a new deterministic snapshot, or the stable snapshot associated with a recorded response.</returns>
     public static async Task<HttpExchangeSnapshot> FromResponseAsync(
         HttpResponseMessage response,
         HttpExchangeSnapshotOptions? options = null,
@@ -161,6 +171,10 @@ public sealed record HttpExchangeSnapshot(
 }
 
 /// <summary>A stable representation of the request in an HTTP exchange.</summary>
+/// <param name="Method">HTTP method text, such as <c>GET</c>.</param>
+/// <param name="Url">Formatted request URL, or <see langword="null"/> when the request has no URL. Configured query and path redaction has already been applied.</param>
+/// <param name="Headers">Captured header names and values, or <see langword="null"/> when header capture is disabled. Header names use case-insensitive comparison.</param>
+/// <param name="Body">Captured JSON, text, or base64 binary body, or <see langword="null"/> when body capture is disabled or the body is absent or empty.</param>
 public sealed record HttpExchangeRequestSnapshot(
     string Method,
     string? Url,
@@ -168,6 +182,10 @@ public sealed record HttpExchangeRequestSnapshot(
     object? Body);
 
 /// <summary>A stable representation of the response in an HTTP exchange.</summary>
+/// <param name="StatusCode">Numeric HTTP status code.</param>
+/// <param name="ReasonPhrase">HTTP reason phrase, or <see langword="null"/> when none is supplied.</param>
+/// <param name="Headers">Captured header names and values, or <see langword="null"/> when header capture is disabled. Header names use case-insensitive comparison.</param>
+/// <param name="Body">Captured JSON, text, or base64 binary body, or <see langword="null"/> when body capture is disabled or the body is absent or empty.</param>
 public sealed record HttpExchangeResponseSnapshot(
     int StatusCode,
     string? ReasonPhrase,
@@ -175,11 +193,14 @@ public sealed record HttpExchangeResponseSnapshot(
     object? Body)
 {
     /// <summary>Gets the failure raised while the response body was recorded.</summary>
+    /// <value>The captured failure, or <see langword="null"/> when body capture completed normally.</value>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public HttpExchangeFailureSnapshot? BodyFailure { get; init; }
 }
 
 /// <summary>A stable representation of a failure that prevented an HTTP response.</summary>
+/// <param name="Type">Fully qualified exception type name.</param>
+/// <param name="Message">Exception message. The value may contain application or remote-system details and is not automatically redacted.</param>
 public sealed record HttpExchangeFailureSnapshot(string Type, string Message)
 {
     internal static HttpExchangeFailureSnapshot FromException(Exception exception)

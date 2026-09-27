@@ -16,6 +16,8 @@ public sealed class ExternalApiControllerTests : IClassFixture<TestApiFactory>
         _factory = factory;
     }
 
+    #region docs-http-controller-integration
+
     [Fact]
     public Task Controller_calls_external_api_and_saves_the_result_to_database() =>
         Run(async (scope, cancellationToken) =>
@@ -47,6 +49,8 @@ public sealed class ExternalApiControllerTests : IClassFixture<TestApiFactory>
             Assert.Equal(HttpMethod.Get, request.Method);
             Assert.Equal("/products/701", request.RequestUri!.PathAndQuery);
         });
+
+    #endregion
 
     [Fact]
     public Task External_not_found_response_does_not_save_a_product() =>

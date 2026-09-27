@@ -14,6 +14,11 @@ public sealed class RecordedMessageBusAssertions
     }
 
     /// <summary>Requires exactly the supplied number of recorded messages.</summary>
+    /// <param name="expected">The non-negative message count required at assertion time.</param>
+    /// <returns>This bus assertion object so additional checks can be chained.</returns>
+    /// <exception cref="RecordedMessageVerificationException">
+    /// The current message count does not equal <paramref name="expected"/>.
+    /// </exception>
     public RecordedMessageBusAssertions HaveCount(int expected)
     {
         if (expected < 0)
@@ -32,6 +37,19 @@ public sealed class RecordedMessageBusAssertions
     }
 
     /// <summary>Requires exactly one message for the supplied transport and destination.</summary>
+    /// <param name="transport">
+    /// The non-empty transport identifier matched without regard to case.
+    /// </param>
+    /// <param name="destination">
+    /// The non-empty destination matched using ordinal, case-sensitive comparison.
+    /// </param>
+    /// <returns>
+    /// A new assertion object bound to the single matching message and the bus's serializer
+    /// options.
+    /// </returns>
+    /// <exception cref="RecordedMessageVerificationException">
+    /// The point-in-time message snapshot contains zero or multiple matches.
+    /// </exception>
     public RecordedMessageAssertions ContainSingle(
         string transport,
         string destination)
@@ -73,6 +91,9 @@ public sealed class RecordedMessageAssertions
     }
 
     /// <summary>Requires the message to contain the supplied header.</summary>
+    /// <param name="name">The non-empty header name matched without regard to case.</param>
+    /// <returns>This message assertion object so additional checks can be chained.</returns>
+    /// <exception cref="RecordedMessageVerificationException">The header is absent.</exception>
     public RecordedMessageAssertions HaveHeader(string name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -85,6 +106,15 @@ public sealed class RecordedMessageAssertions
     }
 
     /// <summary>Requires the message to contain the supplied header value.</summary>
+    /// <param name="name">The non-empty header name matched without regard to case.</param>
+    /// <param name="expectedValue">
+    /// The non-null value compared using ordinal, case-sensitive comparison. An empty value is
+    /// accepted. Failed assertions include expected and actual values without redaction.
+    /// </param>
+    /// <returns>This message assertion object so additional checks can be chained.</returns>
+    /// <exception cref="RecordedMessageVerificationException">
+    /// The header is absent or its value differs.
+    /// </exception>
     public RecordedMessageAssertions HaveHeader(string name, string expectedValue)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -105,6 +135,20 @@ public sealed class RecordedMessageAssertions
     }
 
     /// <summary>Requires the message payload to structurally equal the supplied JSON value.</summary>
+    /// <typeparam name="T">The type of expected value serialized for comparison.</typeparam>
+    /// <param name="expected">
+    /// The value serialized immediately and compared structurally with the recorded JSON payload.
+    /// It is not retained or owned and may be <see langword="null"/>.
+    /// </param>
+    /// <param name="options">
+    /// Serialization options for <paramref name="expected"/>, or <see langword="null"/> to use the
+    /// recording bus's options. Supplied options are read but not owned, retained, or mutated.
+    /// </param>
+    /// <returns>This message assertion object so additional checks can be chained.</returns>
+    /// <exception cref="RecordedMessageVerificationException">
+    /// The JSON values differ structurally. The exception message includes both payloads without
+    /// automatic redaction.
+    /// </exception>
     public RecordedMessageAssertions HavePayload<T>(
         T expected,
         JsonSerializerOptions? options = null)
@@ -130,4 +174,8 @@ public sealed class RecordedMessageAssertions
 }
 
 /// <summary>Thrown when recorded messages do not satisfy a fluent assertion.</summary>
+/// <param name="message">
+/// The non-null assertion-failure message. Depending on the assertion, it can contain unredacted
+/// header values or serialized payloads.
+/// </param>
 public sealed class RecordedMessageVerificationException(string message) : Exception(message);

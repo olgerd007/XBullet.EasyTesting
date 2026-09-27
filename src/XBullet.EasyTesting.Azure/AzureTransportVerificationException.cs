@@ -4,6 +4,7 @@ namespace XBullet.EasyTesting.Azure;
 public sealed class AzureTransportVerificationException : Exception
 {
     /// <summary>Creates a verification exception.</summary>
+    /// <param name="message">The non-null text describing the unmet request expectation.</param>
     public AzureTransportVerificationException(string message)
         : base(message)
     {

@@ -6,6 +6,8 @@ namespace TestFunctions.IntegrationTests;
 
 public sealed class DurableFunctionTests
 {
+    #region docs-functions-durable-activity
+
     [Fact]
     public async Task Orchestrator_dispatches_to_real_activity_and_records_call()
     {
@@ -26,6 +28,10 @@ public sealed class DurableFunctionTests
         Assert.Null(call.Options);
     }
 
+    #endregion
+
+    #region docs-functions-durable-limitations
+
     [Fact]
     public void Runtime_dependent_members_are_not_supported()
     {
@@ -35,6 +41,8 @@ public sealed class DurableFunctionTests
         Assert.Throws<NotSupportedException>(() => context.GetInput<string>());
         Assert.Throws<NotSupportedException>(() => context.NewGuid());
     }
+
+    #endregion
 
     [Fact]
     public async Task Activity_dispatch_validates_handlers_nullable_results_and_result_types()

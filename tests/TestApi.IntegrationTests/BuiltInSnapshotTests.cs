@@ -14,6 +14,8 @@ public sealed class BuiltInSnapshotTests : IClassFixture<TestApiFactory>
         _factory = factory;
     }
 
+    #region docs-snapshots-built-in-controller
+
     [Fact]
     public Task Authenticated_controller_matches_own_snapshot() =>
         Run(async (scope, cancellationToken) =>
@@ -26,6 +28,8 @@ public sealed class BuiltInSnapshotTests : IClassFixture<TestApiFactory>
                 snapshotSettings: BuiltInSnapshotAudit.CreateSettings(),
                 cancellationToken: cancellationToken);
         });
+
+    #endregion
 
     private Task Run(Func<TestScenarioScope<Program>, CancellationToken, Task> test) =>
         _factory.RunInTestScenarioScopeAsync(

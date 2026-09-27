@@ -21,7 +21,8 @@ public async Task Get_order_matches_snapshot()
 }
 ```
 
-The verified model contains stable request, status, header, and body data. Volatile headers are excluded by default, and `ControllerSnapshotOptions` can customize the captured result.
+The verified model contains stable request, status, header, and body data. Volatile headers are
+excluded by default, and `ControllerSnapshotOptions` can customize the captured result.
 
 For a complete request/response exchange, attach an `HttpExchangeRecorder` to the test client.
 This records the real TestServer call; it does not replace the transport with a stub:
@@ -57,6 +58,8 @@ every exchange in request order.
 
 ## Documentation
 
+- [API reference](https://olgerd007.github.io/XBullet.EasyTesting/api/packages/xbullet-easytesting-verify-xunit.html)
 - [Verify.Xunit controller snapshot guide](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/verify-xunit.md)
+- [Built-in snapshots versus Verify.Xunit](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/snapshots/choose-engine.md)
 - [Built-in snapshot guide](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/snapshots.md)
 - [Snapshot core package](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/src/XBullet.EasyTesting.Snapshots/README.md)

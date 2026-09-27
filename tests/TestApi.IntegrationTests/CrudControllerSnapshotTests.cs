@@ -33,6 +33,8 @@ public sealed class CrudControllerSnapshotTests : IClassFixture<TestApiFactory>
                 cancellationToken: cancellationToken);
         });
 
+    #region docs-snapshots-complete-exchange
+
     [Fact]
     public Task Create_matches_custom_snapshot_with_generated_id_scrubbed() =>
         Run(async (scope, cancellationToken) =>
@@ -54,6 +56,8 @@ public sealed class CrudControllerSnapshotTests : IClassFixture<TestApiFactory>
                 cancellationToken: cancellationToken);
         });
 
+    #endregion
+
     [Fact]
     public Task Update_matches_custom_snapshot() =>
         Run(async (scope, cancellationToken) =>
@@ -72,6 +76,8 @@ public sealed class CrudControllerSnapshotTests : IClassFixture<TestApiFactory>
                 snapshotSettings: BuiltInSnapshotAudit.CreateSettings(),
                 cancellationToken: cancellationToken);
         });
+
+    #region docs-snapshots-redacted-exchange
 
     [Fact]
     public Task Update_matches_full_exchange_with_nested_request_and_path_scrubbing() =>
@@ -114,6 +120,8 @@ public sealed class CrudControllerSnapshotTests : IClassFixture<TestApiFactory>
                 snapshotSettings: settings,
                 cancellationToken: cancellationToken);
         });
+
+    #endregion
 
     [Fact]
     public Task Delete_matches_custom_snapshot() =>

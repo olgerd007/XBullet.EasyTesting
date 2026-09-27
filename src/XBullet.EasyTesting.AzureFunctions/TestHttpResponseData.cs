@@ -27,5 +27,6 @@ public sealed class TestHttpResponseData : HttpResponseData
     public override HttpCookies Cookies => _cookies;
 
     /// <summary>Gets cookies appended by the function.</summary>
+    /// <value>A live read-only view of cookies in append order. Cookie objects are retained without cloning.</value>
     public IReadOnlyList<IHttpCookie> AppendedCookies => _cookies.Items;
 }

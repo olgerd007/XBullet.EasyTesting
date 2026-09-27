@@ -23,6 +23,8 @@ namespace XBullet.EasyTesting.ContainerTests;
 
 public sealed class ContainerModuleSmokeTests
 {
+    #region docs-testcontainers-postgresql
+
     [Fact(Explicit = true)]
     public async Task PostgreSql_is_ready_and_accepts_queries()
     {
@@ -41,6 +43,10 @@ public sealed class ContainerModuleSmokeTests
         AssertConfiguration(scope, "ConnectionStrings:PostgreSql", container.GetConnectionString());
     }
 
+    #endregion
+
+    #region docs-testcontainers-sqlserver
+
     [Fact(Explicit = true)]
     public async Task SqlServer_is_ready_and_accepts_queries()
     {
@@ -58,6 +64,10 @@ public sealed class ContainerModuleSmokeTests
         Assert.Equal(42, Convert.ToInt32(result, System.Globalization.CultureInfo.InvariantCulture));
         AssertConfiguration(scope, "ConnectionStrings:SqlServer", container.GetConnectionString());
     }
+
+    #endregion
+
+    #region docs-testcontainers-kafka
 
     [Fact(Explicit = true)]
     public async Task Kafka_is_ready_and_persists_a_message()
@@ -83,6 +93,10 @@ public sealed class ContainerModuleSmokeTests
         AssertConfiguration(scope, "Kafka:BootstrapServers", container.GetBootstrapAddress());
     }
 
+    #endregion
+
+    #region docs-testcontainers-redis
+
     [Fact(Explicit = true)]
     public async Task Redis_is_ready_and_round_trips_a_value()
     {
@@ -100,6 +114,10 @@ public sealed class ContainerModuleSmokeTests
         Assert.Equal("ready", await database.StringGetAsync(key));
         AssertConfiguration(scope, "ConnectionStrings:Redis", container.GetConnectionString());
     }
+
+    #endregion
+
+    #region docs-testcontainers-rabbitmq
 
     [Fact(Explicit = true)]
     public async Task RabbitMq_is_ready_and_round_trips_a_message()
@@ -139,6 +157,10 @@ public sealed class ContainerModuleSmokeTests
         AssertConfiguration(scope, "ConnectionStrings:RabbitMq", container.GetConnectionString());
     }
 
+    #endregion
+
+    #region docs-testcontainers-azurite
+
     [Fact(Explicit = true)]
     public async Task Azurite_is_ready_and_round_trips_a_blob()
     {
@@ -160,6 +182,10 @@ public sealed class ContainerModuleSmokeTests
         Assert.Equal("ready", download.Value.Content.ToString());
         AssertConfiguration(scope, "ConnectionStrings:AzureStorage", container.GetConnectionString());
     }
+
+    #endregion
+
+    #region docs-testcontainers-servicebus
 
     [Fact(Explicit = true)]
     public async Task ServiceBus_emulator_is_ready_and_round_trips_a_message()
@@ -185,6 +211,8 @@ public sealed class ContainerModuleSmokeTests
         await receiver.CompleteMessageAsync(received, TestContext.Current.CancellationToken);
         AssertConfiguration(scope, "ConnectionStrings:ServiceBus", container.GetConnectionString());
     }
+
+    #endregion
 
     private static Task<TestScenarioScope<Program>> CreateScopeAsync(
         AuthenticatedWebApplicationFactory<Program> factory) =>

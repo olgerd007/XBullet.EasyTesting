@@ -1,0 +1,88 @@
+items:
+- name: Documentation
+  href: index.md
+- name: Getting started
+  items:
+  - name: First controller test
+    href: getting-started/first-controller-test.md
+- name: Concepts
+  items:
+  - name: Test hosts
+    href: concepts/test-hosts.md
+  - name: Scenarios and isolation
+    href: concepts/scenarios-and-isolation.md
+  - name: Resources and cleanup
+    href: concepts/resources-and-cleanup.md
+  - name: Authentication
+    href: concepts/authentication.md
+  - name: Security and sensitive data
+    href: concepts/security-and-sensitive-data.md
+  - name: Multi-target and parallel execution
+    href: concepts/multi-target-and-parallel-execution.md
+- name: Guides
+  items:
+  - name: Application boundaries
+    href: guides/application-boundaries.md
+  - name: Authentication and scenarios
+    href: guides/authentication-and-scenarios.md
+  - name: Service and configuration overrides
+    href: guides/service-and-configuration-overrides.md
+  - name: Response assertions
+    href: guides/response-assertions.md
+  - name: Outbound HTTP
+    href: guides/outbound-http.md
+  - name: Entity Framework Core
+    href: guides/entity-framework-core.md
+  - name: Messaging
+    href: guides/messaging.md
+  - name: Observability
+    href: guides/observability.md
+  - name: Azure SDK
+    href: guides/azure-sdk.md
+  - name: Testcontainers
+    href: guides/testcontainers.md
+  - name: Aspire
+    href: guides/aspire.md
+  - name: Azure Functions
+    href: guides/azure-functions.md
+  - name: Azure Functions triggers
+    href: guides/azure-functions-triggers.md
+  - name: Durable Functions boundary
+    href: guides/azure-functions-durable.md
+  - name: Snapshots
+    href: guides/snapshots.md
+    items:
+    - name: Getting started
+      href: guides/snapshots/getting-started.md
+    - name: Files and naming
+      href: guides/snapshots/files-and-naming.md
+    - name: Recipes
+      href: guides/snapshots/recipes.md
+    - name: Stabilizing data
+      href: guides/snapshots/stabilizing-data.md
+    - name: Defaults
+      href: guides/snapshots/defaults.md
+    - name: Maintenance
+      href: guides/snapshots/maintenance.md
+    - name: Migration
+      href: guides/snapshots/migration.md
+    - name: Choose an engine
+      href: guides/snapshots/choose-engine.md
+  - name: Verify.Xunit
+    href: guides/verify-xunit.md
+- name: API reference
+  href: api/toc.yml
+- name: Contributing
+  items:
+  - name: Building and releasing
+    href: contributing/building-and-releasing.md
+  - name: API reference generation
+    href: contributing/api-reference.md
+  - name: Documentation maintenance
+    href: contributing/documentation-maintenance.md
+  - name: Documentation release checklist
+    href: contributing/release-checklist.md
+  - name: Documentation examples
+    href: contributing/documentation-examples.md
+  - name: Documentation style
+    href: documentation-style-guide.md

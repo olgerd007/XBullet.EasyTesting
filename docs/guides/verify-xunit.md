@@ -2,25 +2,36 @@
 
 This guide covers the optional Verify.Xunit v3 adapter for controller responses and complete TestServer exchanges.
 
+For a workflow comparison, see
+[built-in snapshots versus Verify.Xunit](snapshots/choose-engine.md).
+
 ## Verify.Xunit v3 controller snapshots
 
-Reference the optional `XBullet.EasyTesting.Verify.Xunit` package from an xUnit v3 test project and verify an HTTP response directly:
+Reference the optional `XBullet.EasyTesting.Verify.Xunit` package from an xUnit v3 test project and
+verify an HTTP response directly:
 
+<!-- snippet: tests/TestApi.IntegrationTests/ControllerSnapshotTests.cs#docs-snapshots-verify-controller -->
 ```csharp
 [Fact]
-public async Task Get_order_matches_snapshot()
-{
-    using var client = _factory.CreateAuthenticatedClient(
-        TestUser.Create(name: "Ada", roles: ["Administrator"]));
-    using var response = await client.GetAsync("/api/orders/42");
+public Task Authenticated_controller_matches_snapshot() =>
+    Run(async (scope, cancellationToken) =>
+    {
+        using var client = scope.CreateAuthenticatedClient(
+            TestUser.Create(name: "Ada", nameIdentifier: "user-42"));
+        using var response = await client.GetAsync("/api/secure/me", cancellationToken);
 
-    await response.VerifyControllerSnapshot();
-}
+        await response.VerifyControllerSnapshot(cancellationToken: cancellationToken);
+    });
 ```
+<!-- end-snippet -->
 
-The Verify snapshot uses the same normalized controller model as the built-in assertion: request method and relative URL, numeric status code, reason phrase, stable response headers, and body. JSON is compared structurally. Empty bodies become `null`, text remains text, and binary content is stored as base64.
+The Verify snapshot uses the same normalized controller model as the built-in assertion: request
+method and relative URL, numeric status code, reason phrase, stable response headers, and body. JSON
+is compared structurally. Empty bodies become `null`, text remains text, and binary content is
+stored as base64.
 
-Volatile headers such as `Date`, `Server`, and correlation identifiers are excluded by default. Customize the captured data when needed:
+Volatile headers such as `Date`, `Server`, and correlation identifiers are excluded by default.
+Customize the captured data when needed:
 
 ```csharp
 var options = new ControllerSnapshotOptions()
@@ -50,3 +61,5 @@ The recorder continues through the real TestServer pipeline; it is not a stub. U
 captured calls in request order.
 
 Commit each accepted `*.verified.txt` file. Unaccepted `*.received.*` files are ignored by this repository.
+
+Browse the [Verify.Xunit API reference](../api/packages/xbullet-easytesting-verify-xunit.md).

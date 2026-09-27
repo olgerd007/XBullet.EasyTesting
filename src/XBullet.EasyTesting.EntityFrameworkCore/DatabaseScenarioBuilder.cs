@@ -4,6 +4,12 @@ using Microsoft.EntityFrameworkCore;
 namespace XBullet.EasyTesting.EntityFrameworkCore;
 
 /// <summary>Fluently arranges one scoped EF Core database scenario.</summary>
+/// <typeparam name="TEntryPoint">The application entry-point type hosted by the test factory.</typeparam>
+/// <typeparam name="TDbContext">The EF Core context type used by the application.</typeparam>
+/// <remarks>
+/// This mutable builder is not thread-safe and can execute only once. Arranged callbacks execute
+/// sequentially against one factory-owned scoped context and must not retain or dispose it.
+/// </remarks>
 public sealed class DatabaseScenarioBuilder<TEntryPoint, TDbContext>
     where TEntryPoint : class
     where TDbContext : DbContext
@@ -26,6 +32,7 @@ public sealed class DatabaseScenarioBuilder<TEntryPoint, TDbContext>
     }
 
     /// <summary>Ensures that the database schema exists before running subsequent actions.</summary>
+    /// <returns>This builder, for chaining.</returns>
     public DatabaseScenarioBuilder<TEntryPoint, TDbContext> EnsureCreated()
     {
         _initialize = true;
@@ -34,6 +41,7 @@ public sealed class DatabaseScenarioBuilder<TEntryPoint, TDbContext>
     }
 
     /// <summary>Deletes and recreates the isolated test database before subsequent actions.</summary>
+    /// <returns>This builder, for chaining.</returns>
     public DatabaseScenarioBuilder<TEntryPoint, TDbContext> Recreate()
     {
         _recreate = true;
@@ -44,6 +52,13 @@ public sealed class DatabaseScenarioBuilder<TEntryPoint, TDbContext>
     /// <summary>
     /// Uses an application-specific database recreation operation before subsequent actions.
     /// </summary>
+    /// <param name="recreateDatabase">
+    /// A non-null asynchronous callback invoked once before arranged actions. It receives the
+    /// factory-owned scoped context and execution token and must not retain or dispose the context.
+    /// The callback is responsible for deleting, migrating, restoring, or otherwise recreating the
+    /// database; changes are saved after all arranged actions, not immediately after this callback.
+    /// </param>
+    /// <returns>This builder, for chaining. The callback is retained until execution.</returns>
     public DatabaseScenarioBuilder<TEntryPoint, TDbContext> RecreateDatabaseWith(
         Func<TDbContext, CancellationToken, Task> recreateDatabase)
     {
@@ -55,6 +70,12 @@ public sealed class DatabaseScenarioBuilder<TEntryPoint, TDbContext>
     }
 
     /// <summary>Adds entities during scenario execution.</summary>
+    /// <typeparam name="TEntity">The mapped reference-entity type to add.</typeparam>
+    /// <param name="entities">
+    /// The non-null array of entities to add. Its contents are copied when this method is called;
+    /// each element must be a valid entity accepted by EF Core.
+    /// </param>
+    /// <returns>This builder, for chaining.</returns>
     public DatabaseScenarioBuilder<TEntryPoint, TDbContext> Seed<TEntity>(params TEntity[] entities)
         where TEntity : class
     {
@@ -66,6 +87,11 @@ public sealed class DatabaseScenarioBuilder<TEntryPoint, TDbContext>
     }
 
     /// <summary>Adds a synchronous context mutation to the scenario.</summary>
+    /// <param name="action">
+    /// A non-null callback invoked once in arrangement order with the factory-owned scoped context.
+    /// It must not retain or dispose the context. Tracked changes are saved after all actions finish.
+    /// </param>
+    /// <returns>This builder, for chaining. The callback is retained until execution.</returns>
     public DatabaseScenarioBuilder<TEntryPoint, TDbContext> Apply(Action<TDbContext> action)
     {
         ArgumentNullException.ThrowIfNull(action);
@@ -78,6 +104,12 @@ public sealed class DatabaseScenarioBuilder<TEntryPoint, TDbContext>
     }
 
     /// <summary>Adds an asynchronous context mutation to the scenario.</summary>
+    /// <param name="action">
+    /// A non-null asynchronous callback invoked once in arrangement order with the factory-owned
+    /// scoped context and execution token. It must not retain or dispose the context. Tracked changes
+    /// are saved after all actions finish.
+    /// </param>
+    /// <returns>This builder, for chaining. The callback is retained until execution.</returns>
     public DatabaseScenarioBuilder<TEntryPoint, TDbContext> Apply(
         Func<TDbContext, CancellationToken, Task> action)
     {
@@ -87,6 +119,11 @@ public sealed class DatabaseScenarioBuilder<TEntryPoint, TDbContext>
     }
 
     /// <summary>Runs the arranged actions in a transaction supported by the configured provider.</summary>
+    /// <returns>This builder, for chaining.</returns>
+    /// <remarks>
+    /// The configured provider must support transactions. The transaction commits after all actions
+    /// and the final save succeed; disposal rolls it back when execution fails before commit.
+    /// </remarks>
     public DatabaseScenarioBuilder<TEntryPoint, TDbContext> InTransaction()
     {
         _transactional = true;
@@ -94,6 +131,14 @@ public sealed class DatabaseScenarioBuilder<TEntryPoint, TDbContext>
     }
 
     /// <summary>Executes the arranged operations once and saves tracked changes.</summary>
+    /// <param name="cancellationToken">
+    /// A token passed to database operations and asynchronous callbacks. The default token does not
+    /// request cancellation.
+    /// </param>
+    /// <returns>
+    /// A task that completes after optional initialization or recreation, all actions, the final
+    /// save, and any requested transaction commit. A second call throws an exception.
+    /// </returns>
     public Task ExecuteAsync(CancellationToken cancellationToken = default)
     {
         if (_executed)

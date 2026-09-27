@@ -15,6 +15,7 @@ public sealed class TestHttpResponseAssertionsTests : IClassFixture<TestApiFacto
         _factory = factory;
     }
 
+    #region docs-response-assertions
     [Fact]
     public async Task Response_assertions_accept_status_and_response_or_content_headers()
     {
@@ -34,7 +35,9 @@ public sealed class TestHttpResponseAssertionsTests : IClassFixture<TestApiFacto
             .HaveHeader("X-Correlation-Id", "test-42")
             .HaveHeader("Content-Type"));
     }
+    #endregion
 
+    #region docs-response-assertion-failures
     [Fact]
     public async Task Response_assertions_describe_status_and_header_failures()
     {
@@ -64,6 +67,7 @@ public sealed class TestHttpResponseAssertionsTests : IClassFixture<TestApiFacto
         Assert.Throws<ArgumentException>(() => assertions.HaveHeader(" "));
         Assert.Throws<ArgumentNullException>(() => assertions.HaveHeader("X-Mode", null!));
     }
+    #endregion
 
     [Fact]
     public async Task Json_body_assertion_describes_invalid_and_mismatched_json()

@@ -20,6 +20,7 @@ public sealed class TestScenarioScopeTests : IClassFixture<TestApiFactory>
         _factory = factory;
     }
 
+    #region docs-scenario-isolation
     [Fact]
     public async Task Scope_isolates_database_resources_services_and_configuration()
     {
@@ -86,7 +87,9 @@ public sealed class TestScenarioScopeTests : IClassFixture<TestApiFactory>
             second.Services.GetRequiredService<IExternalCatalogClient>());
         Assert.Null(second.Services.GetRequiredService<IConfiguration>()["Scenario:Name"]);
     }
+    #endregion
 
+    #region docs-scenario-lifetime-gate
     [Fact]
     public async Task Scope_gate_covers_the_complete_test_lifetime()
     {
@@ -103,7 +106,9 @@ public sealed class TestScenarioScopeTests : IClassFixture<TestApiFactory>
         await using var second = await secondTask;
         Assert.NotEqual(first.ScenarioId, second.ScenarioId);
     }
+    #endregion
 
+    #region docs-scenario-failure-diagnostics
     [Fact]
     public async Task Failed_scope_captures_diagnostics_before_automatic_cleanup()
     {
@@ -143,6 +148,7 @@ public sealed class TestScenarioScopeTests : IClassFixture<TestApiFactory>
         Assert.Equal(0, _factory.ExternalCatalog.CallCount);
         Assert.Equal(0, _factory.PublishedMessages.Count);
     }
+    #endregion
 
     private sealed class ReplacementCatalogClient : IExternalCatalogClient
     {

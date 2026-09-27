@@ -13,24 +13,38 @@ public sealed class TestFunctionBindings
         new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Gets captured input values by binding name.</summary>
+    /// <value>A live read-only, case-insensitive view. Values are retained without cloning and may be null.</value>
     public IReadOnlyDictionary<string, object?> Inputs => _inputs;
 
     /// <summary>Gets captured output values by binding name.</summary>
+    /// <value>A live read-only, case-insensitive view. Values are retained without cloning and may be null.</value>
     public IReadOnlyDictionary<string, object?> Outputs => _outputs;
 
     /// <summary>Gets worker binding types for captured outputs.</summary>
+    /// <value>A live read-only, case-insensitive mapping from output name to non-empty worker binding type.</value>
     public IReadOnlyDictionary<string, string> OutputTypes => _outputTypes;
 
     /// <summary>Gets the unmodified value returned by the function.</summary>
+    /// <value>
+    /// The original function return value, or <see langword="null"/> when no value has been captured
+    /// or the function returned null. The value is retained without cloning.
+    /// </value>
     public object? InvocationResult { get; private set; }
 
     /// <summary>Starts fluent assertions over captured output bindings.</summary>
+    /// <returns>A new assertion object that reads this collection's current output values.</returns>
     public TestOutputBindingAssertions Should() => new(this);
 
     /// <summary>Gets a captured input value by binding name.</summary>
+    /// <typeparam name="T">The expected assignable value type; no conversion is performed.</typeparam>
+    /// <param name="name">The non-empty captured input name, matched case-insensitively.</param>
+    /// <returns>The typed value, or the default <typeparamref name="T"/> value when the captured value is null.</returns>
     public T? GetInput<T>(string name) => GetValue<T>(_inputs, name, "input");
 
     /// <summary>Gets a captured output value by binding name.</summary>
+    /// <typeparam name="T">The expected assignable value type; no conversion is performed.</typeparam>
+    /// <param name="name">The non-empty captured output name, matched case-insensitively.</param>
+    /// <returns>The typed value, or the default <typeparamref name="T"/> value when the captured value is null.</returns>
     public T? GetOutput<T>(string name) => GetValue<T>(_outputs, name, "output");
 
     internal void CaptureInput(string name, object? value) => _inputs[name] = value;

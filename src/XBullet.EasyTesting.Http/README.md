@@ -38,6 +38,7 @@ read failures are observed without eagerly consuming the body.
 
 ## Documentation
 
-- [External APIs and application-boundary guide](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/application-boundaries.md)
+- [API reference](https://olgerd007.github.io/XBullet.EasyTesting/api/packages/xbullet-easytesting-http.html)
+- [Outbound HTTP guide](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/outbound-http.md)
 - [Executable HTTP-stub examples](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/tests/XBullet.EasyTesting.Tests/StubHttpMessageHandlerTests.cs)
 - [Snapshot adapters for recorded HTTP exchanges](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/src/XBullet.EasyTesting.Snapshots.Http/README.md)

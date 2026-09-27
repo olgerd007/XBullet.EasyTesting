@@ -14,6 +14,8 @@ public sealed class ObservabilityTests
     private static readonly DateTimeOffset StartTime =
         new(2030, 1, 2, 3, 4, 5, TimeSpan.Zero);
 
+    #region docs-observability-logs-time
+
     [Fact]
     public async Task Captures_structured_logs_scopes_and_fake_time_from_the_scenario_host()
     {
@@ -60,6 +62,10 @@ public sealed class ObservabilityTests
         Assert.Equal(StartTime.AddMinutes(5), observability.Time.GetUtcNow());
     }
 
+    #endregion
+
+    #region docs-observability-diagnostics
+
     [Fact]
     public async Task Captured_logs_are_included_in_failure_diagnostics()
     {
@@ -95,6 +101,10 @@ public sealed class ObservabilityTests
         Assert.Contains("diagnostic-operation", serialized);
         Assert.Contains("diagnostic.failures", serialized);
     }
+
+    #endregion
+
+    #region docs-observability-traces-metrics
 
     [Fact]
     public async Task Captures_activity_relationships_events_status_and_metrics()
@@ -170,6 +180,8 @@ public sealed class ObservabilityTests
         Assert.Equal("eu", counterMeasurement.Tags["region"]);
         Assert.Equal(StartTime, counterMeasurement.Timestamp);
     }
+
+    #endregion
 
     [Fact]
     public void Log_capture_is_bounded_to_the_configured_entry_count()

@@ -90,5 +90,6 @@ infrastructure verification.
 
 ## Documentation
 
-- [Documentation home and package selection](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/index.md)
+- [API reference](https://olgerd007.github.io/XBullet.EasyTesting/api/packages/xbullet-easytesting-testcontainers.html)
+- [Containerized infrastructure guide](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/testcontainers.md)
 - [Executable container examples](https://github.com/olgerd007/XBullet.EasyTesting/tree/main/tests/XBullet.EasyTesting.ContainerTests)

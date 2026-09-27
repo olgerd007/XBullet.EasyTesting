@@ -16,6 +16,8 @@ public sealed class ControllerSnapshotTests : IClassFixture<TestApiFactory>
         _factory = factory;
     }
 
+    #region docs-snapshots-verify-controller
+
     [Fact]
     public Task Authenticated_controller_matches_snapshot() =>
         Run(async (scope, cancellationToken) =>
@@ -26,6 +28,8 @@ public sealed class ControllerSnapshotTests : IClassFixture<TestApiFactory>
 
             await response.VerifyControllerSnapshot(cancellationToken: cancellationToken);
         });
+
+    #endregion
 
     [Fact]
     public Task Unauthorized_controller_matches_snapshot() =>

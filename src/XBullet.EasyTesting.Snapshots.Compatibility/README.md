@@ -22,6 +22,8 @@ ASP.NET testing dependency graph.
 
 ## Documentation
 
+- [API reference](https://olgerd007.github.io/XBullet.EasyTesting/api/packages/xbullet-easytesting-snapshots.html)
 - [Built-in snapshot guide](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/snapshots.md)
+- [Package-split migration guide](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/snapshots/migration.md)
 - [Snapshot core package](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/src/XBullet.EasyTesting.Snapshots/README.md)
 - [Outbound HTTP snapshot adapters](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/src/XBullet.EasyTesting.Snapshots.Http/README.md)

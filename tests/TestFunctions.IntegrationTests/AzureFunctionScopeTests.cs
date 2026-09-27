@@ -8,6 +8,8 @@ namespace TestFunctions.IntegrationTests;
 
 public sealed class AzureFunctionScopeTests
 {
+    #region docs-functions-invocation-scope
+
     [Fact]
     public async Task Each_invocation_uses_one_isolated_scope()
     {
@@ -61,6 +63,10 @@ public sealed class AzureFunctionScopeTests
         AssertContextNoLongerUsesInvocationScope(secondContext, secondFunction, singleton);
     }
 
+    #endregion
+
+    #region docs-functions-failure-cleanup
+
     [Fact]
     public async Task Invocation_scope_is_disposed_when_function_throws()
     {
@@ -79,6 +85,8 @@ public sealed class AzureFunctionScopeTests
         Assert.True(observation.Scoped.DisposedAsynchronously);
         AssertContextNoLongerUsesInvocationScope(context, observation, singleton);
     }
+
+    #endregion
 
     [Fact]
     public async Task Invocation_scope_is_disposed_when_middleware_throws()

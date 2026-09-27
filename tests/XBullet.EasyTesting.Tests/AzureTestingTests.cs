@@ -11,6 +11,8 @@ public sealed class AzureTestingTests
     private const string SasSignature = "sensitive-sas-signature";
     private const string SasQuery = "sv=2024-11-04&sp=r&sig=" + SasSignature;
 
+    #region docs-azure-responses
+
     [Fact]
     public void Response_exposes_content_headers_and_model_value()
     {
@@ -25,6 +27,10 @@ public sealed class AzureTestingTests
         Assert.Equal("application/json", response.GetRawResponse().Headers.ContentType);
         Assert.Contains("Ada", response.GetRawResponse().Content.ToString());
     }
+
+    #endregion
+
+    #region docs-azure-paging
 
     [Fact]
     public async Task Pageable_helpers_preserve_pages_and_continuation_tokens()
@@ -44,6 +50,10 @@ public sealed class AzureTestingTests
         Assert.Equal("next", pages[0].ContinuationToken);
         Assert.Equal([1, 2, 3], pages.SelectMany(page => page.Values));
     }
+
+    #endregion
+
+    #region docs-azure-credential
 
     [Fact]
     public async Task Credential_returns_deterministic_token_records_context_and_can_fail()
@@ -73,6 +83,8 @@ public sealed class AzureTestingTests
                 TestContext.Current.CancellationToken));
         Assert.Equal(2, credential.RequestCount);
     }
+
+    #endregion
 
     [Fact]
     public async Task Azure_helpers_cover_optional_values_validation_and_reset_paths()
@@ -134,6 +146,8 @@ public sealed class AzureTestingTests
             await credential.CaptureDiagnosticsAsync(cancellation.Token));
     }
 
+    #region docs-azure-pipeline
+
     [Fact]
     public async Task Transport_exercises_real_blob_client_and_records_retries()
     {
@@ -163,6 +177,8 @@ public sealed class AzureTestingTests
         transport.VerifyCalled(RequestMethod.Head, "/container/blob?sig=test", expectedCount: 2);
     }
 
+    #endregion
+
     [Fact]
     public async Task Transport_diagnostics_redact_query_header_values_and_content()
     {
@@ -182,6 +198,8 @@ public sealed class AzureTestingTests
         Assert.DoesNotContain("sig=", json, StringComparison.Ordinal);
         Assert.Contains("x-ms-version", json, StringComparison.OrdinalIgnoreCase);
     }
+
+    #region docs-azure-diagnostics
 
     [Fact]
     public async Task Failed_verification_redacts_actual_and_expected_SAS_query_values()
@@ -211,6 +229,8 @@ public sealed class AzureTestingTests
         Assert.Contains("comp=metadata", predicateFailure.Message);
         Assert.DoesNotContain(SasSignature, predicateFailure.Message);
     }
+
+    #endregion
 
     [Fact]
     public async Task Unarranged_response_body_redacts_SAS_query_values()

@@ -206,6 +206,21 @@ public Task<HttpClient> CreateClientAsync(
 Generated-documentation warnings are defects unless the project explicitly suppresses a documented
 compatibility or tooling case.
 
+## Generated API reference
+
+- Link package READMEs to their stable GitHub Pages package URL.
+- Link repository guides to the committed page under `docs/api/packages` so the link works both on
+  GitHub and in the generated site.
+- Use `<xref:Fully.Qualified.Type>` inside Docfx-only package pages when a link should follow a
+  public API identifier rather than a generated filename.
+- Put substantial workflows and examples in guides. Use an overwrite under `docs/api/overrides`
+  only to route an important API entry point to that conceptual material.
+- Generate the reference from implementation projects, not the compatibility facade. Document a
+  type-forwarding facade with a package page that points to each canonical implementation package.
+- Never edit `docs/api/generated` or `artifacts/docs`; run `eng/build-documentation.ps1` instead.
+- Treat a strict Docfx warning as a broken reference build. Fix unresolved UIDs, links, bookmarks,
+  duplicate comments, and metadata conflicts rather than weakening the warning policy.
+
 ## Review checklist
 
 - [ ] The page has one clear audience and purpose.
@@ -214,7 +229,14 @@ compatibility or tooling case.
 - [ ] Defaults and important configuration choices are stated.
 - [ ] Failure behavior, diagnostics, cleanup, and limitations are covered.
 - [ ] Every public parameter and generic type parameter has useful XML documentation.
+- [ ] New primary entry points are linked from the relevant API package page or overwrite.
 - [ ] Terminology matches this guide.
 - [ ] Links are descriptive and repository-relative where possible.
 - [ ] The page does not duplicate a longer canonical explanation.
 - [ ] No secrets or sensitive values appear in examples or output.
+
+Run `eng/verify-documentation.ps1 -NoBuild -WarningsAsErrors` after a Release build. The command
+enforces this guide's mechanical Markdown rules, synchronized examples, local links, XML comment
+coverage, and strict generated-reference output. The
+[maintenance policy](contributing/documentation-maintenance.md) defines external-link and periodic
+review behavior.

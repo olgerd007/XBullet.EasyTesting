@@ -16,6 +16,8 @@ public sealed class PublishingControllerTests : IClassFixture<TestApiFactory>
         _factory = factory;
     }
 
+    #region docs-kafka-publishing
+
     [Fact]
     public Task Controller_publishes_order_to_kafka_topic() =>
         Run(async (scope, cancellationToken) =>
@@ -35,6 +37,8 @@ public sealed class PublishingControllerTests : IClassFixture<TestApiFactory>
                 new OrderCreatedMessage(42, "customer-7", 125.50m),
                 recorded.GetPayload<OrderCreatedMessage>());
         });
+
+    #endregion
 
     [Fact]
     public Task Controller_publishes_invoice_to_service_bus_queue() =>
@@ -93,6 +97,8 @@ public sealed class PublishingControllerTests : IClassFixture<TestApiFactory>
             Assert.Equal(0, _factory.PublishedMessages.Count);
         });
 
+    #region docs-message-negative-path
+
     [Fact]
     public Task Invalid_request_does_not_publish_a_message() =>
         Run(async (scope, cancellationToken) =>
@@ -106,6 +112,8 @@ public sealed class PublishingControllerTests : IClassFixture<TestApiFactory>
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
             Assert.Equal(0, _factory.PublishedMessages.Count);
         });
+
+    #endregion
 
     private Task Run(Func<TestScenarioScope<Program>, CancellationToken, Task> test) =>
         _factory.RunInTestScenarioScopeAsync(

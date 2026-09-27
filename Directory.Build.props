@@ -7,6 +7,8 @@
     <AnalysisModeSecurity>AllEnabledByDefault</AnalysisModeSecurity>
     <Deterministic>true</Deterministic>
     <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+    <VerifyDocumentationOnBuild
+      Condition="'$(VerifyDocumentationOnBuild)' == '' and '$(GITHUB_ACTIONS)' != 'true'">true</VerifyDocumentationOnBuild>
     <NuGetAudit>true</NuGetAudit>
     <NuGetAuditMode>all</NuGetAuditMode>
     <NuGetAuditLevel>moderate</NuGetAuditLevel>
@@ -14,7 +16,7 @@
 
     <Authors>olgerd007</Authors>
     <Copyright>Copyright © 2026 olgerd007</Copyright>
-    <VersionPrefix>1.0.13</VersionPrefix>
+    <VersionPrefix>1.0.14</VersionPrefix>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/olgerd007/XBullet.EasyTesting</PackageProjectUrl>
     <RepositoryUrl>https://github.com/olgerd007/XBullet.EasyTesting.git</RepositoryUrl>

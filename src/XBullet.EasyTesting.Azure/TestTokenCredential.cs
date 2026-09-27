@@ -13,6 +13,13 @@ public sealed class TestTokenCredential : TokenCredential, ITestScenarioResource
     private Exception? _exception;
 
     /// <summary>Creates a successful credential with a deterministic token and expiry.</summary>
+    /// <param name="token">
+    /// The non-empty, non-whitespace token returned by synchronous and asynchronous requests. The
+    /// default is <c>xbullet-test-token</c>. Treat custom values as secrets.
+    /// </param>
+    /// <param name="expiresOn">
+    /// The absolute token expiry, or <see langword="null"/> to use January 1, 2100 at 00:00 UTC.
+    /// </param>
     public TestTokenCredential(
         string token = "xbullet-test-token",
         DateTimeOffset? expiresOn = null)
@@ -23,6 +30,10 @@ public sealed class TestTokenCredential : TokenCredential, ITestScenarioResource
     }
 
     /// <summary>Gets a stable copy of captured token requests.</summary>
+    /// <value>
+    /// A newly allocated snapshot in request order. The caller may retain the list. Individual
+    /// requests can contain unredacted claims and identifiers that should be treated as sensitive.
+    /// </value>
     public IReadOnlyList<TestTokenRequest> Requests
     {
         get
@@ -35,6 +46,7 @@ public sealed class TestTokenCredential : TokenCredential, ITestScenarioResource
     }
 
     /// <summary>Gets the number of captured token requests.</summary>
+    /// <value>The total number of successful and arranged-failure requests recorded since construction or reset.</value>
     public int RequestCount
     {
         get
@@ -47,6 +59,13 @@ public sealed class TestTokenCredential : TokenCredential, ITestScenarioResource
     }
 
     /// <summary>Configures the credential to return a token and clears any arranged failure.</summary>
+    /// <param name="token">The non-empty, non-whitespace token to return. Treat the value as a secret.</param>
+    /// <param name="expiresOn">
+    /// The new absolute expiry, or <see langword="null"/> to preserve the currently configured expiry.
+    /// </param>
+    /// <returns>
+    /// This credential, for chaining. The arranged failure is cleared; recorded requests are preserved.
+    /// </returns>
     public TestTokenCredential SucceedWith(string token, DateTimeOffset? expiresOn = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(token);
@@ -65,6 +84,11 @@ public sealed class TestTokenCredential : TokenCredential, ITestScenarioResource
     }
 
     /// <summary>Configures the credential to throw for subsequent token requests.</summary>
+    /// <param name="exception">
+    /// The non-null exception instance retained and thrown after each subsequent request is recorded.
+    /// The same instance is used until successful behavior is configured.
+    /// </param>
+    /// <returns>This credential, for chaining. The configured token and recorded requests are preserved.</returns>
     public TestTokenCredential FailWith(Exception exception)
     {
         ArgumentNullException.ThrowIfNull(exception);
@@ -77,6 +101,9 @@ public sealed class TestTokenCredential : TokenCredential, ITestScenarioResource
     }
 
     /// <summary>Clears captured requests while preserving the arranged credential behavior.</summary>
+    /// <returns>
+    /// This credential, for chaining. The token, expiry, and any arranged failure remain unchanged.
+    /// </returns>
     public TestTokenCredential Reset()
     {
         lock (_gate)

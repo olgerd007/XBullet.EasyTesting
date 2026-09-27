@@ -62,6 +62,10 @@ public sealed class SnapshotSettings
     /// Gets or sets the snapshot directory. Relative paths are resolved from the calling source file.
     /// The default is a <c>__snapshots__</c> directory beside that source file.
     /// </summary>
+    /// <value>
+    /// An absolute path or a path relative to the caller's source directory, or <see langword="null"/>
+    /// to use the resolver or the default sibling <c>__snapshots__</c> directory.
+    /// </value>
     public string? Directory
     {
         get => _directory;
@@ -71,11 +75,14 @@ public sealed class SnapshotSettings
             _overrides |= SettingOverrides.Directory;
         }
     }
-
     /// <summary>
     /// Gets or sets an optional callback that selects the snapshot directory from the calling test
     /// context. <see cref="Directory"/> takes precedence when both are set.
     /// </summary>
+    /// <value>
+    /// A callback retained and invoked during path resolution, or <see langword="null"/>. It must
+    /// return a non-empty absolute or source-relative directory. <see cref="Directory"/> takes precedence.
+    /// </value>
     public Func<SnapshotLocationContext, string>? DirectoryResolver
     {
         get => _directoryResolver;
@@ -85,10 +92,10 @@ public sealed class SnapshotSettings
             _overrides |= SettingOverrides.DirectoryResolver;
         }
     }
-
     /// <summary>
     /// Gets or sets the snapshot name. The calling method name is used when this is not specified.
     /// </summary>
+    /// <value>A filename component, or <see langword="null"/> to use the caller member name.</value>
     public string? SnapshotName
     {
         get => _snapshotName;
@@ -98,11 +105,11 @@ public sealed class SnapshotSettings
             _overrides |= SettingOverrides.SnapshotName;
         }
     }
-
     /// <summary>
     /// Gets or sets an optional snapshot variant. Variants create distinct snapshots for multiple
     /// assertions or parameterized cases in the same test method.
     /// </summary>
+    /// <value>An optional filename component distinguishing snapshots from the same assertion.</value>
     public string? Variant
     {
         get => _variant;
@@ -112,8 +119,11 @@ public sealed class SnapshotSettings
             _overrides |= SettingOverrides.Variant;
         }
     }
-
     /// <summary>Gets or sets the JSON options used to serialize the snapshot.</summary>
+    /// <value>
+    /// The mutable serializer options used immediately by assertions. The default uses web defaults,
+    /// indented output, and original property names. Defaults templates clone this object.
+    /// </value>
     public JsonSerializerOptions JsonSerializerOptions
     {
         get
@@ -128,8 +138,11 @@ public sealed class SnapshotSettings
             _overrides |= SettingOverrides.JsonSerializerOptions;
         }
     }
-
     /// <summary>Gets transformations applied to serialized content before comparison.</summary>
+    /// <value>
+    /// The live ordered callback list. Scrubbers run after structural JSON rules and must return
+    /// non-null content; JSON scrubbers must leave valid JSON.
+    /// </value>
     public IList<Func<string, string>> Scrubbers { get; } = new List<Func<string, string>>();
 
     internal IReadOnlySet<string> ScrubbedMembers => _scrubbedMembers;
@@ -148,6 +161,11 @@ public sealed class SnapshotSettings
     /// Gets or sets automatic snapshot-update behavior. The default can be selected with
     /// <c>INTEGRATION_TESTS_UPDATE_SNAPSHOTS=missing</c> or <c>all</c>.
     /// </summary>
+    /// <value>
+    /// <see cref="SnapshotUpdateMode.None"/> to write received files and fail,
+    /// <see cref="SnapshotUpdateMode.Missing"/> to approve only missing files, or
+    /// <see cref="SnapshotUpdateMode.All"/> to overwrite missing and changed verified files.
+    /// </value>
     public SnapshotUpdateMode UpdateMode
     {
         get => _updateMode;
@@ -157,8 +175,11 @@ public sealed class SnapshotSettings
             _overrides |= SettingOverrides.UpdateMode;
         }
     }
-
     /// <summary>Gets or sets whether an installed diff viewer is launched after a mismatch.</summary>
+    /// <value>
+    /// <see langword="true"/> to attempt launching a viewer after mismatches outside CI; otherwise,
+    /// <see langword="false"/>. The default is true.
+    /// </value>
     public bool LaunchDiffTool
     {
         get => _launchDiffTool;
@@ -168,11 +189,11 @@ public sealed class SnapshotSettings
             _overrides |= SettingOverrides.LaunchDiffTool;
         }
     }
-
     /// <summary>
     /// Gets or sets an explicit diff viewer. When omitted, Visual Studio, VS Code, Rider,
     /// and Meld are discovered automatically. Diff viewers are never launched in CI.
     /// </summary>
+    /// <value>An explicit retained configuration, or <see langword="null"/> to auto-discover a supported viewer.</value>
     public SnapshotDiffTool? DiffTool
     {
         get => _diffTool;
@@ -182,12 +203,15 @@ public sealed class SnapshotSettings
             _overrides |= SettingOverrides.DiffTool;
         }
     }
-
     /// <summary>
     /// Gets or sets whether automatic snapshot updates are allowed when a continuous-integration
     /// environment is detected. The default is controlled by
     /// <c>INTEGRATION_TESTS_ALLOW_SNAPSHOT_UPDATES_IN_CI</c> and is otherwise false.
     /// </summary>
+    /// <value>
+    /// <see langword="true"/> to permit configured automatic writes in detected CI environments;
+    /// otherwise, <see langword="false"/>. This does not itself enable updates.
+    /// </value>
     public bool AllowUpdatesInContinuousIntegration
     {
         get => _allowUpdatesInContinuousIntegration;
@@ -197,8 +221,8 @@ public sealed class SnapshotSettings
             _overrides |= SettingOverrides.AllowUpdatesInContinuousIntegration;
         }
     }
-
     /// <summary>Gets or sets an optional instance-scoped catalog that records exercised snapshots.</summary>
+    /// <value>The caller-owned catalog notified of verified paths, or <see langword="null"/> for no tracking.</value>
     public SnapshotCatalog? Catalog
     {
         get => _catalog;
@@ -208,8 +232,9 @@ public sealed class SnapshotSettings
             _overrides |= SettingOverrides.Catalog;
         }
     }
-
     /// <summary>Sets the snapshot name and returns this instance.</summary>
+    /// <param name="snapshotName">The non-empty name used as a sanitized filename component.</param>
+    /// <returns>This settings instance, for chaining.</returns>
     public SnapshotSettings Named(string snapshotName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(snapshotName);
@@ -218,6 +243,8 @@ public sealed class SnapshotSettings
     }
 
     /// <summary>Sets a snapshot variant and returns this instance.</summary>
+    /// <param name="variant">The non-empty variant used as a sanitized filename component.</param>
+    /// <returns>This settings instance, for chaining.</returns>
     public SnapshotSettings ForVariant(string variant)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(variant);
@@ -229,6 +256,11 @@ public sealed class SnapshotSettings
     /// Creates a compact deterministic variant from serialized parameter values and returns this
     /// instance. This is useful when parameter text would produce an excessively long filename.
     /// </summary>
+    /// <param name="values">The non-null parameter array serialized immediately with current JSON options.</param>
+    /// <returns>
+    /// This settings instance with a <c>hash-</c> variant followed by the first 16 lowercase SHA-256
+    /// hexadecimal characters of the serialized values.
+    /// </returns>
     public SnapshotSettings ForHashedVariant(params object?[] values)
     {
         ArgumentNullException.ThrowIfNull(values);
@@ -238,6 +270,8 @@ public sealed class SnapshotSettings
     }
 
     /// <summary>Sets the snapshot directory and returns this instance.</summary>
+    /// <param name="directory">A non-empty absolute path or path relative to the caller source directory.</param>
+    /// <returns>This settings instance, for chaining, with any directory resolver cleared.</returns>
     public SnapshotSettings InDirectory(string directory)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(directory);
@@ -247,6 +281,10 @@ public sealed class SnapshotSettings
     }
 
     /// <summary>Sets a context-aware snapshot-directory resolver and returns this instance.</summary>
+    /// <param name="directoryResolver">
+    /// A non-null callback retained until assertion and required to return a non-empty directory path.
+    /// </param>
+    /// <returns>This settings instance, for chaining, with any fixed directory cleared.</returns>
     public SnapshotSettings InDirectory(Func<SnapshotLocationContext, string> directoryResolver)
     {
         ArgumentNullException.ThrowIfNull(directoryResolver);
@@ -259,9 +297,12 @@ public sealed class SnapshotSettings
     /// Stores snapshots directly beside the calling source file instead of in its default
     /// <c>__snapshots__</c> directory.
     /// </summary>
+    /// <returns>This settings instance, for chaining, with directory <c>.</c>.</returns>
     public SnapshotSettings BesideSourceFile() => InDirectory(".");
 
     /// <summary>Adds a serialized-content scrubber and returns this instance.</summary>
+    /// <param name="scrubber">A non-null callback retained and run in registration order before comparison.</param>
+    /// <returns>This settings instance, for chaining.</returns>
     public SnapshotSettings Scrub(Func<string, string> scrubber)
     {
         ArgumentNullException.ThrowIfNull(scrubber);
@@ -273,6 +314,8 @@ public sealed class SnapshotSettings
     /// Replaces values of matching JSON members with <c>{Scrubbed}</c> at every nesting level.
     /// Member names are matched without regard to case.
     /// </summary>
+    /// <param name="memberNames">A non-null array of non-empty names; duplicates are ignored case-insensitively.</param>
+    /// <returns>This settings instance, for chaining.</returns>
     public SnapshotSettings ScrubMembers(params string[] memberNames)
     {
         AddMemberNames(_scrubbedMembers, memberNames);
@@ -282,12 +325,16 @@ public sealed class SnapshotSettings
     /// <summary>
     /// Replaces the value of a matching JSON member with <c>{Scrubbed}</c> at every nesting level.
     /// </summary>
+    /// <param name="memberName">The non-empty case-insensitive member name.</param>
+    /// <returns>This settings instance, for chaining.</returns>
     public SnapshotSettings ScrubMember(string memberName) => ScrubMembers(memberName);
 
     /// <summary>
     /// Removes matching JSON members from the snapshot at every nesting level.
     /// Member names are matched without regard to case.
     /// </summary>
+    /// <param name="memberNames">A non-null array of non-empty names; duplicates are ignored case-insensitively.</param>
+    /// <returns>This settings instance, for chaining.</returns>
     public SnapshotSettings IgnoreMembers(params string[] memberNames)
     {
         AddMemberNames(_ignoredMembers, memberNames);
@@ -295,12 +342,16 @@ public sealed class SnapshotSettings
     }
 
     /// <summary>Removes a matching JSON member from the snapshot at every nesting level.</summary>
+    /// <param name="memberName">The non-empty case-insensitive member name.</param>
+    /// <returns>This settings instance, for chaining.</returns>
     public SnapshotSettings IgnoreMember(string memberName) => IgnoreMembers(memberName);
 
     /// <summary>
     /// Replaces values selected by an extended JSON Pointer with <c>{Scrubbed}</c>.
     /// Use an empty path for the root, <c>/</c> separators, and <c>*</c> as a wildcard segment.
     /// </summary>
+    /// <param name="path">The non-null extended JSON Pointer; an empty string selects the root.</param>
+    /// <returns>This settings instance, for chaining. Rules run in registration order.</returns>
     public SnapshotSettings ScrubPath(string path)
     {
         _pathRules.Add(new JsonSnapshotPathRule(
@@ -312,6 +363,8 @@ public sealed class SnapshotSettings
     /// <summary>
     /// Removes values selected by an extended JSON Pointer. Use <c>*</c> as a wildcard segment.
     /// </summary>
+    /// <param name="path">The non-null extended JSON Pointer; an empty string selects the root.</param>
+    /// <returns>This settings instance, for chaining. Rules run in registration order.</returns>
     public SnapshotSettings IgnorePath(string path)
     {
         _pathRules.Add(new JsonSnapshotPathRule(
@@ -321,6 +374,9 @@ public sealed class SnapshotSettings
     }
 
     /// <summary>Replaces values selected by an extended JSON Pointer with a serialized value.</summary>
+    /// <param name="path">The non-null extended JSON Pointer; an empty string selects the root.</param>
+    /// <param name="replacement">The replacement serialized with current JSON options; null is accepted.</param>
+    /// <returns>This settings instance, for chaining. Rules run in registration order.</returns>
     public SnapshotSettings ReplacePath(string path, object? replacement)
     {
         _pathRules.Add(new JsonSnapshotPathRule(
@@ -334,6 +390,8 @@ public sealed class SnapshotSettings
     /// Replaces values selected by an extended JSON Pointer with a deterministic SHA-256 hash of
     /// their canonical JSON representation.
     /// </summary>
+    /// <param name="path">The non-null extended JSON Pointer; an empty string selects the root.</param>
+    /// <returns>This settings instance, for chaining. Rules run in registration order.</returns>
     public SnapshotSettings HashPath(string path)
     {
         _pathRules.Add(new JsonSnapshotPathRule(
@@ -346,6 +404,12 @@ public sealed class SnapshotSettings
     /// Sorts arrays selected by an extended JSON Pointer. When <paramref name="itemPath"/> is set,
     /// it is resolved relative to each array item and used as the ordinal JSON sort key.
     /// </summary>
+    /// <param name="path">The non-null extended JSON Pointer selecting arrays; wildcard segments are accepted.</param>
+    /// <param name="itemPath">
+    /// An optional non-wildcard JSON Pointer relative to each item, or <see langword="null"/> to sort
+    /// by each item's canonical JSON representation.
+    /// </param>
+    /// <returns>This settings instance, for chaining. Rules run in registration order.</returns>
     public SnapshotSettings SortArray(string path, string? itemPath = null)
     {
         _pathRules.Add(new JsonSnapshotPathRule(
@@ -358,6 +422,7 @@ public sealed class SnapshotSettings
     }
 
     /// <summary>Sorts JSON object properties by ordinal name before comparison.</summary>
+    /// <returns>This settings instance, for chaining.</returns>
     public SnapshotSettings CanonicalizeJson()
     {
         CanonicalizeObjectProperties = true;
@@ -365,6 +430,7 @@ public sealed class SnapshotSettings
     }
 
     /// <summary>Replaces every JSON string containing a GUID with <c>{Guid}</c>.</summary>
+    /// <returns>This settings instance, for chaining.</returns>
     public SnapshotSettings ScrubGuids()
     {
         ScrubGuidValues = true;
@@ -372,6 +438,7 @@ public sealed class SnapshotSettings
     }
 
     /// <summary>Replaces every round-trip JSON date/time string with <c>{DateTime}</c>.</summary>
+    /// <returns>This settings instance, for chaining.</returns>
     public SnapshotSettings ScrubDateTimes()
     {
         ScrubDateTimeValues = true;
@@ -379,6 +446,8 @@ public sealed class SnapshotSettings
     }
 
     /// <summary>Sets automatic snapshot-update behavior and returns this instance.</summary>
+    /// <param name="updateMode">The update policy; undefined enum values are retained but unsupported during matching.</param>
+    /// <returns>This settings instance, for chaining.</returns>
     public SnapshotSettings Updating(SnapshotUpdateMode updateMode)
     {
         UpdateMode = updateMode;
@@ -386,6 +455,7 @@ public sealed class SnapshotSettings
     }
 
     /// <summary>Explicitly permits automatic snapshot updates in continuous integration.</summary>
+    /// <returns>This settings instance, for chaining. The update mode remains unchanged.</returns>
     public SnapshotSettings AllowingUpdatesInContinuousIntegration()
     {
         AllowUpdatesInContinuousIntegration = true;
@@ -393,6 +463,8 @@ public sealed class SnapshotSettings
     }
 
     /// <summary>Records matched snapshot paths in an instance-scoped catalog.</summary>
+    /// <param name="catalog">The non-null caller-owned, thread-safe catalog to notify.</param>
+    /// <returns>This settings instance, for chaining.</returns>
     public SnapshotSettings TrackingWith(SnapshotCatalog catalog)
     {
         ArgumentNullException.ThrowIfNull(catalog);
@@ -401,6 +473,7 @@ public sealed class SnapshotSettings
     }
 
     /// <summary>Disables diff-tool launching and returns this instance.</summary>
+    /// <returns>This settings instance, for chaining, with any explicit tool cleared.</returns>
     public SnapshotSettings WithoutDiffTool()
     {
         LaunchDiffTool = false;
@@ -409,6 +482,8 @@ public sealed class SnapshotSettings
     }
 
     /// <summary>Selects an explicit diff tool and returns this instance.</summary>
+    /// <param name="diffTool">The non-null caller-owned configuration retained by these settings.</param>
+    /// <returns>This settings instance, for chaining, with launching enabled outside CI.</returns>
     public SnapshotSettings WithDiffTool(SnapshotDiffTool diffTool)
     {
         ArgumentNullException.ThrowIfNull(diffTool);

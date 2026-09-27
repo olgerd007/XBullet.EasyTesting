@@ -3,7 +3,13 @@ using System.IdentityModel.Tokens.Jwt;
 
 namespace XBullet.EasyTesting.Authentication;
 
-/// <summary>Fluently defines a locally signed JWT.</summary>
+/// <summary>Fluently defines a JWT produced by a <see cref="TestJwtAuthority"/>.</summary>
+/// <remarks>
+/// This mutable builder is not thread-safe. Unless overridden, the issuer, audience, and lifetime
+/// come from the authority; the subject is a new identifier, the name is
+/// <c>integration-test-user</c>, and the not-before time is the build time. Each token also receives
+/// a new JWT identifier when it is built.
+/// </remarks>
 public sealed class TestJwtBuilder
 {
     private readonly TestJwtAuthority _authority;
@@ -23,6 +29,12 @@ public sealed class TestJwtBuilder
     }
 
     /// <summary>Sets the token issuer.</summary>
+    /// <param name="issuer">
+    /// The non-empty issuer claim. The value is used as supplied and is not normalized or validated
+    /// as a URI.
+    /// </param>
+    /// <returns>This builder so additional token values can be configured.</returns>
+    /// <exception cref="ArgumentException"><paramref name="issuer"/> is empty or whitespace.</exception>
     public TestJwtBuilder WithIssuer(string issuer)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(issuer);
@@ -30,7 +42,12 @@ public sealed class TestJwtBuilder
         return this;
     }
 
-    /// <summary>Replaces the token audiences.</summary>
+    /// <summary>Replaces the token audiences with one value.</summary>
+    /// <param name="audience">
+    /// The non-empty audience claim. This removes every audience previously added to the builder.
+    /// </param>
+    /// <returns>This builder so additional token values can be configured.</returns>
+    /// <exception cref="ArgumentException"><paramref name="audience"/> is empty or whitespace.</exception>
     public TestJwtBuilder WithAudience(string audience)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(audience);
@@ -40,6 +57,11 @@ public sealed class TestJwtBuilder
     }
 
     /// <summary>Adds a token audience.</summary>
+    /// <param name="audience">
+    /// The non-empty audience claim to append. Duplicate audience values are retained.
+    /// </param>
+    /// <returns>This builder so additional token values can be configured.</returns>
+    /// <exception cref="ArgumentException"><paramref name="audience"/> is empty or whitespace.</exception>
     public TestJwtBuilder AddAudience(string audience)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(audience);
@@ -48,6 +70,12 @@ public sealed class TestJwtBuilder
     }
 
     /// <summary>Sets the subject claim.</summary>
+    /// <param name="subject">
+    /// The non-empty subject identifier. By default, each builder uses a new 32-character GUID
+    /// without separators.
+    /// </param>
+    /// <returns>This builder so additional token values can be configured.</returns>
+    /// <exception cref="ArgumentException"><paramref name="subject"/> is empty or whitespace.</exception>
     public TestJwtBuilder WithSubject(string subject)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(subject);
@@ -56,6 +84,12 @@ public sealed class TestJwtBuilder
     }
 
     /// <summary>Sets the name claim.</summary>
+    /// <param name="name">
+    /// The non-empty value for the <c>name</c> claim. The default is
+    /// <c>integration-test-user</c>.
+    /// </param>
+    /// <returns>This builder so additional token values can be configured.</returns>
+    /// <exception cref="ArgumentException"><paramref name="name"/> is empty or whitespace.</exception>
     public TestJwtBuilder WithName(string name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -64,6 +98,12 @@ public sealed class TestJwtBuilder
     }
 
     /// <summary>Adds a delegated OAuth scope.</summary>
+    /// <param name="scope">
+    /// The non-empty scope value to append. Duplicate values are retained; all scopes are emitted
+    /// in one space-delimited <c>scp</c> claim.
+    /// </param>
+    /// <returns>This builder so additional token values can be configured.</returns>
+    /// <exception cref="ArgumentException"><paramref name="scope"/> is empty or whitespace.</exception>
     public TestJwtBuilder WithScope(string scope)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(scope);
@@ -72,6 +112,13 @@ public sealed class TestJwtBuilder
     }
 
     /// <summary>Adds several delegated OAuth scopes.</summary>
+    /// <param name="scopes">
+    /// The non-null scope array to append in order. Every element must be non-empty; duplicate
+    /// values are retained. The builder copies the values and does not own the array.
+    /// </param>
+    /// <returns>This builder so additional token values can be configured.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="scopes"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">An element is empty or whitespace.</exception>
     public TestJwtBuilder WithScopes(params string[] scopes)
     {
         ArgumentNullException.ThrowIfNull(scopes);
@@ -84,6 +131,11 @@ public sealed class TestJwtBuilder
     }
 
     /// <summary>Adds an application role.</summary>
+    /// <param name="role">
+    /// The non-empty role value to append as a <c>roles</c> claim. Duplicate roles are retained.
+    /// </param>
+    /// <returns>This builder so additional token values can be configured.</returns>
+    /// <exception cref="ArgumentException"><paramref name="role"/> is empty or whitespace.</exception>
     public TestJwtBuilder WithRole(string role)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(role);
@@ -92,6 +144,13 @@ public sealed class TestJwtBuilder
     }
 
     /// <summary>Adds several application roles.</summary>
+    /// <param name="roles">
+    /// The non-null role array to append in order. Every element must be non-empty; duplicate roles
+    /// are retained. The builder copies the values and does not own the array.
+    /// </param>
+    /// <returns>This builder so additional token values can be configured.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="roles"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">An element is empty or whitespace.</exception>
     public TestJwtBuilder WithRoles(params string[] roles)
     {
         ArgumentNullException.ThrowIfNull(roles);
@@ -104,6 +163,11 @@ public sealed class TestJwtBuilder
     }
 
     /// <summary>Adds an arbitrary JWT claim.</summary>
+    /// <param name="type">The non-empty claim-type identifier.</param>
+    /// <param name="value">The non-null claim value; an empty value is accepted.</param>
+    /// <returns>This builder so additional token values can be configured.</returns>
+    /// <exception cref="ArgumentException"><paramref name="type"/> is empty or whitespace.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="value"/> is <see langword="null"/>.</exception>
     public TestJwtBuilder WithClaim(string type, string value)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(type);
@@ -113,6 +177,11 @@ public sealed class TestJwtBuilder
     }
 
     /// <summary>Sets the token's not-before time.</summary>
+    /// <param name="notBefore">
+    /// The absolute instant at which the token becomes valid. Its offset is converted to UTC when
+    /// the token is serialized. The default is the build time.
+    /// </param>
+    /// <returns>This builder so additional token values can be configured.</returns>
     public TestJwtBuilder NotBefore(DateTimeOffset notBefore)
     {
         _notBefore = notBefore;
@@ -120,13 +189,26 @@ public sealed class TestJwtBuilder
     }
 
     /// <summary>Sets the token's absolute expiry.</summary>
+    /// <param name="expires">
+    /// The absolute expiration instant. Its offset is converted to UTC when the token is serialized.
+    /// No ordering check against the not-before time is performed by this method.
+    /// </param>
+    /// <returns>This builder so additional token values can be configured.</returns>
     public TestJwtBuilder ExpiresAt(DateTimeOffset expires)
     {
         _expires = expires;
         return this;
     }
 
-    /// <summary>Sets the token lifetime relative to the time it is created.</summary>
+    /// <summary>Sets the token expiration relative to the current time.</summary>
+    /// <param name="lifetime">
+    /// The positive duration added to UTC now when this method is called. This sets an absolute
+    /// expiration and does not defer the calculation until token serialization.
+    /// </param>
+    /// <returns>This builder so additional token values can be configured.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// <paramref name="lifetime"/> is zero or negative.
+    /// </exception>
     public TestJwtBuilder ExpiresAfter(TimeSpan lifetime)
     {
         if (lifetime <= TimeSpan.Zero)

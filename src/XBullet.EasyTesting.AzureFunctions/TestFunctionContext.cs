@@ -29,6 +29,7 @@ public sealed class TestFunctionContext : FunctionContext
     }
 
     /// <summary>Gets the friendly function name assigned by the test.</summary>
+    /// <value>The non-empty name also used as this context's function identifier.</value>
     public string FunctionName { get; }
 
     /// <inheritdoc />
@@ -41,6 +42,7 @@ public sealed class TestFunctionContext : FunctionContext
     public override TraceContext TraceContext => _traceContext;
 
     /// <summary>Gets the strongly typed test trace context.</summary>
+    /// <value>The current mutable test trace values, replaced when <see cref="WithTrace"/> is called.</value>
     public TestTraceContext TestTraceContext => _traceContext;
 
     /// <inheritdoc />
@@ -50,6 +52,7 @@ public sealed class TestFunctionContext : FunctionContext
     public override RetryContext RetryContext => _retryContext;
 
     /// <summary>Gets the strongly typed test retry context.</summary>
+    /// <value>The current retry values, initially zero and replaced by <see cref="WithRetry"/>.</value>
     public TestRetryContext TestRetryContext => _retryContext;
 
     /// <inheritdoc />
@@ -59,6 +62,7 @@ public sealed class TestFunctionContext : FunctionContext
     public override TestFunctionDefinition FunctionDefinition { get; }
 
     /// <summary>Gets captured input and output bindings for this invocation.</summary>
+    /// <value>The context-owned binding collection, mutable only through context and invocation operations.</value>
     public TestFunctionBindings Bindings { get; }
 
     /// <inheritdoc />
@@ -72,6 +76,9 @@ public sealed class TestFunctionContext : FunctionContext
     public override CancellationToken CancellationToken => _cancellationToken;
 
     /// <summary>Sets retry state and returns this context.</summary>
+    /// <param name="retryCount">The non-negative zero-based current retry count.</param>
+    /// <param name="maxRetryCount">The non-negative maximum retry count, greater than or equal to <paramref name="retryCount"/>.</param>
+    /// <returns>This context, for chaining, with a newly allocated retry context.</returns>
     public TestFunctionContext WithRetry(int retryCount, int maxRetryCount)
     {
         _retryContext = new TestRetryContext(retryCount, maxRetryCount);
@@ -79,6 +86,9 @@ public sealed class TestFunctionContext : FunctionContext
     }
 
     /// <summary>Sets distributed-tracing values and returns this context.</summary>
+    /// <param name="traceParent">The non-null W3C trace-parent text. Format validation is left to tested code.</param>
+    /// <param name="traceState">The non-null trace-state text. The default is an empty string.</param>
+    /// <returns>This context, for chaining, with a newly allocated trace context.</returns>
     public TestFunctionContext WithTrace(string traceParent, string traceState = "")
     {
         ArgumentNullException.ThrowIfNull(traceParent);
@@ -88,6 +98,9 @@ public sealed class TestFunctionContext : FunctionContext
     }
 
     /// <summary>Adds a value to binding data and returns this context.</summary>
+    /// <param name="name">The non-empty binding-data key. Existing keys are replaced case-insensitively.</param>
+    /// <param name="value">The non-null value to retain without cloning.</param>
+    /// <returns>This context, for chaining.</returns>
     public TestFunctionContext WithBindingData(string name, object value)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -97,6 +110,13 @@ public sealed class TestFunctionContext : FunctionContext
     }
 
     /// <summary>Adds an input value and its function-definition metadata.</summary>
+    /// <param name="name">The non-empty binding name. Existing captured values are replaced case-insensitively.</param>
+    /// <param name="value">
+    /// The value to retain without cloning, or <see langword="null"/> to capture a null input without
+    /// adding it to binding data.
+    /// </param>
+    /// <param name="bindingType">The non-empty worker binding type. The default is <c>input</c>.</param>
+    /// <returns>This context, for chaining.</returns>
     public TestFunctionContext WithInputBinding(string name, object? value, string bindingType = "input")
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -112,6 +132,10 @@ public sealed class TestFunctionContext : FunctionContext
     }
 
     /// <summary>Adds an output value and its function-definition metadata.</summary>
+    /// <param name="name">The non-empty binding name. Existing captured values are replaced case-insensitively.</param>
+    /// <param name="value">The output value to retain without cloning; <see langword="null"/> is accepted.</param>
+    /// <param name="bindingType">The non-empty worker binding type. The default is <c>output</c>.</param>
+    /// <returns>This context, for chaining.</returns>
     public TestFunctionContext WithOutputBinding(string name, object? value, string bindingType = "output")
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -122,6 +146,9 @@ public sealed class TestFunctionContext : FunctionContext
     }
 
     /// <summary>Adds a typed invocation feature and returns this context.</summary>
+    /// <typeparam name="T">The feature's registration and lookup type.</typeparam>
+    /// <param name="feature">The non-null feature instance retained by the invocation feature collection.</param>
+    /// <returns>This context, for chaining.</returns>
     public TestFunctionContext WithFeature<T>(T feature)
     {
         ArgumentNullException.ThrowIfNull(feature);
@@ -130,6 +157,9 @@ public sealed class TestFunctionContext : FunctionContext
     }
 
     /// <summary>Adds an invocation item and returns this context.</summary>
+    /// <param name="key">The non-null item key. An equal existing key is replaced.</param>
+    /// <param name="value">The non-null value retained without cloning.</param>
+    /// <returns>This context, for chaining.</returns>
     public TestFunctionContext WithItem(object key, object value)
     {
         ArgumentNullException.ThrowIfNull(key);

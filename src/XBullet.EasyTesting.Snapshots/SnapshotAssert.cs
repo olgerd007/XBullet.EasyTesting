@@ -15,6 +15,12 @@ public static class SnapshotAssert
     /// Serializes a value and compares it with its committed <c>.verified.json</c> snapshot.
     /// A runtime-qualified received file is written when the snapshot is new or differs.
     /// </summary>
+    /// <param name="actual">The value to serialize. May be <see langword="null"/>, which is serialized as JSON <c>null</c>.</param>
+    /// <param name="settings">Optional snapshot settings. <see langword="null"/> uses the effective global or default settings.</param>
+    /// <param name="cancellationToken">Token that cancels snapshot file locking and asynchronous file I/O. The default token does not cancel the operation.</param>
+    /// <param name="sourceFile">Calling source-file path used to locate and name the snapshot. The compiler supplies this value by default; it must not be empty.</param>
+    /// <param name="testName">Calling member name used as the default snapshot name. The compiler supplies this value by default.</param>
+    /// <returns>A task that completes after a match or an allowed automatic update; otherwise it writes a received file and throws <see cref="SnapshotMismatchException"/>.</returns>
     public static async Task MatchAsync(
         object? actual,
         SnapshotSettings? settings = null,
@@ -38,6 +44,12 @@ public static class SnapshotAssert
     /// Parses JSON content with <see cref="JsonDocument"/> and compares its normalized JSON
     /// representation with a committed <c>.verified.json</c> snapshot.
     /// </summary>
+    /// <param name="actualJson">The non-null JSON text to parse, normalize, scrub, and compare.</param>
+    /// <param name="settings">Optional snapshot settings. <see langword="null"/> uses the effective global or default settings.</param>
+    /// <param name="cancellationToken">Token that cancels snapshot file locking and asynchronous file I/O. The default token does not cancel the operation.</param>
+    /// <param name="sourceFile">Calling source-file path used to locate and name the snapshot. The compiler supplies this value by default; it must not be empty.</param>
+    /// <param name="testName">Calling member name used as the default snapshot name. The compiler supplies this value by default.</param>
+    /// <returns>A task that completes after a match or an allowed automatic update; otherwise it writes a received file and throws <see cref="SnapshotMismatchException"/>.</returns>
     public static async Task MatchJsonAsync(
         string actualJson,
         SnapshotSettings? settings = null,
@@ -93,6 +105,12 @@ public static class SnapshotAssert
     /// Compares text with a committed <c>.verified.txt</c> snapshot. A runtime-qualified
     /// <c>.received.*.txt</c> file is written when the snapshot is new or differs.
     /// </summary>
+    /// <param name="actualText">The non-null text to scrub and compare. Line endings are normalized and trailing line feeds are removed.</param>
+    /// <param name="settings">Optional snapshot settings. <see langword="null"/> uses the effective global or default settings.</param>
+    /// <param name="cancellationToken">Token that cancels snapshot file locking and asynchronous file I/O. The default token does not cancel the operation.</param>
+    /// <param name="sourceFile">Calling source-file path used to locate and name the snapshot. The compiler supplies this value by default; it must not be empty.</param>
+    /// <param name="testName">Calling member name used as the default snapshot name. The compiler supplies this value by default.</param>
+    /// <returns>A task that completes after a match or an allowed automatic update; otherwise it writes a received file and throws <see cref="SnapshotMismatchException"/>.</returns>
     public static Task MatchTextAsync(
         string actualText,
         SnapshotSettings? settings = null,
@@ -271,7 +289,12 @@ public static class SnapshotAssert
         DeleteIfExists(paths.Received);
     }
 
-    /// <summary>Promotes one received snapshot file to its verified counterpart.</summary>
+    /// <summary>Promotes one received snapshot file to its verified counterpart, replacing an existing verified file.</summary>
+    /// <param name="receivedPath">
+    /// Absolute or current-directory-relative path to an existing file whose name contains
+    /// <c>.received.</c> followed by a runtime qualifier and file extension.
+    /// </param>
+    /// <returns>The full path of the verified file. The received file is moved and no longer exists at its original path.</returns>
     public static string AcceptReceived(string receivedPath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(receivedPath);

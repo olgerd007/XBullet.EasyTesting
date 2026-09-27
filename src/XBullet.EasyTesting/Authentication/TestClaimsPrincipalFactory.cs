@@ -18,6 +18,15 @@ public class TestClaimsPrincipalFactory : ITestClaimsPrincipalFactory
     }
 
     /// <summary>Creates the primary identity represented by the test user.</summary>
+    /// <param name="user">
+    /// The non-null transported definition whose name identifier, name, roles, claims,
+    /// authentication type, and claim-type mappings are copied. The factory does not retain, own,
+    /// or mutate it.
+    /// </param>
+    /// <returns>
+    /// A new claims identity containing the primary user claims. Ownership passes to the caller,
+    /// which normally adds it to the returned principal.
+    /// </returns>
     protected virtual ClaimsIdentity CreatePrimaryIdentity(TestUser user) =>
         new(
             CreatePrimaryClaims(user),
@@ -29,6 +38,14 @@ public class TestClaimsPrincipalFactory : ITestClaimsPrincipalFactory
     /// Creates an additional identity. Override this to materialize application-specific identity
     /// classes such as an application-specific <c>ApiUserIdentity</c>.
     /// </summary>
+    /// <param name="identity">
+    /// The non-null additional-identity definition whose claims, authentication type, name-claim
+    /// type, and role-claim type are copied. The factory does not retain, own, or mutate it.
+    /// </param>
+    /// <returns>
+    /// A new claims identity containing the supplied definition. Ownership passes to the caller,
+    /// which normally adds it to the returned principal.
+    /// </returns>
     protected virtual ClaimsIdentity CreateAdditionalIdentity(TestIdentity identity) =>
         new(
             identity.Claims.Select(claim => new Claim(claim.Type, claim.Value)),

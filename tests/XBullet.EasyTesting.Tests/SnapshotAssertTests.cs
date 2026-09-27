@@ -13,6 +13,8 @@ public sealed class SnapshotAssertTests
     private const string NumericJson =
         """{"large":1234567890123456789012345678901234567890,"precise":0.12345678901234567890123456789,"exponent":1e400}""";
 
+    #region docs-snapshots-compatibility
+
     [Fact]
     public void Compatibility_facade_forwards_to_split_snapshot_assemblies()
     {
@@ -42,6 +44,8 @@ public sealed class SnapshotAssertTests
         Assert.DoesNotContain("XBullet.EasyTesting.Http", coreReferences);
         Assert.DoesNotContain("XBullet.EasyTesting", coreReferences);
     }
+
+    #endregion
 
     [Fact]
     public async Task Controller_json_body_preserves_number_tokens()
@@ -452,6 +456,8 @@ public sealed class SnapshotAssertTests
         }
     }
 
+    #region docs-snapshots-variants
+
     [Fact]
     public async Task Snapshot_variants_create_distinct_files_for_one_test()
     {
@@ -483,6 +489,8 @@ public sealed class SnapshotAssertTests
             DeleteTemporarySnapshotDirectory(snapshotDirectory);
         }
     }
+
+    #endregion
 
     [Fact]
     public async Task Snapshot_names_are_portable_and_escape_without_collisions()
@@ -595,6 +603,8 @@ public sealed class SnapshotAssertTests
         }
     }
 
+    #region docs-snapshots-path-rules
+
     [Fact]
     public async Task Json_pointer_rules_target_nested_and_wildcard_values()
     {
@@ -650,6 +660,10 @@ public sealed class SnapshotAssertTests
         }
     }
 
+    #endregion
+
+    #region docs-snapshots-hashing
+
     [Fact]
     public async Task Hashed_paths_use_canonical_json_content()
     {
@@ -681,6 +695,10 @@ public sealed class SnapshotAssertTests
             DeleteTemporarySnapshotDirectory(snapshotDirectory);
         }
     }
+
+    #endregion
+
+    #region docs-snapshots-canonical-order
 
     [Fact]
     public async Task Canonical_properties_and_sorted_arrays_ignore_incidental_order()
@@ -718,6 +736,8 @@ public sealed class SnapshotAssertTests
             DeleteTemporarySnapshotDirectory(snapshotDirectory);
         }
     }
+
+    #endregion
 
     [Fact]
     public async Task Root_and_array_path_rules_cover_null_and_primitive_values()
@@ -997,6 +1017,8 @@ public sealed class SnapshotAssertTests
         }
     }
 
+    #region docs-snapshots-controller-response
+
     [Fact]
     public async Task Controller_response_extension_forwards_capture_and_snapshot_options()
     {
@@ -1031,6 +1053,8 @@ public sealed class SnapshotAssertTests
             DeleteTemporarySnapshotDirectory(snapshotDirectory);
         }
     }
+
+    #endregion
 
     [Fact]
     public async Task Captured_request_extension_matches_one_request()
@@ -1067,6 +1091,8 @@ public sealed class SnapshotAssertTests
         }
     }
 
+    #region docs-snapshots-first-acceptance
+
     [Fact]
     public async Task New_snapshot_writes_a_received_file()
     {
@@ -1098,6 +1124,8 @@ public sealed class SnapshotAssertTests
             DeleteTemporarySnapshotDirectory(snapshotDirectory);
         }
     }
+
+    #endregion
 
     [Fact]
     public async Task Passing_target_does_not_delete_another_runtime_received_file()
@@ -1269,6 +1297,8 @@ public sealed class SnapshotAssertTests
         Assert.NotEqual(first, different);
     }
 
+    #region docs-snapshots-plain-text
+
     [Fact]
     public async Task Plain_text_snapshots_use_text_files_and_custom_scrubbers()
     {
@@ -1301,6 +1331,8 @@ public sealed class SnapshotAssertTests
             DeleteTemporarySnapshotDirectory(snapshotDirectory);
         }
     }
+
+    #endregion
 
     [Fact]
     public void Controller_snapshot_options_support_fluent_capture_configuration()
@@ -2167,6 +2199,8 @@ public sealed class SnapshotAssertTests
         }
     }
 
+    #region docs-snapshots-update-modes
+
     [Fact]
     public async Task Automatic_update_modes_create_and_replace_verified_snapshots()
     {
@@ -2200,6 +2234,8 @@ public sealed class SnapshotAssertTests
             DeleteTemporarySnapshotDirectory(snapshotDirectory);
         }
     }
+
+    #endregion
 
     [Theory]
     [InlineData(null, SnapshotUpdateMode.None)]
@@ -2257,6 +2293,8 @@ public sealed class SnapshotAssertTests
         }
     }
 
+    #region docs-snapshots-mismatch-diagnostics
+
     [Fact]
     public async Task Mismatch_reports_first_structural_json_path_and_values()
     {
@@ -2289,6 +2327,8 @@ public sealed class SnapshotAssertTests
             DeleteTemporarySnapshotDirectory(snapshotDirectory);
         }
     }
+
+    #endregion
 
     [Fact]
     public async Task Mismatch_diagnostics_cover_structural_json_difference_forms()
@@ -2375,6 +2415,8 @@ public sealed class SnapshotAssertTests
         }
     }
 
+    #region docs-snapshots-obsolete
+
     [Fact]
     public async Task Catalog_detects_verified_snapshots_not_observed_by_the_test_run()
     {
@@ -2405,6 +2447,10 @@ public sealed class SnapshotAssertTests
             DeleteTemporarySnapshotDirectory(snapshotDirectory);
         }
     }
+
+    #endregion
+
+    #region docs-snapshots-bulk-maintenance
 
     [Fact]
     public async Task Bulk_maintenance_requires_preview_and_explicit_confirmation()
@@ -2450,6 +2496,10 @@ public sealed class SnapshotAssertTests
         }
     }
 
+    #endregion
+
+    #region docs-snapshots-ci-guard
+
     [Fact]
     public async Task Automatic_updates_in_ci_require_separate_explicit_opt_in()
     {
@@ -2492,6 +2542,10 @@ public sealed class SnapshotAssertTests
             DeleteTemporarySnapshotDirectory(snapshotDirectory);
         }
     }
+
+    #endregion
+
+    #region docs-snapshots-reusable-defaults
 
     [Fact]
     public async Task Project_defaults_create_independent_settings_with_local_overrides()
@@ -2537,6 +2591,10 @@ public sealed class SnapshotAssertTests
             DeleteTemporarySnapshotDirectory(snapshotDirectory);
         }
     }
+
+    #endregion
+
+    #region docs-snapshots-global-defaults
 
     [Fact]
     public async Task Global_defaults_merge_with_explicit_settings_and_local_values_take_precedence()
@@ -2587,6 +2645,8 @@ public sealed class SnapshotAssertTests
             DeleteTemporarySnapshotDirectory(explicitDirectory);
         }
     }
+
+    #endregion
 
     [Fact]
     public async Task ExtendGlobal_copies_global_defaults_and_applies_local_configuration()
@@ -3127,6 +3187,8 @@ public sealed class SnapshotAssertTests
         }
     }
 
+    #region docs-snapshots-structured-scrubbing
+
     [Fact]
     public async Task Structured_scrubbing_stabilizes_dynamic_values_and_ignored_members()
     {
@@ -3190,6 +3252,8 @@ public sealed class SnapshotAssertTests
             DeleteTemporarySnapshotDirectory(snapshotDirectory);
         }
     }
+
+    #endregion
 
     [Theory]
     [InlineData("different-kinds", "{}", "[]", "$")]
@@ -3402,6 +3466,8 @@ public sealed class SnapshotAssertTests
         Assert.Throws<ArgumentNullException>(() => new SnapshotSettings().WithDiffTool(null!));
     }
 
+    #region docs-snapshots-outbound-http
+
     [Fact]
     public async Task Captured_http_requests_have_a_dedicated_snapshot_assertion()
     {
@@ -3469,6 +3535,8 @@ public sealed class SnapshotAssertTests
             DeleteTemporarySnapshotDirectory(snapshotDirectory);
         }
     }
+
+    #endregion
 
     [Fact]
     public async Task Stub_http_exchanges_can_store_yaml_snapshots()

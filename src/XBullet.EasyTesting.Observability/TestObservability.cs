@@ -11,6 +11,14 @@ namespace XBullet.EasyTesting.Observability;
 public sealed class TestObservability : ITestScenarioEnvironmentResource
 {
     /// <summary>Creates scenario observability from the supplied options.</summary>
+    /// <param name="options">
+    /// The configuration to read immediately, or <see langword="null"/> to use defaults. Maximums
+    /// must be positive. The options object is not retained, and later changes do not affect this resource.
+    /// </param>
+    /// <remarks>
+    /// This resource owns its three collectors and any fake time provider. Callers may use the
+    /// exposed objects while the scenario is active but must not dispose them separately.
+    /// </remarks>
     public TestObservability(TestObservabilityOptions? options = null)
     {
         options ??= new TestObservabilityOptions();
@@ -53,15 +61,23 @@ public sealed class TestObservability : ITestScenarioEnvironmentResource
     }
 
     /// <summary>Gets the structured application-log collector.</summary>
+    /// <value>The scenario-owned bounded collector registered as the host's logging provider.</value>
     public TestLogCollector Logs { get; }
 
     /// <summary>Gets the completed-activity collector.</summary>
+    /// <value>The scenario-owned bounded listener for completed activities.</value>
     public TestActivityCollector Activities { get; }
 
     /// <summary>Gets the metric-measurement collector.</summary>
+    /// <value>The scenario-owned bounded listener for supported numeric metric measurements.</value>
     public TestMetricCollector Metrics { get; }
 
     /// <summary>Gets deterministic time when enabled, otherwise null.</summary>
+    /// <value>
+    /// The scenario-owned fake time provider registered as the application's <see cref="TimeProvider"/>,
+    /// or <see langword="null"/> when system time remains configured. It also timestamps captured logs
+    /// and metrics, but activity timestamps continue to come from <c>Activity</c>.
+    /// </value>
     public FakeTimeProvider? Time { get; }
 
     /// <inheritdoc />

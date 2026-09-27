@@ -71,6 +71,10 @@ jobs:
           --configuration Release
           --no-build
 
+      - name: Verify documentation
+        shell: pwsh
+        run: ./eng/verify-documentation.ps1 -NoBuild -WarningsAsErrors
+
       - name: Pack release
         shell: bash
         run: |

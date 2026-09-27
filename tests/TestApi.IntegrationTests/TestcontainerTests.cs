@@ -12,6 +12,8 @@ namespace TestApi.IntegrationTests;
 
 public sealed class TestcontainerTests
 {
+    #region docs-testcontainer-resource-lifecycle
+
     [Fact]
     public async Task Resource_waits_for_start_before_publishing_configuration_and_services()
     {
@@ -52,6 +54,10 @@ public sealed class TestcontainerTests
         Assert.Equal(1, proxy.DisposeCount);
     }
 
+    #endregion
+
+    #region docs-testcontainer-custom-module
+
     [Fact]
     public async Task Generic_registration_integrates_with_scenario_host_and_typed_lookup()
     {
@@ -83,6 +89,8 @@ public sealed class TestcontainerTests
 
         Assert.Equal(1, proxy.DisposeCount);
     }
+
+    #endregion
 
     [Fact]
     public void Module_registrations_are_lazy_and_composable_without_a_container_runtime()

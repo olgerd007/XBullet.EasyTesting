@@ -1,6 +1,10 @@
 namespace XBullet.EasyTesting.Authentication;
 
 /// <summary>Maps test authentication profiles to scheme names used by the application.</summary>
+/// <remarks>
+/// This mutable builder is configured once during test-factory initialization and is not
+/// thread-safe. Scheme names are matched using ordinal, case-sensitive comparison.
+/// </remarks>
 public sealed class TestAuthenticationSchemeBuilder
 {
     private readonly HashSet<string> _additionalSchemes = new(StringComparer.Ordinal);
@@ -52,6 +56,11 @@ public sealed class TestAuthenticationSchemeBuilder
     }
 
     /// <summary>Maps Azure AD test identities to an application scheme such as <c>Bearer</c>.</summary>
+    /// <param name="authenticationScheme">
+    /// The non-empty application scheme selected for users built with
+    /// <see cref="TestAzureAdUserBuilder"/>. Registration of the scheme is not validated here.
+    /// </param>
+    /// <returns>This builder so additional authentication mappings can be configured.</returns>
     public TestAuthenticationSchemeBuilder MapAzureAd(string authenticationScheme)
     {
         AzureAdScheme = AddScheme(authenticationScheme);
@@ -59,6 +68,11 @@ public sealed class TestAuthenticationSchemeBuilder
     }
 
     /// <summary>Maps API-key test identities to the application's API-key authentication scheme.</summary>
+    /// <param name="authenticationScheme">
+    /// The non-empty application scheme selected for users built with
+    /// <see cref="TestApiKeyBuilder"/>. Registration of the scheme is not validated here.
+    /// </param>
+    /// <returns>This builder so additional authentication mappings can be configured.</returns>
     public TestAuthenticationSchemeBuilder MapApiKey(string authenticationScheme)
     {
         ApiKeyScheme = AddScheme(authenticationScheme);
@@ -66,6 +80,11 @@ public sealed class TestAuthenticationSchemeBuilder
     }
 
     /// <summary>Maps Federation test identities to the application's authentication scheme.</summary>
+    /// <param name="authenticationScheme">
+    /// The non-empty application scheme selected for users built with
+    /// <see cref="TestFederatedUserBuilder"/>. Registration of the scheme is not validated here.
+    /// </param>
+    /// <returns>This builder so additional authentication mappings can be configured.</returns>
     public TestAuthenticationSchemeBuilder MapFederation(string authenticationScheme)
     {
         FederationScheme = AddScheme(authenticationScheme);
@@ -73,6 +92,11 @@ public sealed class TestAuthenticationSchemeBuilder
     }
 
     /// <summary>Adds an application-specific authentication scheme handled by test identities.</summary>
+    /// <param name="authenticationScheme">
+    /// The non-empty application scheme that may accept simulated test-user headers. Adding an
+    /// existing scheme again has no additional effect.
+    /// </param>
+    /// <returns>This builder so additional authentication mappings can be configured.</returns>
     public TestAuthenticationSchemeBuilder MapScheme(string authenticationScheme)
     {
         AddScheme(authenticationScheme);
@@ -84,6 +108,11 @@ public sealed class TestAuthenticationSchemeBuilder
     /// Use this together with <see cref="PreserveDefaultAuthenticationScheme"/> when simulated
     /// identities and the application's real authentication handlers must coexist.
     /// </summary>
+    /// <param name="authenticationScheme">
+    /// The non-empty, test-only scheme that accepts simulated identity headers. Adding an existing
+    /// scheme again has no additional effect.
+    /// </param>
+    /// <returns>This builder so additional authentication mappings can be configured.</returns>
     public TestAuthenticationSchemeBuilder MapTestAuthentication(string authenticationScheme)
     {
         AddScheme(authenticationScheme);
@@ -94,6 +123,7 @@ public sealed class TestAuthenticationSchemeBuilder
     /// Keeps the default authentication, challenge, and forbid schemes selected by the application.
     /// Simulated identities remain available through mapped test schemes.
     /// </summary>
+    /// <returns>This builder so additional authentication mappings can be configured.</returns>
     public TestAuthenticationSchemeBuilder PreserveDefaultAuthenticationScheme()
     {
         PreserveApplicationDefaultScheme = true;
@@ -105,6 +135,12 @@ public sealed class TestAuthenticationSchemeBuilder
     /// scheme and otherwise forwards to the application's original default authentication scheme.
     /// The application's original challenge and forbid schemes remain unchanged.
     /// </summary>
+    /// <param name="testAuthenticationScheme">
+    /// The non-empty, test-only scheme used when a request carries a simulated test-user header.
+    /// Requests without that header are forwarded to the application's original default
+    /// authentication scheme.
+    /// </param>
+    /// <returns>This builder so additional authentication mappings can be configured.</returns>
     public TestAuthenticationSchemeBuilder UseHybridDefaultAuthentication(
         string testAuthenticationScheme)
     {
@@ -117,6 +153,21 @@ public sealed class TestAuthenticationSchemeBuilder
     /// Uses the application's real JWT bearer scheme with tokens signed by a local test authority.
     /// The application must register the named scheme with <c>AddJwtBearer</c>.
     /// </summary>
+    /// <param name="authenticationScheme">
+    /// The non-empty, case-sensitive application scheme registered with <c>AddJwtBearer</c>. The
+    /// scheme is removed from simulated-header handling and becomes the Azure AD client profile's
+    /// target.
+    /// </param>
+    /// <param name="configure">
+    /// The callback invoked synchronously once with a new local-authority options instance. When
+    /// <see langword="null"/>, the documented <see cref="TestJwtAuthorityOptions"/> defaults are
+    /// used. The callback is not retained or invoked concurrently.
+    /// </param>
+    /// <returns>This builder so additional authentication mappings can be configured.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// The scheme is already registered for end-to-end JWT authentication, or its discovery or
+    /// JWKS path conflicts with another local authority.
+    /// </exception>
     public TestAuthenticationSchemeBuilder UseEndToEndJwt(
         string authenticationScheme,
         Action<TestJwtAuthorityOptions>? configure = null)
@@ -158,6 +209,17 @@ public sealed class TestAuthenticationSchemeBuilder
     /// <summary>
     /// Uses the application's real API-key authentication scheme and configures client-side key injection.
     /// </summary>
+    /// <param name="authenticationScheme">
+    /// The non-empty application scheme handled by the real API-key authentication handler. The
+    /// scheme is removed from simulated-header handling and becomes the API-key client profile's
+    /// target.
+    /// </param>
+    /// <param name="configure">
+    /// The callback invoked synchronously once with new injection options. When
+    /// <see langword="null"/>, header <c>X-Api-Key</c>, query parameter <c>api_key</c>, and a
+    /// non-default scheme are used. The callback is not retained or invoked concurrently.
+    /// </param>
+    /// <returns>This builder so additional authentication mappings can be configured.</returns>
     public TestAuthenticationSchemeBuilder UseEndToEndApiKey(
         string authenticationScheme,
         Action<TestApiKeyInjectionOptions>? configure = null)
@@ -180,6 +242,19 @@ public sealed class TestAuthenticationSchemeBuilder
     /// Uses the application's real certificate authentication scheme and transports a certificate to TestServer.
     /// The application must register the named scheme with <c>AddCertificate</c>.
     /// </summary>
+    /// <param name="authenticationScheme">
+    /// The non-empty, case-sensitive application scheme registered with <c>AddCertificate</c>. The
+    /// scheme is removed from simulated-header handling.
+    /// </param>
+    /// <param name="configure">
+    /// The callback invoked synchronously once with new certificate-transport options. When
+    /// <see langword="null"/>, the scheme does not replace the application's default. The callback
+    /// is not retained or invoked concurrently.
+    /// </param>
+    /// <returns>This builder so additional authentication mappings can be configured.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// The scheme is already registered for end-to-end client-certificate authentication.
+    /// </exception>
     public TestAuthenticationSchemeBuilder UseEndToEndClientCertificate(
         string authenticationScheme,
         Action<TestClientCertificateOptions>? configure = null)

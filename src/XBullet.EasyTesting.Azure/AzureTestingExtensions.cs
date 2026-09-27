@@ -9,6 +9,13 @@ namespace XBullet.EasyTesting.Azure;
 public static class AzureTestingExtensions
 {
     /// <summary>Replaces the application token credential for every test scenario.</summary>
+    /// <typeparam name="TEntryPoint">The application entry-point type configured by the host builder.</typeparam>
+    /// <param name="builder">The non-null host builder to configure.</param>
+    /// <param name="credential">
+    /// The non-null credential instance registered as the singleton <see cref="TokenCredential"/>.
+    /// The instance is retained and shared; the caller owns it and any state it records.
+    /// </param>
+    /// <returns>The same host builder, for chaining.</returns>
     public static EasyTestHostBuilder<TEntryPoint> UseAzureTestCredential<TEntryPoint>(
         this EasyTestHostBuilder<TEntryPoint> builder,
         TestTokenCredential credential)
@@ -20,6 +27,12 @@ public static class AzureTestingExtensions
     }
 
     /// <summary>Replaces the application token credential for one test scenario.</summary>
+    /// <param name="builder">The non-null scenario-scope builder to configure.</param>
+    /// <param name="credential">
+    /// The non-null credential instance registered as the scenario's singleton
+    /// <see cref="TokenCredential"/>. The caller owns the retained instance and its recorded state.
+    /// </param>
+    /// <returns>The same scenario-scope builder, for chaining.</returns>
     public static TestScenarioScopeBuilder UseAzureTestCredential(
         this TestScenarioScopeBuilder builder,
         TestTokenCredential credential)
@@ -30,6 +43,14 @@ public static class AzureTestingExtensions
     }
 
     /// <summary>Replaces a directly injected Azure SDK client for every test scenario.</summary>
+    /// <typeparam name="TEntryPoint">The application entry-point type configured by the host builder.</typeparam>
+    /// <typeparam name="TClient">The reference type registered and resolved directly from dependency injection.</typeparam>
+    /// <param name="builder">The non-null host builder to configure.</param>
+    /// <param name="client">
+    /// The non-null client instance registered as a singleton. The instance is retained and shared;
+    /// because it was supplied externally, the caller remains responsible for disposing it when needed.
+    /// </param>
+    /// <returns>The same host builder, for chaining.</returns>
     public static EasyTestHostBuilder<TEntryPoint> ReplaceAzureClient<TEntryPoint, TClient>(
         this EasyTestHostBuilder<TEntryPoint> builder,
         TClient client)
@@ -42,6 +63,13 @@ public static class AzureTestingExtensions
     }
 
     /// <summary>Replaces a directly injected Azure SDK client for one test scenario.</summary>
+    /// <typeparam name="TClient">The reference type registered and resolved directly from dependency injection.</typeparam>
+    /// <param name="builder">The non-null scenario-scope builder to configure.</param>
+    /// <param name="client">
+    /// The non-null client instance registered as a scenario singleton. The instance is retained;
+    /// because it was supplied externally, the caller remains responsible for disposing it when needed.
+    /// </param>
+    /// <returns>The same scenario-scope builder, for chaining.</returns>
     public static TestScenarioScopeBuilder ReplaceAzureClient<TClient>(
         this TestScenarioScopeBuilder builder,
         TClient client)

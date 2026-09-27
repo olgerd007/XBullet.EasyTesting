@@ -9,6 +9,8 @@ namespace XBullet.EasyTesting.Tests;
 
 public sealed class StubHttpMessageHandlerTests
 {
+    #region docs-http-basic-exchange
+
     [Fact]
     public async Task Arranged_response_is_returned_and_request_is_recorded()
     {
@@ -46,6 +48,8 @@ public sealed class StubHttpMessageHandlerTests
         Assert.Contains("\"accepted\":true", Encoding.UTF8.GetString(exchange.Response.Body.Span));
         Assert.Null(exchange.Response.BodyFailure);
     }
+
+    #endregion
 
     [Fact]
     public async Task Failed_send_is_recorded_as_an_exchange()
@@ -87,6 +91,8 @@ public sealed class StubHttpMessageHandlerTests
         Assert.Equal(1, handler.CallCount);
     }
 
+    #region docs-http-diagnostics
+
     [Fact]
     public async Task Unmatched_request_explains_why_each_rule_failed()
     {
@@ -118,6 +124,8 @@ public sealed class StubHttpMessageHandlerTests
         Assert.Contains("did not satisfy header 'X-Tenant' containing value 'tenant-42'", diagnostic);
     }
 
+    #endregion
+
     [Fact]
     public async Task Predicate_exception_is_reported_as_a_rule_mismatch()
     {
@@ -142,6 +150,8 @@ public sealed class StubHttpMessageHandlerTests
             "valid order request threw InvalidOperationException: predicate failed",
             diagnostic);
     }
+
+    #region docs-http-matchers
 
     [Fact]
     public async Task Request_matchers_support_headers_json_and_dynamic_responses()
@@ -175,6 +185,8 @@ public sealed class StubHttpMessageHandlerTests
                 expectedCount: 1,
                 description: "a request containing the tenant header");
     }
+
+    #endregion
 
     [Fact]
     public async Task Request_predicate_mismatch_does_not_select_the_rule()
@@ -542,6 +554,8 @@ public sealed class StubHttpMessageHandlerTests
             .VerifyNotCalled(HttpMethod.Get, "/echo");
     }
 
+    #region docs-http-sequence
+
     [Fact]
     public async Task Response_sequence_returns_each_response_once_and_then_fails_loudly()
     {
@@ -568,6 +582,8 @@ public sealed class StubHttpMessageHandlerTests
         Assert.True(secondBody!.Accepted);
         Assert.Contains("contains 2 response(s), but call 3 was received", exception.Message);
     }
+
+    #endregion
 
     [Fact]
     public async Task Response_sequence_supports_delayed_text_and_dynamic_responses()
@@ -609,6 +625,8 @@ public sealed class StubHttpMessageHandlerTests
         Assert.Equal("GET", thirdBody);
     }
 
+    #region docs-http-faults
+
     [Fact]
     public async Task Response_sequence_supports_exceptions_cancellation_and_timeouts()
     {
@@ -644,6 +662,8 @@ public sealed class StubHttpMessageHandlerTests
         Assert.Equal("sequence failure", failure.Message);
         Assert.Contains("timed out after", timeout.Message);
     }
+
+    #endregion
 
     [Fact]
     public async Task Response_sequence_supports_malformed_and_truncated_content()

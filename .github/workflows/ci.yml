@@ -48,13 +48,17 @@ jobs:
       - name: Verify formatting
         run: dotnet format XBullet.EasyTesting.sln --verify-no-changes --no-restore
 
+      - name: Verify documentation snippets
+        shell: pwsh
+        run: ./eng/sync-documentation-snippets.ps1 -Check
+
       - name: Build
         run: >-
           dotnet build XBullet.EasyTesting.sln
           --configuration Release
           --no-restore
 
-      - name: Test
+      - name: Test all target frameworks
         run: >-
           dotnet test XBullet.EasyTesting.sln
           --configuration Release
@@ -99,6 +103,44 @@ jobs:
             **/TestResults/**/*.log
             **/TestResults/**/*.cobertura.xml
           if-no-files-found: warn
+
+  documentation:
+    name: Validate documentation site
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
+
+      - name: Restore
+        run: dotnet restore XBullet.EasyTesting.sln
+
+      - name: Build public API assemblies
+        run: >-
+          dotnet build XBullet.EasyTesting.sln
+          --configuration Release
+          --no-restore
+
+      - name: Verify documentation
+        shell: pwsh
+        run: ./eng/verify-documentation.ps1 -NoBuild -WarningsAsErrors
+
+      - name: Upload documentation site
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: documentation-site
+          path: artifacts/docs
+          if-no-files-found: error
 
   pack:
     name: Validate and pack NuGet packages

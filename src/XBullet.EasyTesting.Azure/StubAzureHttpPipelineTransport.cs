@@ -15,6 +15,10 @@ public sealed class StubAzureHttpPipelineTransport : HttpPipelineTransport, ITes
     private readonly List<RecordedAzureRequest> _requests = [];
 
     /// <summary>Gets a stable copy of recorded requests.</summary>
+    /// <value>
+    /// A newly allocated snapshot in call order. The caller may retain the list. Individual records
+    /// contain unredacted URI queries, header values, and bodies that may be sensitive.
+    /// </value>
     public IReadOnlyList<RecordedAzureRequest> Requests
     {
         get
@@ -27,6 +31,7 @@ public sealed class StubAzureHttpPipelineTransport : HttpPipelineTransport, ITes
     }
 
     /// <summary>Gets the number of recorded requests.</summary>
+    /// <value>The total number of synchronous and asynchronous requests recorded since construction or reset.</value>
     public int CallCount
     {
         get
@@ -39,6 +44,7 @@ public sealed class StubAzureHttpPipelineTransport : HttpPipelineTransport, ITes
     }
 
     /// <summary>Gets the number of arranged responses not yet consumed.</summary>
+    /// <value>The non-negative number of queued response arrangements.</value>
     public int RemainingResponseCount
     {
         get
@@ -51,6 +57,19 @@ public sealed class StubAzureHttpPipelineTransport : HttpPipelineTransport, ITes
     }
 
     /// <summary>Enqueues a response status and optional body for one request.</summary>
+    /// <param name="status">
+    /// The HTTP status code from 100 through 599. The default is 200. Validation occurs when the
+    /// response is consumed.
+    /// </param>
+    /// <param name="content">
+    /// The optional response body retained until the arrangement is consumed. When
+    /// <see langword="null"/>, the response has no body.
+    /// </param>
+    /// <param name="contentType">
+    /// The optional content-type header. A null, empty, or whitespace value is omitted, and the value
+    /// is ignored when <paramref name="content"/> is <see langword="null"/>.
+    /// </param>
+    /// <returns>This transport, for chaining. One response is appended to the thread-safe queue.</returns>
     public StubAzureHttpPipelineTransport Respond(
         int status = 200,
         BinaryData? content = null,
@@ -69,6 +88,19 @@ public sealed class StubAzureHttpPipelineTransport : HttpPipelineTransport, ITes
     }
 
     /// <summary>Enqueues a JSON response for one request.</summary>
+    /// <typeparam name="T">The type of value to serialize.</typeparam>
+    /// <param name="value">
+    /// The value retained and serialized when the response is consumed; nullable values are accepted
+    /// when <typeparamref name="T"/> permits them.
+    /// </param>
+    /// <param name="status">
+    /// The HTTP status code from 100 through 599. The default is 200. Validation occurs when consumed.
+    /// </param>
+    /// <param name="serializerOptions">
+    /// Optional JSON options retained until serialization, or <see langword="null"/> to use Azure
+    /// <see cref="BinaryData"/> defaults.
+    /// </param>
+    /// <returns>This transport, for chaining. One JSON response is appended to the queue.</returns>
     public StubAzureHttpPipelineTransport RespondJson<T>(
         T value,
         int status = 200,
@@ -76,6 +108,12 @@ public sealed class StubAzureHttpPipelineTransport : HttpPipelineTransport, ITes
         Respond(_ => new TestAzureResponse(status).WithJsonContent(value, serializerOptions));
 
     /// <summary>Enqueues a request-aware response factory for one request.</summary>
+    /// <param name="responseFactory">
+    /// A non-null callback retained until the next queued response is consumed, then invoked once with
+    /// that request's stable record. It must return a non-null response whose ownership transfers to
+    /// the Azure pipeline.
+    /// </param>
+    /// <returns>This transport, for chaining. The factory is appended to the thread-safe queue.</returns>
     public StubAzureHttpPipelineTransport Respond(
         Func<RecordedAzureRequest, Response> responseFactory)
     {
@@ -89,6 +127,14 @@ public sealed class StubAzureHttpPipelineTransport : HttpPipelineTransport, ITes
     }
 
     /// <summary>Verifies a method and absolute URI, relative path, or relative path-and-query call count.</summary>
+    /// <param name="method">The exact Azure request method to match.</param>
+    /// <param name="requestUri">
+    /// A non-empty absolute URI, root-relative path, or root-relative path and query. Absolute URIs
+    /// match in full; relative values match the path, including the query only when one is supplied.
+    /// Matching is ordinal and case-sensitive.
+    /// </param>
+    /// <param name="expectedCount">The non-negative number of matching requests expected. The default is one.</param>
+    /// <returns>This transport when the expectation succeeds; otherwise, an exception is thrown.</returns>
     public StubAzureHttpPipelineTransport VerifyCalled(
         RequestMethod method,
         string requestUri,
@@ -103,6 +149,16 @@ public sealed class StubAzureHttpPipelineTransport : HttpPipelineTransport, ITes
     }
 
     /// <summary>Verifies the number of requests accepted by a custom predicate.</summary>
+    /// <param name="predicate">
+    /// A non-null callback invoked once for each request in a stable snapshot. It returns
+    /// <see langword="true"/> for matching requests and must not mutate transport state.
+    /// </param>
+    /// <param name="expectedCount">The non-negative number of accepted requests expected.</param>
+    /// <param name="description">
+    /// Optional expectation text used in a failure message, or <see langword="null"/>, empty, or
+    /// whitespace to use a generic description. Do not include secrets in this text.
+    /// </param>
+    /// <returns>This transport when the expectation succeeds; otherwise, an exception is thrown.</returns>
     public StubAzureHttpPipelineTransport Verify(
         Func<RecordedAzureRequest, bool> predicate,
         int expectedCount,
@@ -127,6 +183,7 @@ public sealed class StubAzureHttpPipelineTransport : HttpPipelineTransport, ITes
     }
 
     /// <summary>Clears arranged responses and recorded requests.</summary>
+    /// <returns>This transport, for chaining. Configured object identity is preserved.</returns>
     public StubAzureHttpPipelineTransport Reset()
     {
         lock (_gate)

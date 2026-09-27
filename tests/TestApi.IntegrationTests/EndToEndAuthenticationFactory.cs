@@ -2,6 +2,7 @@ using XBullet.EasyTesting.Authentication;
 
 namespace TestApi.IntegrationTests;
 
+#region docs-end-to-end-authentication-factory
 public sealed class EndToEndAuthenticationFactory : TestApiFactory
 {
     protected override void ConfigureTestAuthentication(TestAuthenticationSchemeBuilder authentication)
@@ -25,3 +26,4 @@ public sealed class EndToEndAuthenticationFactory : TestApiFactory
             .UseEndToEndClientCertificate("Certificate");
     }
 }
+#endregion

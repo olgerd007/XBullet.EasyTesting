@@ -10,6 +10,16 @@ public static class HttpClientAuthenticationExtensions
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
 
     /// <summary>Adds a test identity to every request made by this client.</summary>
+    /// <param name="client">
+    /// The client whose default request headers are modified in place. The caller retains
+    /// ownership and remains responsible for disposing it.
+    /// </param>
+    /// <param name="user">
+    /// The test-user definition serialized immediately into the simulated-authentication header.
+    /// The method does not retain, own, or mutate the supplied object. The header is test-only and
+    /// is not cryptographically protected.
+    /// </param>
+    /// <returns>The same <paramref name="client"/> instance for fluent use.</returns>
     public static HttpClient AuthenticateAs(this HttpClient client, TestUser user)
     {
         ArgumentNullException.ThrowIfNull(client);
@@ -24,6 +34,16 @@ public static class HttpClientAuthenticationExtensions
     }
 
     /// <summary>Adds a test identity to one request.</summary>
+    /// <param name="request">
+    /// The request whose headers are modified in place. The caller retains ownership and remains
+    /// responsible for disposing it.
+    /// </param>
+    /// <param name="user">
+    /// The test-user definition serialized immediately into the simulated-authentication header.
+    /// The method does not retain, own, or mutate the supplied object. The header is test-only and
+    /// is not cryptographically protected.
+    /// </param>
+    /// <returns>The same <paramref name="request"/> instance for fluent use.</returns>
     public static HttpRequestMessage AuthenticateAs(this HttpRequestMessage request, TestUser user)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -38,6 +58,12 @@ public static class HttpClientAuthenticationExtensions
     }
 
     /// <summary>Removes any test identity configured on the client.</summary>
+    /// <param name="client">
+    /// The client whose default simulated-user and Authorization headers are cleared in place.
+    /// Request-specific headers, cookies, certificates, and other credentials are unchanged. The
+    /// caller retains ownership and remains responsible for disposing the client.
+    /// </param>
+    /// <returns>The same <paramref name="client"/> instance for fluent use.</returns>
     public static HttpClient UseAnonymousUser(this HttpClient client)
     {
         ArgumentNullException.ThrowIfNull(client);

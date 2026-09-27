@@ -15,6 +15,18 @@ public sealed class TestMetricCollector : ITestScenarioResource, IDisposable
     private readonly MeterListener _listener = new();
 
     /// <summary>Creates a bounded collector, optionally restricted to exact meter names.</summary>
+    /// <param name="timeProvider">
+    /// The clock used for measurement timestamps, or <see langword="null"/> to use
+    /// <see cref="TimeProvider.System"/>. The provider is retained but not owned or disposed.
+    /// </param>
+    /// <param name="meterNames">
+    /// Exact, case-sensitive meter names to capture, or <see langword="null"/> or an empty sequence to
+    /// capture every meter. The sequence is enumerated immediately and duplicates are ignored.
+    /// </param>
+    /// <param name="maximumMeasurements">
+    /// The positive maximum number of measurements retained. The default is 1,000; when the bound is
+    /// exceeded, the oldest measurements are discarded first.
+    /// </param>
     public TestMetricCollector(
         TimeProvider? timeProvider = null,
         IEnumerable<string>? meterNames = null,
@@ -46,6 +58,10 @@ public sealed class TestMetricCollector : ITestScenarioResource, IDisposable
     }
 
     /// <summary>Gets a stable copy of captured measurements in recording order.</summary>
+    /// <value>
+    /// A newly allocated snapshot in recording order. The caller may retain the list. Measurements
+    /// can contain unredacted tag values with sensitive or mutable data.
+    /// </value>
     public IReadOnlyList<TestMetricMeasurement> Measurements
     {
         get
@@ -58,6 +74,7 @@ public sealed class TestMetricCollector : ITestScenarioResource, IDisposable
     }
 
     /// <summary>Gets the number of currently captured measurements.</summary>
+    /// <value>A value from zero through the configured maximum measurement count.</value>
     public int Count
     {
         get
@@ -70,12 +87,18 @@ public sealed class TestMetricCollector : ITestScenarioResource, IDisposable
     }
 
     /// <summary>Starts a fluent assertion chain over captured measurements.</summary>
+    /// <returns>A new assertion object that reads this collector's current snapshots.</returns>
     public TestMetricCollectorAssertions Should() => new(this);
 
     /// <summary>Requests measurements from enabled observable instruments.</summary>
+    /// <remarks>
+    /// This synchronously invokes enabled observable-instrument callbacks and appends the values they
+    /// report. Callback exceptions propagate to the caller.
+    /// </remarks>
     public void CollectObservableMeasurements() => _listener.RecordObservableInstruments();
 
     /// <summary>Removes every captured measurement and returns this collector.</summary>
+    /// <returns>This collector, for chaining. Its listener, filters, clock, and maximum remain unchanged.</returns>
     public TestMetricCollector Reset()
     {
         lock (_gate)

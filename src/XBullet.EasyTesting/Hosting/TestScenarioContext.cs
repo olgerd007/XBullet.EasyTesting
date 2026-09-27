@@ -12,6 +12,10 @@ public sealed class TestScenarioContext
     }
 
     /// <summary>Gets the unique identifier for this scenario scope.</summary>
+    /// <value>
+    /// A non-empty identifier generated for this scope. The identifier remains stable until the
+    /// scope is disposed.
+    /// </value>
     public string ScenarioId { get; }
 
     internal IReadOnlyList<TestScenarioEnvironmentResourceRegistration> EnvironmentResources =>
@@ -47,6 +51,10 @@ public sealed class TestScenarioContext
     }
 
     /// <summary>Registers an asynchronously disposable scenario-owned resource.</summary>
+    /// <param name="resource">
+    /// The resource whose ownership transfers to the scenario. It is disposed once during cleanup,
+    /// in reverse registration order.
+    /// </param>
     public void DisposeWithScenario(IAsyncDisposable resource)
     {
         ArgumentNullException.ThrowIfNull(resource);
@@ -54,6 +62,10 @@ public sealed class TestScenarioContext
     }
 
     /// <summary>Registers a disposable scenario-owned resource.</summary>
+    /// <param name="resource">
+    /// The resource whose ownership transfers to the scenario. It is disposed once during cleanup,
+    /// in reverse registration order.
+    /// </param>
     public void DisposeWithScenario(IDisposable resource)
     {
         ArgumentNullException.ThrowIfNull(resource);
@@ -65,6 +77,11 @@ public sealed class TestScenarioContext
     }
 
     /// <summary>Registers a custom scenario cleanup action.</summary>
+    /// <param name="cleanup">
+    /// The asynchronous action invoked once during scenario cleanup. Cleanup actions run
+    /// sequentially in reverse registration order. All actions run even when an earlier action
+    /// fails, and their failures are reported together.
+    /// </param>
     public void OnCleanup(Func<ValueTask> cleanup)
     {
         ArgumentNullException.ThrowIfNull(cleanup);

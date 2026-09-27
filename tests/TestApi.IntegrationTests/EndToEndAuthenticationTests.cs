@@ -15,6 +15,7 @@ public sealed class EndToEndAuthenticationTests : IClassFixture<EndToEndAuthenti
         _factory = factory;
     }
 
+    #region docs-end-to-end-jwt
     [Fact]
     public Task Locally_signed_jwt_is_validated_by_the_real_bearer_handler() =>
         Run(async (scope, cancellationToken) =>
@@ -31,6 +32,7 @@ public sealed class EndToEndAuthenticationTests : IClassFixture<EndToEndAuthenti
 
             Assert.Equal(HttpStatusCode.NoContent, result.Response.StatusCode);
         });
+    #endregion
 
     [Fact]
     public Task Jwt_roles_are_evaluated_by_real_authorization() =>
