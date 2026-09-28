@@ -1,9 +1,9 @@
 using System.Net;
+using Microsoft.EntityFrameworkCore;
+using TestApi.Models;
 using XBullet.EasyTesting.Authentication;
 using XBullet.EasyTesting.Hosting;
 using XBullet.EasyTesting.Messaging;
-using Microsoft.EntityFrameworkCore;
-using TestApi.Models;
 using Xunit;
 
 namespace TestApi.IntegrationTests;

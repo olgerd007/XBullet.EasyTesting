@@ -1,9 +1,6 @@
 using System.Net;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
-using XBullet.EasyTesting.Authentication;
-using XBullet.EasyTesting.EntityFrameworkCore;
-using XBullet.EasyTesting.Hosting;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -15,6 +12,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using XBullet.EasyTesting.Authentication;
+using XBullet.EasyTesting.EntityFrameworkCore;
+using XBullet.EasyTesting.Hosting;
 using Xunit;
 
 namespace TestApi.IntegrationTests;

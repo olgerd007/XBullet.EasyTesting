@@ -1,8 +1,8 @@
-using XBullet.EasyTesting.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using XBullet.EasyTesting.Hosting;
 
 namespace XBullet.EasyTesting.EntityFrameworkCore;
 

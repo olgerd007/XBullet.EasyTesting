@@ -1,7 +1,7 @@
 using System.Text.Json;
-using XBullet.EasyTesting.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using XBullet.EasyTesting.Hosting;
 using Xunit;
 
 namespace TestApi.IntegrationTests;

@@ -1,9 +1,3 @@
-using XBullet.EasyTesting.Authentication;
-using XBullet.EasyTesting.EntityFrameworkCore;
-using XBullet.EasyTesting.Hosting;
-using XBullet.EasyTesting.Http;
-using XBullet.EasyTesting.Messaging;
-using XBullet.EasyTesting.Snapshots;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,6 +5,12 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using TestApi.Data;
 using TestApi.External;
 using TestApi.Messaging;
+using XBullet.EasyTesting.Authentication;
+using XBullet.EasyTesting.EntityFrameworkCore;
+using XBullet.EasyTesting.Hosting;
+using XBullet.EasyTesting.Http;
+using XBullet.EasyTesting.Messaging;
+using XBullet.EasyTesting.Snapshots;
 
 namespace TestApi.IntegrationTests;
 

@@ -1,8 +1,8 @@
 using System.Runtime.CompilerServices;
 using System.Text.Json;
-using XBullet.EasyTesting.Snapshots;
 using VerifyTests;
 using VerifyXunit;
+using XBullet.EasyTesting.Snapshots;
 
 namespace XBullet.EasyTesting.Verify.Xunit;
 

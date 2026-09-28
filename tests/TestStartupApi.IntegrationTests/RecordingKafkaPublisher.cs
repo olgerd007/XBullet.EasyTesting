@@ -1,5 +1,5 @@
-using XBullet.EasyTesting.Messaging;
 using TestStartupApi.Messaging;
+using XBullet.EasyTesting.Messaging;
 
 namespace TestStartupApi.IntegrationTests;
 

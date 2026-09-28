@@ -1,7 +1,7 @@
 using System.Net.Http.Json;
+using TestApi.Models;
 using XBullet.EasyTesting.Hosting;
 using XBullet.EasyTesting.Snapshots;
-using TestApi.Models;
 using Xunit;
 
 namespace TestApi.IntegrationTests;

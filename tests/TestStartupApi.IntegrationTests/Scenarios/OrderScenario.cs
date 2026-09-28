@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-using XBullet.EasyTesting.Hosting;
 using TestStartupApi.Controllers;
 using TestStartupApi.External;
 using TestStartupApi.Models;
+using XBullet.EasyTesting.Hosting;
 
 namespace TestStartupApi.IntegrationTests.Scenarios;
 

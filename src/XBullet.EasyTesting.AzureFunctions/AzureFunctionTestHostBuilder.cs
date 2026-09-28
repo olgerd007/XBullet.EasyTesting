@@ -1,8 +1,8 @@
+using System.Text.Json;
 using Azure.Core.Serialization;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Middleware;
 using Microsoft.Extensions.DependencyInjection;
-using System.Text.Json;
 
 namespace XBullet.EasyTesting.AzureFunctions;
 

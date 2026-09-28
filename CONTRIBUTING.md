@@ -22,6 +22,11 @@ Before opening a pull request, also verify formatting:
 dotnet format XBullet.EasyTesting.sln --verify-no-changes --no-restore
 ```
 
+The root `.editorconfig` is the source of truth for formatting, naming, and C# style. Stable rules
+are build warnings (and therefore errors in this repository); preference-heavy modern C# rules are
+IDE suggestions. Member accessibility ordering is intentionally left to code review so related API
+members can remain cohesive and field-initializer order is preserved.
+
 To run the same documentation gate directly without rebuilding the solution:
 
 ```powershell

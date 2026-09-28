@@ -1,8 +1,8 @@
 using Microsoft.Data.Sqlite;
-using XBullet.EasyTesting.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using TestApi.Data;
 using TestApi.Models;
+using XBullet.EasyTesting.EntityFrameworkCore;
 using Xunit;
 
 namespace TestApi.IntegrationTests;

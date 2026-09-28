@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Configuration;
-using XBullet.EasyTesting.Hosting;
 using TestStartupApi.Features;
+using XBullet.EasyTesting.Hosting;
 
 namespace TestStartupApi.IntegrationTests.Scenarios;
 
