@@ -10,7 +10,7 @@ creating the semantic-version tag.
 - [ ] Breaking or behavior-changing releases include migration guidance.
 - [ ] New public APIs have complete XML comments and an approved public API entry.
 - [ ] Package READMEs contain a minimal current example and the stable API-reference link.
-- [ ] `docs/documentation-coverage.md` reflects new, changed, or removed functionality.
+- [ ] `docs/contributing/documentation-coverage.md` reflects new, changed, or removed functionality.
 - [ ] Review dates in `documentation-maintenance.md` are updated for every area reviewed during the
       release.
 

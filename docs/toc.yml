@@ -80,6 +80,8 @@ items:
     href: contributing/api-reference.md
   - name: Documentation maintenance
     href: contributing/documentation-maintenance.md
+  - name: Documentation coverage
+    href: contributing/documentation-coverage.md
   - name: Documentation release checklist
     href: contributing/release-checklist.md
   - name: Documentation examples

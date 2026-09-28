@@ -5,6 +5,7 @@ TestResults/
 artifacts/
 coverage/
 docs/api/generated/
+.codex/plans/
 *.trx
 *.received.*
 *.user

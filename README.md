@@ -108,7 +108,8 @@ complete navigation map.
 - Snapshot and diagnostic output can contain sensitive application data. Configure exclusions or
   redaction before committing files or publishing logs.
 
-See the maintained [limitations register](docs/documentation-coverage.md#limitations-register) for
+See the maintained
+[limitations register](docs/contributing/documentation-coverage.md#limitations-register) for
 package-specific constraints.
 
 ## Examples

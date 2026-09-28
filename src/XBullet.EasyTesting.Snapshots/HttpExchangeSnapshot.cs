@@ -11,6 +11,7 @@ namespace XBullet.EasyTesting.Snapshots;
 public sealed record HttpExchangeSnapshot(
     HttpExchangeRequestSnapshot? Request,
     HttpExchangeResponseSnapshot? Response,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     HttpExchangeFailureSnapshot? Failure)
 {
     /// <summary>Creates a deterministic exchange snapshot from an HTTP response.</summary>

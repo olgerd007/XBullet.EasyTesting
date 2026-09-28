@@ -57,7 +57,7 @@ the implementation. Update the dates in this table in the pull request that reco
 
 ## Coverage ownership
 
-Every public feature belongs in `docs/documentation-coverage.md`. A public behavior change must do
+Every public feature belongs in `docs/contributing/documentation-coverage.md`. A public behavior change must do
 one of the following:
 
 1. Update the existing feature or package row and its canonical documentation.

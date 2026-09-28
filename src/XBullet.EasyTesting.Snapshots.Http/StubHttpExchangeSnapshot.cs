@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using XBullet.EasyTesting.Http;
 
 namespace XBullet.EasyTesting.Snapshots;
@@ -34,6 +35,7 @@ public sealed class StubHttpExchangeSnapshot
     /// The stable send-failure snapshot, or <see langword="null"/> when no failure existed at
     /// snapshot creation time. Failure messages are copied without automatic redaction.
     /// </value>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public StubHttpFailureSnapshot? Failure { get; }
 
     /// <summary>Creates a deterministic snapshot model from a captured exchange.</summary>
@@ -138,6 +140,7 @@ public sealed class StubHttpResponseSnapshot
     /// The stable content-read failure, or <see langword="null"/> when no failure was captured.
     /// Failure messages are copied without automatic redaction.
     /// </value>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public StubHttpFailureSnapshot? BodyFailure { get; }
 
     /// <summary>Creates a deterministic snapshot model from a captured response.</summary>

@@ -6,6 +6,19 @@ The project follows Semantic Versioning. Package versions are produced from GitH
 
 ## [Unreleased]
 
+## [1.0.15] - 2026-09-28
+
+### Changed
+
+- Moved the documentation coverage inventory into the contributor documentation, replaced completed
+  public roadmaps with durable redirects, and added generated-redirect validation to documentation
+  builds.
+
+### Fixed
+
+- HTTP exchange snapshots now omit absent send and response-body failures across direct, recorded,
+  and outbound-stub captures while preserving full diagnostics when a failure occurs.
+
 ## [1.0.14] - 2026-09-27
 
 ### Added
