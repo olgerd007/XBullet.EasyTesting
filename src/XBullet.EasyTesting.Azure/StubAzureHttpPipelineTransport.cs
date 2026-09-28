@@ -264,9 +264,9 @@ public sealed class StubAzureHttpPipelineTransport : HttpPipelineTransport, ITes
         BinaryData? content = null;
         if (request.Content is not null)
         {
-            using var stream = new MemoryStream();
+            using var stream = CreateCaptureStream(request.Content);
             request.Content.WriteTo(stream, cancellationToken);
-            content = BinaryData.FromBytes(stream.ToArray());
+            content = CreateBinaryData(stream);
         }
 
         return CreateRecordedRequest(request, content);
@@ -279,13 +279,21 @@ public sealed class StubAzureHttpPipelineTransport : HttpPipelineTransport, ITes
         BinaryData? content = null;
         if (request.Content is not null)
         {
-            using var stream = new MemoryStream();
+            using var stream = CreateCaptureStream(request.Content);
             await request.Content.WriteToAsync(stream, cancellationToken);
-            content = BinaryData.FromBytes(stream.ToArray());
+            content = CreateBinaryData(stream);
         }
 
         return CreateRecordedRequest(request, content);
     }
+
+    private static MemoryStream CreateCaptureStream(RequestContent content) =>
+        content.TryComputeLength(out var length) && length <= int.MaxValue
+            ? new MemoryStream((int)Math.Min(length, 1_048_576))
+            : new MemoryStream();
+
+    private static BinaryData CreateBinaryData(MemoryStream stream) =>
+        BinaryData.FromBytes(stream.GetBuffer().AsMemory(0, (int)stream.Length));
 
     private static RecordedAzureRequest CreateRecordedRequest(Request request, BinaryData? content)
     {

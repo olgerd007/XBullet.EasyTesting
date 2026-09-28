@@ -219,6 +219,8 @@ public async Task Captured_http_requests_have_a_dedicated_snapshot_assertion()
         Assert.Contains("\"Response\"", exchangesVerified);
         Assert.Contains("\"StatusCode\": 201", exchangesVerified);
         Assert.Contains("\"accepted\": true", exchangesVerified);
+        Assert.DoesNotContain("\"Failure\"", exchangesVerified);
+        Assert.DoesNotContain("\"BodyFailure\"", exchangesVerified);
     }
     finally
     {

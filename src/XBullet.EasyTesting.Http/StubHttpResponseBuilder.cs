@@ -48,8 +48,8 @@ public sealed class StubHttpResponseBuilder
         ArgumentNullException.ThrowIfNull(value);
         _predicates.Add(new StubRequestPredicate(
             $"header '{name}' containing value '{value}'",
-            request =>
-                request.Headers.TryGetValue(name, out var values) &&
+            context =>
+                context.Request.Headers.TryGetValue(name, out var values) &&
                 values.Contains(value, StringComparer.Ordinal)));
         return this;
     }
@@ -74,7 +74,7 @@ public sealed class StubHttpResponseBuilder
             : value;
         _predicates.Add(new StubRequestPredicate(
             $"query parameter '{name}' containing value '{displayedValue}'",
-            request => GetQueryParameterValues(request.RequestUri, name)
+            context => GetQueryParameterValues(context.Request.RequestUri, name)
                 .Contains(value, StringComparer.Ordinal)));
         return this;
     }
@@ -99,7 +99,7 @@ public sealed class StubHttpResponseBuilder
         _hasQueryParameterMatcher = true;
         _predicates.Add(new StubRequestPredicate(
             $"predicate for query parameter '{name}'",
-            request => predicate(GetQueryParameterValues(request.RequestUri, name))));
+            context => predicate(GetQueryParameterValues(context.Request.RequestUri, name))));
         return this;
     }
 
@@ -114,7 +114,7 @@ public sealed class StubHttpResponseBuilder
         ArgumentNullException.ThrowIfNull(body);
         _predicates.Add(new StubRequestPredicate(
             "the configured exact request body",
-            request => string.Equals(request.Body, body, StringComparison.Ordinal)));
+            context => string.Equals(context.Request.Body, body, StringComparison.Ordinal)));
         return this;
     }
 
@@ -138,7 +138,7 @@ public sealed class StubHttpResponseBuilder
             serializerOptions ?? DefaultSerializerOptions);
         _predicates.Add(new StubRequestPredicate(
             "the configured structural JSON request body",
-            request => JsonMatches(request.Body, expected)));
+            context => JsonMatches(context, expected)));
         return this;
     }
 
@@ -168,7 +168,7 @@ public sealed class StubHttpResponseBuilder
             serializerOptions ?? DefaultSerializerOptions);
         _predicates.Add(new StubRequestPredicate(
             $"JSON property '{propertyName}' equal to the configured value",
-            request => JsonPathMatcher.Matches(request.Body, path, expected)));
+            context => JsonPathMatcher.Matches(context, path, expected)));
         return this;
     }
 
@@ -188,7 +188,7 @@ public sealed class StubHttpResponseBuilder
         var path = JsonPathMatcher.RootProperty(propertyName);
         _predicates.Add(new StubRequestPredicate(
             $"predicate for JSON property '{propertyName}'",
-            request => JsonPathMatcher.Matches(request.Body, path, predicate)));
+            context => JsonPathMatcher.Matches(context, path, predicate)));
         return this;
     }
 
@@ -221,7 +221,7 @@ public sealed class StubHttpResponseBuilder
             serializerOptions ?? DefaultSerializerOptions);
         _predicates.Add(new StubRequestPredicate(
             $"JSON path '{path}' equal to the configured value",
-            request => JsonPathMatcher.Matches(request.Body, parsedPath, expected)));
+            context => JsonPathMatcher.Matches(context, parsedPath, expected)));
         return this;
     }
 
@@ -247,7 +247,7 @@ public sealed class StubHttpResponseBuilder
         var parsedPath = JsonPathMatcher.Parse(path);
         _predicates.Add(new StubRequestPredicate(
             $"predicate for JSON path '{path}'",
-            request => JsonPathMatcher.Matches(request.Body, parsedPath, predicate)));
+            context => JsonPathMatcher.Matches(context, parsedPath, predicate)));
         return this;
     }
 
@@ -271,7 +271,7 @@ public sealed class StubHttpResponseBuilder
             string.IsNullOrWhiteSpace(description)
                 ? "the custom request predicate"
                 : description,
-            predicate));
+            context => predicate(context.Request)));
         return this;
     }
 
@@ -624,20 +624,13 @@ public sealed class StubHttpResponseBuilder
         }
     }
 
-    private static bool JsonMatches(string? actual, JsonNode? expected)
+    private static bool JsonMatches(StubRequestMatchContext context, JsonNode? expected)
     {
-        if (actual is null)
+        if (!context.TryGetJsonRoot(out var actual))
         {
             return false;
         }
 
-        try
-        {
-            return JsonNode.DeepEquals(JsonNode.Parse(actual), expected);
-        }
-        catch (JsonException)
-        {
-            return false;
-        }
+        return JsonNode.DeepEquals(JsonNode.Parse(actual.GetRawText()), expected);
     }
 }

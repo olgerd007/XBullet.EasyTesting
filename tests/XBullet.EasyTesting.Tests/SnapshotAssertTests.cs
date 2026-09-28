@@ -1675,6 +1675,33 @@ public sealed class SnapshotAssertTests
     }
 
     [Fact]
+    public void Captured_http_snapshots_preserve_body_truncation_metadata()
+    {
+        var request = new StubHttpRequest(
+            HttpMethod.Post,
+            new Uri("/capture", UriKind.Relative),
+            new Dictionary<string, string[]>(),
+            "partial")
+        {
+            BodyTruncated = true
+        };
+        var response = CreateStubResponse(
+            bodyCaptured: true,
+            body: Encoding.UTF8.GetBytes("partial")) with
+        {
+            BodyTruncated = true
+        };
+
+        var requestSnapshot = StubHttpRequestSnapshot.FromRequest(request);
+        var responseSnapshot = StubHttpResponseSnapshot.FromResponse(response);
+
+        Assert.True(requestSnapshot.BodyTruncated);
+        Assert.True(responseSnapshot.BodyTruncated);
+        Assert.Contains("\"BodyTruncated\":true", JsonSerializer.Serialize(requestSnapshot));
+        Assert.Contains("\"BodyTruncated\":true", JsonSerializer.Serialize(responseSnapshot));
+    }
+
+    [Fact]
     public void Http_exchange_options_accept_empty_sets_and_reject_invalid_names()
     {
         var exchange = new HttpExchangeSnapshotOptions();

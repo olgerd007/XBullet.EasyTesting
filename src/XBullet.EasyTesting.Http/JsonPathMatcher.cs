@@ -46,63 +46,49 @@ internal static class JsonPathMatcher
     }
 
     public static bool Matches(
-        string? json,
+        StubRequestMatchContext context,
         IReadOnlyList<JsonPathSegment> path,
         JsonNode? expected)
     {
         return Matches(
-            json,
+            context,
             path,
             element => JsonNode.DeepEquals(JsonNode.Parse(element.GetRawText()), expected));
     }
 
     public static bool Matches(
-        string? json,
+        StubRequestMatchContext context,
         IReadOnlyList<JsonPathSegment> path,
         Func<JsonElement, bool> predicate)
     {
-        if (json is null)
+        if (!context.TryGetJsonRoot(out var current))
         {
             return false;
         }
 
-        JsonDocument document;
-        try
+        foreach (var segment in path)
         {
-            document = JsonDocument.Parse(json);
-        }
-        catch (JsonException)
-        {
-            return false;
-        }
-
-        using (document)
-        {
-            var current = document.RootElement;
-            foreach (var segment in path)
+            if (segment.PropertyName is not null)
             {
-                if (segment.PropertyName is not null)
+                if (current.ValueKind != JsonValueKind.Object ||
+                    !current.TryGetProperty(segment.PropertyName, out current))
                 {
-                    if (current.ValueKind != JsonValueKind.Object ||
-                        !current.TryGetProperty(segment.PropertyName, out current))
-                    {
-                        return false;
-                    }
-                }
-                else
-                {
-                    if (current.ValueKind != JsonValueKind.Array ||
-                        segment.ArrayIndex >= current.GetArrayLength())
-                    {
-                        return false;
-                    }
-
-                    current = current.EnumerateArray().ElementAt(segment.ArrayIndex);
+                    return false;
                 }
             }
+            else
+            {
+                if (current.ValueKind != JsonValueKind.Array ||
+                    segment.ArrayIndex >= current.GetArrayLength())
+                {
+                    return false;
+                }
 
-            return predicate(current);
+                current = current[segment.ArrayIndex];
+            }
         }
+
+        return predicate(current);
     }
 
     public static IReadOnlyList<JsonPathSegment> RootProperty(string propertyName)

@@ -1,1 +1,4 @@
 #nullable enable
+XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshot.BodyTruncated.get -> bool
+XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshot.BodyTruncated.init -> void
+XBullet.EasyTesting.Snapshots.StubHttpResponseSnapshot.BodyTruncated.get -> bool

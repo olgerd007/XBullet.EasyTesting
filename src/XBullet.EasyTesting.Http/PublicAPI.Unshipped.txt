@@ -1,1 +1,18 @@
 #nullable enable
+XBullet.EasyTesting.Http.StubHttpMessageHandler.StubHttpMessageHandler(XBullet.EasyTesting.Http.StubHttpMessageHandlerOptions! options) -> void
+XBullet.EasyTesting.Http.StubHttpMessageHandlerOptions
+XBullet.EasyTesting.Http.StubHttpMessageHandlerOptions.CaptureRequestBodies.get -> bool
+XBullet.EasyTesting.Http.StubHttpMessageHandlerOptions.CaptureRequestBodies.init -> void
+XBullet.EasyTesting.Http.StubHttpMessageHandlerOptions.CaptureResponseBodies.get -> bool
+XBullet.EasyTesting.Http.StubHttpMessageHandlerOptions.CaptureResponseBodies.init -> void
+XBullet.EasyTesting.Http.StubHttpMessageHandlerOptions.MaximumRecordedExchanges.get -> int?
+XBullet.EasyTesting.Http.StubHttpMessageHandlerOptions.MaximumRecordedExchanges.init -> void
+XBullet.EasyTesting.Http.StubHttpMessageHandlerOptions.MaximumRequestBodyBytes.get -> int?
+XBullet.EasyTesting.Http.StubHttpMessageHandlerOptions.MaximumRequestBodyBytes.init -> void
+XBullet.EasyTesting.Http.StubHttpMessageHandlerOptions.MaximumResponseBodyBytes.get -> int?
+XBullet.EasyTesting.Http.StubHttpMessageHandlerOptions.MaximumResponseBodyBytes.init -> void
+XBullet.EasyTesting.Http.StubHttpMessageHandlerOptions.StubHttpMessageHandlerOptions() -> void
+XBullet.EasyTesting.Http.StubHttpRequest.BodyTruncated.get -> bool
+XBullet.EasyTesting.Http.StubHttpRequest.BodyTruncated.init -> void
+XBullet.EasyTesting.Http.StubHttpResponse.BodyTruncated.get -> bool
+XBullet.EasyTesting.Http.StubHttpResponse.BodyTruncated.init -> void
