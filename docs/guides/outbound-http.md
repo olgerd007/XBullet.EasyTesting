@@ -82,6 +82,28 @@ public async Task Arranged_response_is_returned_and_request_is_recorded()
 the response or send failure. Response content is observed when the application reads it; the stub
 does not eagerly consume a streaming body.
 
+## Bound retained HTTP data
+
+The default handler retains every exchange and complete request and consumed response bodies. For
+long-running or payload-heavy tests, configure explicit limits when constructing the handler:
+
+```csharp
+using var handler = new StubHttpMessageHandler(new StubHttpMessageHandlerOptions
+{
+    MaximumRecordedExchanges = 500,
+    MaximumRequestBodyBytes = 64 * 1024,
+    MaximumResponseBodyBytes = 64 * 1024
+});
+```
+
+`CallCount` still counts every received request, while `Requests` and `Exchanges` expose the newest
+retained entries. Set `MaximumRecordedExchanges` to zero to disable retention. A truncated captured
+body sets `BodyTruncated` on the request, response, and corresponding snapshot representation.
+`CaptureRequestBodies` and `CaptureResponseBodies` can disable body retention independently.
+
+Request matchers and response factories receive the configured captured request body. Do not
+truncate or disable request-body capture when a rule depends on content beyond the retained bytes.
+
 ## Match the request precisely
 
 Start a rule with `When(method, pathOrUri)`. Add any combination of:

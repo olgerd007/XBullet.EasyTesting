@@ -6,13 +6,22 @@ The project follows Semantic Versioning. Package versions are produced from GitH
 
 ## [Unreleased]
 
-## [1.0.15] - 2026-09-28
+## [1.0.15] - 2026-09-29
+
+### Added
+
+- Added bounded request, response, and exchange capture controls to `StubHttpMessageHandler`,
+  including truncation metadata for recorded requests, responses, and snapshots. See the
+  [outbound HTTP guide](docs/guides/outbound-http.md#bound-retained-http-data).
 
 ### Changed
 
 - Moved the documentation coverage inventory into the contributor documentation, replaced completed
   public roadmaps with durable redirects, and added generated-redirect validation to documentation
   builds.
+- Optimized HTTP stub matching, snapshot comparison and scrubbing, and recorded-message inspection
+  on high-volume test paths without changing their default behavior.
+- Added repository-wide C# style conventions with build-time enforcement and contributor guidance.
 
 ### Fixed
 
