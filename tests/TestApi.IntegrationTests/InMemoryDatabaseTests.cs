@@ -91,6 +91,23 @@ public sealed class InMemoryDatabaseTests : IClassFixture<InMemoryTestApiFactory
             WarningBehavior.Ignore,
             warningConfiguration.GetBehavior(CoreEventId.ManyServiceProvidersCreatedWarning));
 
+        await using (var scope = await factory.CreateTestScenarioScopeAsync(
+            cancellationToken: cancellationToken))
+        {
+            var scenarioWarningConfiguration = await factory.QueryDatabaseAsync(
+                scope,
+                (database, _) => Task.FromResult(database.GetService<IDbContextOptions>()
+                    .FindExtension<CoreOptionsExtension>()!
+                    .WarningsConfiguration),
+                cancellationToken);
+
+            Assert.Equal(WarningBehavior.Throw, scenarioWarningConfiguration.DefaultBehavior);
+            Assert.Equal(
+                WarningBehavior.Ignore,
+                scenarioWarningConfiguration.GetBehavior(
+                    CoreEventId.ManyServiceProvidersCreatedWarning));
+        }
+
         for (var index = 0; index < 25; index++)
         {
             await using var scope = await factory.CreateTestScenarioScopeAsync(
