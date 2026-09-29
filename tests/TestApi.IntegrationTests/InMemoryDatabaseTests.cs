@@ -1,5 +1,7 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using TestApi.Data;
 using TestApi.Models;
 using XBullet.EasyTesting.EntityFrameworkCore;
@@ -71,6 +73,35 @@ public sealed class InMemoryDatabaseTests : IClassFixture<InMemoryTestApiFactory
             cancellationToken);
 
         Assert.Equal(0, secondCount);
+    }
+
+    [Fact]
+    public async Task Isolated_scenarios_ignore_only_the_expected_service_provider_warning()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var factory = new WarningsAsErrorsInMemoryTestApiFactory();
+        var warningConfiguration = await factory.QueryDatabaseAsync(
+            (database, _) => Task.FromResult(database.GetService<IDbContextOptions>()
+                .FindExtension<CoreOptionsExtension>()!
+                .WarningsConfiguration),
+            cancellationToken);
+
+        Assert.Equal(WarningBehavior.Throw, warningConfiguration.DefaultBehavior);
+        Assert.Equal(
+            WarningBehavior.Ignore,
+            warningConfiguration.GetBehavior(CoreEventId.ManyServiceProvidersCreatedWarning));
+
+        for (var index = 0; index < 25; index++)
+        {
+            await using var scope = await factory.CreateTestScenarioScopeAsync(
+                cancellationToken: cancellationToken);
+            var count = await factory.QueryDatabaseAsync(
+                scope,
+                (database, token) => database.Products.CountAsync(token),
+                cancellationToken);
+
+            Assert.Equal(0, count);
+        }
     }
 
     [Fact]
@@ -204,3 +235,10 @@ public sealed class InMemoryTestApiFactory
 {
 }
 #endregion
+
+internal sealed class WarningsAsErrorsInMemoryTestApiFactory
+    : InMemoryEntityFrameworkWebApplicationFactory<Program, TestApiDbContext>
+{
+    protected override void ConfigureInMemoryDatabase(DbContextOptionsBuilder options) =>
+        options.ConfigureWarnings(warnings => warnings.Default(WarningBehavior.Throw));
+}

@@ -6,6 +6,12 @@ The project follows Semantic Versioning. Package versions are produced from GitH
 
 ## [Unreleased]
 
+### Fixed
+
+- EF-backed test factories now suppress only EF Core's expected
+  `ManyServiceProvidersCreatedWarning`, preventing suites that treat warnings as exceptions from
+  failing after creating more than twenty isolated scenario databases.
+
 ## [1.0.15] - 2026-09-29
 
 ### Added
