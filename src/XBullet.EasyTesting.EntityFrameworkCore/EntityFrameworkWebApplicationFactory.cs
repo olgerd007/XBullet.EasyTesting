@@ -429,7 +429,7 @@ public abstract class EntityFrameworkWebApplicationFactory<TEntryPoint, TDbConte
         ConfigureAdditionalServicesForScenario(services, context);
     }
 
-    private static void ConfigureExpectedDatabaseWarnings(IServiceCollection services)
+    internal static void ConfigureExpectedDatabaseWarnings(IServiceCollection services)
     {
         static void Configure(DbContextOptionsBuilder options) =>
             options.ConfigureWarnings(warnings =>
