@@ -59,6 +59,11 @@ The default per-scenario lifecycle remains `EnsureDeleted` followed by `EnsureCr
 migrations, schema verification, template restore, or another initializer. For a single database
 arrangement, use `Database().RecreateDatabaseWith(...)`.
 
+Scenario isolation intentionally creates distinct EF Core option shapes and internal service
+providers. The test factories suppress only EF Core's `ManyServiceProvidersCreatedWarning` for
+factory and scenario contexts so suites that promote warnings to exceptions can create more than
+twenty isolated scenarios. All other configured EF Core warning behavior is preserved.
+
 SQLite file cleanup clears connection pools, retries transient lock failures, and adds a
 `SqliteDatabaseCleanupDiagnostics` value to the terminal exception's `Data` dictionary under
 `SqliteDatabaseCleanupDiagnostics.ExceptionDataKey`.

@@ -1,6 +1,6 @@
-using XBullet.EasyTesting.Authentication;
-using Microsoft.AspNetCore.Mvc.Testing;
 using System.Net.Http.Headers;
+using Microsoft.AspNetCore.Mvc.Testing;
+using XBullet.EasyTesting.Authentication;
 
 namespace XBullet.EasyTesting.Hosting;
 

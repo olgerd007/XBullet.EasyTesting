@@ -1,13 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using TestStartupApi.Data;
+using TestStartupApi.External;
+using TestStartupApi.IntegrationTests.Stubs;
+using TestStartupApi.Messaging;
 using XBullet.EasyTesting.Authentication;
 using XBullet.EasyTesting.EntityFrameworkCore;
 using XBullet.EasyTesting.Messaging;
-using TestStartupApi.IntegrationTests.Stubs;
-using TestStartupApi.Data;
-using TestStartupApi.External;
-using TestStartupApi.Messaging;
 
 namespace TestStartupApi.IntegrationTests;
 

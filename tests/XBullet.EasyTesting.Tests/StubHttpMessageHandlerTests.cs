@@ -903,5 +903,107 @@ public sealed class StubHttpMessageHandlerTests
             exchange.Response.BodyFailure.Message);
     }
 
+    [Fact]
+    public async Task Capture_options_bound_retention_and_mark_truncated_bodies()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var handler = new StubHttpMessageHandler(new StubHttpMessageHandlerOptions
+        {
+            MaximumRecordedExchanges = 2,
+            MaximumRequestBodyBytes = 5,
+            MaximumResponseBodyBytes = 4
+        });
+        handler
+            .When(HttpMethod.Post, "/capture")
+            .RespondText("response");
+        using var client = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("https://external.example.test/")
+        };
+
+        for (var index = 0; index < 3; index++)
+        {
+            using var response = await client.PostAsync(
+                "/capture",
+                new StringContent("abcdefgh"),
+                cancellationToken);
+            _ = await response.Content.ReadAsStringAsync(cancellationToken);
+        }
+
+        Assert.Equal(3, handler.CallCount);
+        Assert.Equal(2, handler.Requests.Count);
+        Assert.Equal(2, handler.Exchanges.Count);
+        Assert.All(handler.Requests, request =>
+        {
+            Assert.Equal("abcde", request.Body);
+            Assert.True(request.BodyTruncated);
+        });
+        Assert.All(handler.Exchanges, exchange =>
+        {
+            Assert.Equal("resp", Encoding.UTF8.GetString(exchange.Response!.Body.Span));
+            Assert.True(exchange.Response.BodyTruncated);
+        });
+    }
+
+    [Fact]
+    public async Task Capture_options_can_disable_request_and_response_bodies()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var handler = new StubHttpMessageHandler(new StubHttpMessageHandlerOptions
+        {
+            CaptureRequestBodies = false,
+            CaptureResponseBodies = false
+        });
+        handler.When(HttpMethod.Post, "/capture").RespondText("response");
+        using var client = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("https://external.example.test/")
+        };
+
+        using var response = await client.PostAsync(
+            "/capture",
+            new StringContent("request"),
+            cancellationToken);
+        Assert.Equal("response", await response.Content.ReadAsStringAsync(cancellationToken));
+
+        Assert.Equal(1, handler.CallCount);
+        Assert.Null(Assert.Single(handler.Requests).Body);
+        var capturedResponse = Assert.Single(handler.Exchanges).Response;
+        Assert.NotNull(capturedResponse);
+        Assert.False(capturedResponse.BodyCaptured);
+        Assert.Empty(capturedResponse.Body.ToArray());
+    }
+
+    [Fact]
+    public async Task Zero_exchange_limit_disables_retention_without_changing_call_count()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var handler = new StubHttpMessageHandler(new StubHttpMessageHandlerOptions
+        {
+            MaximumRecordedExchanges = 0
+        });
+        handler.When(HttpMethod.Get, "/capture").Respond(HttpStatusCode.NoContent);
+        using var client = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("https://external.example.test/")
+        };
+
+        using var response = await client.GetAsync("/capture", cancellationToken);
+
+        Assert.Equal(1, handler.CallCount);
+        Assert.Empty(handler.Requests);
+        Assert.Empty(handler.Exchanges);
+    }
+
+    [Fact]
+    public void Capture_options_reject_negative_limits()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new StubHttpMessageHandler(new StubHttpMessageHandlerOptions
+            {
+                MaximumResponseBodyBytes = -1
+            }));
+    }
+
     private sealed record Response(bool Accepted);
 }

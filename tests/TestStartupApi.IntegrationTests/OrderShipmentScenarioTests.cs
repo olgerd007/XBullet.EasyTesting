@@ -1,10 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
-using XBullet.EasyTesting.Hosting;
 using TestStartupApi.Controllers;
 using TestStartupApi.External;
 using TestStartupApi.IntegrationTests.Scenarios;
 using TestStartupApi.IntegrationTests.Stubs;
+using XBullet.EasyTesting.Hosting;
 using Xunit;
 
 namespace TestStartupApi.IntegrationTests;

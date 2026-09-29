@@ -13,6 +13,8 @@ public sealed class RecordedMessageBus : ITestScenarioResource
 {
     private readonly object _gate = new();
     private readonly List<RecordedMessage> _messages = [];
+    private readonly Dictionary<MessageRoute, List<RecordedMessage>> _messagesByRoute =
+        new(MessageRouteComparer.Instance);
     private readonly JsonSerializerOptions _serializerOptions;
 
     /// <summary>Creates a recorder with optional JSON serialization settings.</summary>
@@ -107,6 +109,14 @@ public sealed class RecordedMessageBus : ITestScenarioResource
         lock (_gate)
         {
             _messages.Add(message);
+            var route = new MessageRoute(transport, destination);
+            if (!_messagesByRoute.TryGetValue(route, out var routeMessages))
+            {
+                routeMessages = [];
+                _messagesByRoute.Add(route, routeMessages);
+            }
+
+            routeMessages.Add(message);
         }
     }
 
@@ -168,11 +178,11 @@ public sealed class RecordedMessageBus : ITestScenarioResource
         ArgumentException.ThrowIfNullOrWhiteSpace(destination);
         lock (_gate)
         {
-            return _messages
-                .Where(message =>
-                    string.Equals(message.Transport, transport, StringComparison.OrdinalIgnoreCase) &&
-                    string.Equals(message.Destination, destination, StringComparison.Ordinal))
-                .ToArray();
+            return _messagesByRoute.TryGetValue(
+                new MessageRoute(transport, destination),
+                out var messages)
+                ? messages.ToArray()
+                : [];
         }
     }
 
@@ -186,6 +196,7 @@ public sealed class RecordedMessageBus : ITestScenarioResource
         lock (_gate)
         {
             _messages.Clear();
+            _messagesByRoute.Clear();
         }
 
         return this;
@@ -224,4 +235,19 @@ public sealed class RecordedMessageBus : ITestScenarioResource
     }
 
     internal JsonSerializerOptions SerializerOptions => _serializerOptions;
+
+    private readonly record struct MessageRoute(string Transport, string Destination);
+
+    private sealed class MessageRouteComparer : IEqualityComparer<MessageRoute>
+    {
+        public static MessageRouteComparer Instance { get; } = new();
+
+        public bool Equals(MessageRoute x, MessageRoute y) =>
+            string.Equals(x.Transport, y.Transport, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(x.Destination, y.Destination, StringComparison.Ordinal);
+
+        public int GetHashCode(MessageRoute route) => HashCode.Combine(
+            StringComparer.OrdinalIgnoreCase.GetHashCode(route.Transport),
+            StringComparer.Ordinal.GetHashCode(route.Destination));
+    }
 }

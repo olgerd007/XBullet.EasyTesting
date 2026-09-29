@@ -66,7 +66,7 @@ public sealed class StubHttpExchange
         }
     }
 
-    internal void SetResponseBody(byte[] body, Exception? exception)
+    internal void SetResponseBody(byte[] body, bool truncated, Exception? exception)
     {
         lock (_gate)
         {
@@ -79,6 +79,7 @@ public sealed class StubHttpExchange
             {
                 BodyCaptured = true,
                 Body = body,
+                BodyTruncated = truncated,
                 BodyFailure = exception is null
                     ? null
                     : StubHttpFailure.FromException(exception.GetBaseException())
@@ -114,7 +115,14 @@ public sealed record StubHttpResponse(
     IReadOnlyDictionary<string, string[]> Headers,
     bool BodyCaptured,
     ReadOnlyMemory<byte> Body,
-    StubHttpFailure? BodyFailure);
+    StubHttpFailure? BodyFailure)
+{
+    /// <summary>
+    /// Gets whether the retained response body stops at the configured response-body byte limit.
+    /// </summary>
+    /// <value><see langword="true"/> when capture omitted trailing bytes; otherwise, false.</value>
+    public bool BodyTruncated { get; init; }
+}
 
 /// <summary>A stable description of an exception observed during an HTTP exchange.</summary>
 /// <param name="Type">The non-empty fully qualified exception type name when available.</param>

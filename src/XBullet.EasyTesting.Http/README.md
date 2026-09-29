@@ -36,6 +36,25 @@ timeouts, cancellation, malformed payloads, and recorded-request assertions are 
 `Exchanges` records each request together with its response or failure; response bytes and content
 read failures are observed without eagerly consuming the body.
 
+## Bounded capture
+
+Long-running or payload-heavy tests can bound retained data without changing the default behavior:
+
+```csharp
+var stub = new StubHttpMessageHandler(new StubHttpMessageHandlerOptions
+{
+    MaximumRecordedExchanges = 500,
+    MaximumRequestBodyBytes = 64 * 1024,
+    MaximumResponseBodyBytes = 64 * 1024
+});
+```
+
+`CallCount` continues to count every received request, while `Requests` and `Exchanges` expose the
+newest retained entries. A zero exchange limit disables retention. Truncated request and response
+records set `BodyTruncated`; body capture can also be disabled independently. Request matchers and
+response factories observe the configured captured request body, so do not truncate or disable it
+when a rule depends on content beyond the retained portion.
+
 ## Documentation
 
 - [API reference](https://olgerd007.github.io/XBullet.EasyTesting/api/packages/xbullet-easytesting-http.html)

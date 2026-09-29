@@ -1,8 +1,11 @@
 using Microsoft.Data.Sqlite;
-using XBullet.EasyTesting.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.DependencyInjection;
 using TestApi.Data;
 using TestApi.Models;
+using XBullet.EasyTesting.EntityFrameworkCore;
 using Xunit;
 
 namespace TestApi.IntegrationTests;
@@ -72,6 +75,73 @@ public sealed class InMemoryDatabaseTests : IClassFixture<InMemoryTestApiFactory
 
         Assert.Equal(0, secondCount);
     }
+
+    [Fact]
+    public async Task Isolated_scenarios_ignore_only_the_expected_service_provider_warning()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var factory = new WarningsAsErrorsInMemoryTestApiFactory();
+        var warningConfiguration = await factory.QueryDatabaseAsync(
+            (database, _) => Task.FromResult(database.GetService<IDbContextOptions>()
+                .FindExtension<CoreOptionsExtension>()!
+                .WarningsConfiguration),
+            cancellationToken);
+
+        Assert.Equal(WarningBehavior.Throw, warningConfiguration.DefaultBehavior);
+        Assert.Equal(
+            WarningBehavior.Ignore,
+            warningConfiguration.GetBehavior(CoreEventId.ManyServiceProvidersCreatedWarning));
+
+        await using (var scope = await factory.CreateTestScenarioScopeAsync(
+            cancellationToken: cancellationToken))
+        {
+            var scenarioWarningConfiguration = await factory.QueryDatabaseAsync(
+                scope,
+                (database, _) => Task.FromResult(database.GetService<IDbContextOptions>()
+                    .FindExtension<CoreOptionsExtension>()!
+                    .WarningsConfiguration),
+                cancellationToken);
+
+            Assert.Equal(WarningBehavior.Throw, scenarioWarningConfiguration.DefaultBehavior);
+            Assert.Equal(
+                WarningBehavior.Ignore,
+                scenarioWarningConfiguration.GetBehavior(
+                    CoreEventId.ManyServiceProvidersCreatedWarning));
+        }
+
+        for (var index = 0; index < 25; index++)
+        {
+            await using var scope = await factory.CreateTestScenarioScopeAsync(
+                cancellationToken: cancellationToken);
+            var count = await factory.QueryDatabaseAsync(
+                scope,
+                (database, token) => database.Products.CountAsync(token),
+                cancellationToken);
+
+            Assert.Equal(0, count);
+        }
+    }
+
+#if NET8_0
+    [Fact]
+    public void Expected_database_warnings_can_be_registered_without_existing_db_context_options()
+    {
+        ServiceCollection services = [];
+
+        EntityFrameworkWebApplicationFactory<Program, TestApiDbContext>
+            .ConfigureExpectedDatabaseWarnings(services);
+
+        using var provider = services.BuildServiceProvider();
+        var warningConfiguration = provider
+            .GetRequiredService<DbContextOptions<TestApiDbContext>>()
+            .FindExtension<CoreOptionsExtension>()!
+            .WarningsConfiguration;
+
+        Assert.Equal(
+            WarningBehavior.Ignore,
+            warningConfiguration.GetBehavior(CoreEventId.ManyServiceProvidersCreatedWarning));
+    }
+#endif
 
     [Fact]
     public async Task Database_cleanup_supports_non_sqlite_and_sqlite_providers()
@@ -204,3 +274,10 @@ public sealed class InMemoryTestApiFactory
 {
 }
 #endregion
+
+internal sealed class WarningsAsErrorsInMemoryTestApiFactory
+    : InMemoryEntityFrameworkWebApplicationFactory<Program, TestApiDbContext>
+{
+    protected override void ConfigureInMemoryDatabase(DbContextOptionsBuilder options) =>
+        options.ConfigureWarnings(warnings => warnings.Default(WarningBehavior.Throw));
+}

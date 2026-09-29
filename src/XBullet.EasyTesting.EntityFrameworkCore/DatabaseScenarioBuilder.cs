@@ -1,5 +1,5 @@
-using XBullet.EasyTesting.Hosting;
 using Microsoft.EntityFrameworkCore;
+using XBullet.EasyTesting.Hosting;
 
 namespace XBullet.EasyTesting.EntityFrameworkCore;
 

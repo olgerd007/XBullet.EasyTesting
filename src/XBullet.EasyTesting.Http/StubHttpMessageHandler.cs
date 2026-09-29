@@ -1,5 +1,7 @@
+using System.Buffers;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Text;
 using XBullet.EasyTesting.Diagnostics;
 using XBullet.EasyTesting.Hosting;
 
@@ -16,9 +18,28 @@ namespace XBullet.EasyTesting.Http;
 public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioResource
 {
     private readonly object _gate = new();
+    private readonly StubHttpMessageHandlerOptions _options;
     private StubRule[] _rules = [];
-    private readonly List<StubHttpRequest> _requests = [];
-    private readonly List<StubHttpExchange> _exchanges = [];
+    private readonly Queue<StubHttpRequest> _requests = [];
+    private readonly Queue<StubHttpExchange> _exchanges = [];
+    private int _callCount;
+
+    /// <summary>Creates a handler with unlimited exchange and body capture.</summary>
+    public StubHttpMessageHandler()
+        : this(new StubHttpMessageHandlerOptions())
+    {
+    }
+
+    /// <summary>Creates a handler with explicit recording and body-capture limits.</summary>
+    /// <param name="options">
+    /// The non-null immutable option values retained by this handler.
+    /// </param>
+    public StubHttpMessageHandler(StubHttpMessageHandlerOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        options.Validate();
+        _options = options;
+    }
 
     /// <summary>Gets a stable copy of the requests received by this handler.</summary>
     /// <value>
@@ -62,7 +83,7 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
         {
             lock (_gate)
             {
-                return _requests.Count;
+                return _callCount;
             }
         }
     }
@@ -115,7 +136,9 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
             requests = _requests.ToArray();
         }
 
-        var actualCount = requests.Count(request => MatchesMethodAndUri(method, requestUri, request));
+        var uriMatcher = StubUriMatcher.Create(requestUri, matchUriPathOnly: false);
+        var actualCount = requests.Count(request =>
+            method == request.Method && uriMatcher.Matches(request.RequestUri));
         if (actualCount != expectedCount)
         {
             throw new StubHttpVerificationException(
@@ -197,6 +220,7 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
             Volatile.Write(ref _rules, []);
             _requests.Clear();
             _exchanges.Clear();
+            _callCount = 0;
         }
 
         return this;
@@ -229,14 +253,16 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
     {
         cancellationToken.ThrowIfCancellationRequested();
         StubHttpRequest[] requests;
+        int callCount;
         lock (_gate)
         {
             requests = _requests.ToArray();
+            callCount = _callCount;
         }
 
         return ValueTask.FromResult<object?>(new
         {
-            CallCount = requests.Length,
+            CallCount = callCount,
             Requests = requests.Select(request => new
             {
                 request.Method,
@@ -262,7 +288,7 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
             updatedRules[^1] = new StubRule(
                 method,
                 requestUri,
-                matchUriPathOnly,
+                StubUriMatcher.Create(requestUri, matchUriPathOnly),
                 predicates,
                 responseFactory);
             Volatile.Write(ref _rules, updatedRules);
@@ -276,32 +302,53 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
         HttpRequestMessage request,
         CancellationToken cancellationToken)
     {
-        var body = request.Content is null
-            ? null
-            : await request.Content.ReadAsStringAsync(cancellationToken);
+        var (body, bodyTruncated) = request.Content is null || !_options.CaptureRequestBodies
+            ? (null, false)
+            : await CaptureRequestBodyAsync(
+                request.Content,
+                _options.MaximumRequestBodyBytes,
+                cancellationToken);
         var headers = CaptureHeaders(request.Headers, request.Content?.Headers);
 
-        var capturedRequest = new StubHttpRequest(request.Method, request.RequestUri, headers, body);
+        var capturedRequest = new StubHttpRequest(request.Method, request.RequestUri, headers, body)
+        {
+            BodyTruncated = bodyTruncated
+        };
         var exchange = new StubHttpExchange(capturedRequest);
         lock (_gate)
         {
-            _requests.Add(capturedRequest);
-            _exchanges.Add(exchange);
+            _callCount++;
+            if (_options.MaximumRecordedExchanges != 0)
+            {
+                _requests.Enqueue(capturedRequest);
+                _exchanges.Enqueue(exchange);
+                if (_options.MaximumRecordedExchanges is int maximum)
+                {
+                    while (_requests.Count > maximum)
+                    {
+                        _requests.Dequeue();
+                        _exchanges.Dequeue();
+                    }
+                }
+            }
         }
 
         var rules = Volatile.Read(ref _rules);
         List<StubRuleMatchResult>? matchResults = null;
         Func<StubHttpRequest, CancellationToken, Task<HttpResponseMessage>>? responseFactory = null;
-        foreach (var rule in rules)
+        using (var matchContext = new StubRequestMatchContext(capturedRequest))
         {
-            var matchResult = rule.Evaluate(capturedRequest);
-            if (matchResult.IsMatch)
+            foreach (var rule in rules)
             {
-                responseFactory = rule.ResponseFactory;
-                break;
-            }
+                var matchResult = rule.Evaluate(matchContext);
+                if (matchResult.IsMatch)
+                {
+                    responseFactory = rule.ResponseFactory;
+                    break;
+                }
 
-            (matchResults ??= []).Add(matchResult);
+                (matchResults ??= []).Add(matchResult);
+            }
         }
 
         try
@@ -326,10 +373,11 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
                 ReadOnlyMemory<byte>.Empty,
                 null));
 
-            if (response.Content is not null)
+            if (response.Content is not null && _options.CaptureResponseBodies)
             {
                 response.Content = new RecordingHttpContent(
                     response.Content,
+                    _options.MaximumResponseBodyBytes,
                     exchange.SetResponseBody);
             }
 
@@ -340,6 +388,91 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
             exchange.SetFailure(exception);
             throw;
         }
+    }
+
+    private static async ValueTask<(string Body, bool Truncated)> CaptureRequestBodyAsync(
+        HttpContent content,
+        int? maximumBytes,
+        CancellationToken cancellationToken)
+    {
+        if (maximumBytes is null)
+        {
+            return (await content.ReadAsStringAsync(cancellationToken), false);
+        }
+
+        var stream = await content.ReadAsStreamAsync(cancellationToken);
+        using var capture = new MemoryStream(Math.Min(maximumBytes.Value, 81_920));
+        var buffer = ArrayPool<byte>.Shared.Rent(81_920);
+        var truncated = false;
+        try
+        {
+            while (capture.Length <= maximumBytes.Value)
+            {
+                var remaining = maximumBytes.Value - (int)capture.Length;
+                var requestedBytes = remaining == int.MaxValue
+                    ? buffer.Length
+                    : Math.Min(buffer.Length, remaining + 1);
+                var bytesRead = await stream.ReadAsync(
+                    buffer.AsMemory(0, requestedBytes),
+                    cancellationToken);
+                if (bytesRead == 0)
+                {
+                    break;
+                }
+
+                if (bytesRead > remaining)
+                {
+                    capture.Write(buffer, 0, remaining);
+                    truncated = true;
+                    break;
+                }
+
+                capture.Write(buffer, 0, bytesRead);
+            }
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
+
+        return (DecodeBody(capture.GetBuffer().AsSpan(0, (int)capture.Length), content), truncated);
+    }
+
+    private static string DecodeBody(ReadOnlySpan<byte> bytes, HttpContent content)
+    {
+        var encoding = Encoding.UTF8;
+        var preambleLength = 0;
+        if (bytes.StartsWith(Encoding.UTF32.Preamble))
+        {
+            encoding = Encoding.UTF32;
+            preambleLength = Encoding.UTF32.Preamble.Length;
+        }
+        else if (bytes.StartsWith(Encoding.BigEndianUnicode.Preamble))
+        {
+            encoding = Encoding.BigEndianUnicode;
+            preambleLength = Encoding.BigEndianUnicode.Preamble.Length;
+        }
+        else if (bytes.StartsWith(Encoding.Unicode.Preamble))
+        {
+            encoding = Encoding.Unicode;
+            preambleLength = Encoding.Unicode.Preamble.Length;
+        }
+        else if (bytes.StartsWith(Encoding.UTF8.Preamble))
+        {
+            preambleLength = Encoding.UTF8.Preamble.Length;
+        }
+        else if (content.Headers.ContentType?.CharSet is string characterSet)
+        {
+            try
+            {
+                encoding = Encoding.GetEncoding(characterSet.Trim('"'));
+            }
+            catch (ArgumentException)
+            {
+            }
+        }
+
+        return encoding.GetString(bytes[preambleLength..]);
     }
 
     private static IReadOnlyDictionary<string, string[]> CaptureHeaders(
@@ -377,25 +510,21 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
     private sealed record StubRule(
         HttpMethod Method,
         string RequestUri,
-        bool MatchUriPathOnly,
+        StubUriMatcher UriMatcher,
         IReadOnlyList<StubRequestPredicate> Predicates,
         Func<StubHttpRequest, CancellationToken, Task<HttpResponseMessage>> ResponseFactory)
     {
-        public StubRuleMatchResult Evaluate(StubHttpRequest request)
+        public StubRuleMatchResult Evaluate(StubRequestMatchContext context)
         {
+            var request = context.Request;
             if (Method != request.Method)
             {
-                return new StubRuleMatchResult(
-                    this,
-                    [$"method differed: expected {Method}, received {request.Method}"]);
+                return new StubRuleMatchResult(this, StubRuleMismatch.Method, null);
             }
 
-            if (!MatchesMethodAndUri(Method, RequestUri, request, MatchUriPathOnly))
+            if (!UriMatcher.Matches(request.RequestUri))
             {
-                return new StubRuleMatchResult(
-                    this,
-                    [$"URI differed: expected {UriDiagnosticFormatter.Format(RequestUri)}, " +
-                     $"received {UriDiagnosticFormatter.Format(request.RequestUri)}"]);
+                return new StubRuleMatchResult(this, StubRuleMismatch.Uri, null);
             }
 
             List<string>? failures = null;
@@ -403,7 +532,7 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
             {
                 try
                 {
-                    if (!predicate.Matches(request))
+                    if (!predicate.Matches(context))
                     {
                         (failures ??= []).Add($"did not satisfy {predicate.Description}");
                     }
@@ -415,54 +544,88 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
                 }
             }
 
-            return new StubRuleMatchResult(this, failures ?? []);
+            return failures is null
+                ? new StubRuleMatchResult(this, StubRuleMismatch.None, null)
+                : new StubRuleMatchResult(this, StubRuleMismatch.Predicate, failures);
         }
     }
 
-    private sealed record StubRuleMatchResult(StubRule Rule, IReadOnlyList<string> Failures)
+    private readonly record struct StubRuleMatchResult(
+        StubRule Rule,
+        StubRuleMismatch Mismatch,
+        IReadOnlyList<string>? PredicateFailures)
     {
-        public bool IsMatch => Failures.Count == 0;
+        public bool IsMatch => Mismatch == StubRuleMismatch.None;
+
+        public string Describe(StubHttpRequest request) => Mismatch switch
+        {
+            StubRuleMismatch.Method =>
+                $"method differed: expected {Rule.Method}, received {request.Method}",
+            StubRuleMismatch.Uri =>
+                $"URI differed: expected {UriDiagnosticFormatter.Format(Rule.RequestUri)}, " +
+                $"received {UriDiagnosticFormatter.Format(request.RequestUri)}",
+            StubRuleMismatch.Predicate => string.Join("; ", PredicateFailures!),
+            _ => string.Empty
+        };
     }
 
-    private static bool MatchesMethodAndUri(
-        HttpMethod method,
-        string requestUri,
-        StubHttpRequest request,
-        bool matchUriPathOnly = false)
+    private enum StubRuleMismatch
     {
-        if (method != request.Method || request.RequestUri is null)
+        None,
+        Method,
+        Uri,
+        Predicate
+    }
+
+    private sealed record StubUriMatcher(string ExpectedValue, bool IsAbsolute, bool MatchPathOnly)
+    {
+        public static StubUriMatcher Create(string requestUri, bool matchUriPathOnly)
         {
-            return false;
+            if (Uri.TryCreate(requestUri, UriKind.Absolute, out var configuredUri) &&
+                (string.Equals(
+                     configuredUri.Scheme,
+                     Uri.UriSchemeHttp,
+                     StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(
+                     configuredUri.Scheme,
+                     Uri.UriSchemeHttps,
+                     StringComparison.OrdinalIgnoreCase)))
+            {
+                return new StubUriMatcher(
+                    matchUriPathOnly
+                        ? configuredUri.GetLeftPart(UriPartial.Path)
+                        : configuredUri.AbsoluteUri,
+                    IsAbsolute: true,
+                    matchUriPathOnly);
+            }
+
+            return new StubUriMatcher(
+                matchUriPathOnly ? GetPath(requestUri) : requestUri,
+                IsAbsolute: false,
+                matchUriPathOnly);
         }
 
-        if (Uri.TryCreate(requestUri, UriKind.Absolute, out var configuredUri) &&
-            (string.Equals(configuredUri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) ||
-             string.Equals(configuredUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)))
+        public bool Matches(Uri? requestUri)
         {
-            if (!request.RequestUri.IsAbsoluteUri)
+            if (requestUri is null || (IsAbsolute && !requestUri.IsAbsoluteUri))
             {
                 return false;
             }
 
-            var configuredValue = matchUriPathOnly
-                ? configuredUri.GetLeftPart(UriPartial.Path)
-                : configuredUri.AbsoluteUri;
-            var actualValue = matchUriPathOnly
-                ? request.RequestUri.GetLeftPart(UriPartial.Path)
-                : request.RequestUri.AbsoluteUri;
-            return string.Equals(actualValue, configuredValue, StringComparison.Ordinal);
-        }
+            var actualValue = IsAbsolute
+                ? MatchPathOnly
+                    ? requestUri.GetLeftPart(UriPartial.Path)
+                    : requestUri.AbsoluteUri
+                : requestUri.IsAbsoluteUri
+                    ? requestUri.PathAndQuery
+                    : requestUri.OriginalString;
+            if (!IsAbsolute && MatchPathOnly)
+            {
+                actualValue = GetPath(actualValue);
+            }
 
-        var actualUri = request.RequestUri.IsAbsoluteUri
-            ? request.RequestUri.PathAndQuery
-            : request.RequestUri.OriginalString;
-        if (matchUriPathOnly)
-        {
-            actualUri = GetPath(actualUri);
-            requestUri = GetPath(requestUri);
+            return string.Equals(actualValue, ExpectedValue, StringComparison.Ordinal);
         }
-
-        return string.Equals(actualUri, requestUri, StringComparison.Ordinal);
     }
 
     private static string GetPath(string uri)
@@ -497,7 +660,7 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler, ITestScenarioRe
                 matchResults.Select((result, index) =>
                     $"- Rule {index + 1} ({result.Rule.Method} " +
                     $"{UriDiagnosticFormatter.Format(result.Rule.RequestUri)}): " +
-                    string.Join("; ", result.Failures)));
+                    result.Describe(request)));
     }
 
     /// <summary>

@@ -6,6 +6,31 @@ The project follows Semantic Versioning. Package versions are produced from GitH
 
 ## [Unreleased]
 
+## [1.0.15] - 2026-09-29
+
+### Added
+
+- Added bounded request, response, and exchange capture controls to `StubHttpMessageHandler`,
+  including truncation metadata for recorded requests, responses, and snapshots. See the
+  [outbound HTTP guide](docs/guides/outbound-http.md#bound-retained-http-data).
+
+### Changed
+
+- Moved the documentation coverage inventory into the contributor documentation, replaced completed
+  public roadmaps with durable redirects, and added generated-redirect validation to documentation
+  builds.
+- Optimized HTTP stub matching, snapshot comparison and scrubbing, and recorded-message inspection
+  on high-volume test paths without changing their default behavior.
+- Added repository-wide C# style conventions with build-time enforcement and contributor guidance.
+
+### Fixed
+
+- EF-backed test factories now suppress only EF Core's expected
+  `ManyServiceProvidersCreatedWarning`, preventing suites that treat warnings as exceptions from
+  failing after creating more than twenty isolated scenario databases.
+- HTTP exchange snapshots now omit absent send and response-body failures across direct, recorded,
+  and outbound-stub captures while preserving full diagnostics when a failure occurs.
+
 ## [1.0.14] - 2026-09-27
 
 ### Added

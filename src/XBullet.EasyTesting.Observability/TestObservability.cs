@@ -1,9 +1,9 @@
-using XBullet.EasyTesting.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
+using XBullet.EasyTesting.Hosting;
 
 namespace XBullet.EasyTesting.Observability;
 

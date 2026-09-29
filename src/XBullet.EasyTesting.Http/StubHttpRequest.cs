@@ -20,4 +20,11 @@ public sealed record StubHttpRequest(
     HttpMethod Method,
     Uri? RequestUri,
     IReadOnlyDictionary<string, string[]> Headers,
-    string? Body);
+    string? Body)
+{
+    /// <summary>
+    /// Gets whether the retained body stops at the configured request-body byte limit.
+    /// </summary>
+    /// <value><see langword="true"/> when capture omitted trailing bytes; otherwise, false.</value>
+    public bool BodyTruncated { get; init; }
+}

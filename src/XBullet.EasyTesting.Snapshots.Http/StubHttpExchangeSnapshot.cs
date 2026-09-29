@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using XBullet.EasyTesting.Http;
 
 namespace XBullet.EasyTesting.Snapshots;
@@ -34,6 +35,7 @@ public sealed class StubHttpExchangeSnapshot
     /// The stable send-failure snapshot, or <see langword="null"/> when no failure existed at
     /// snapshot creation time. Failure messages are copied without automatic redaction.
     /// </value>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public StubHttpFailureSnapshot? Failure { get; }
 
     /// <summary>Creates a deterministic snapshot model from a captured exchange.</summary>
@@ -100,12 +102,14 @@ public sealed class StubHttpResponseSnapshot
         string? reasonPhrase,
         IReadOnlyDictionary<string, string[]>? headers,
         object? body,
+        bool bodyTruncated,
         StubHttpFailureSnapshot? bodyFailure)
     {
         StatusCode = statusCode;
         ReasonPhrase = reasonPhrase;
         Headers = headers;
         Body = body;
+        BodyTruncated = bodyTruncated;
         BodyFailure = bodyFailure;
     }
 
@@ -133,11 +137,17 @@ public sealed class StubHttpResponseSnapshot
     /// </value>
     public object? Body { get; }
 
+    /// <summary>Gets whether the source response body was truncated during capture.</summary>
+    /// <value><see langword="true"/> when trailing response bytes were omitted; otherwise, false.</value>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool BodyTruncated { get; }
+
     /// <summary>Gets the failure raised while the response body was read.</summary>
     /// <value>
     /// The stable content-read failure, or <see langword="null"/> when no failure was captured.
     /// Failure messages are copied without automatic redaction.
     /// </value>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public StubHttpFailureSnapshot? BodyFailure { get; }
 
     /// <summary>Creates a deterministic snapshot model from a captured response.</summary>
@@ -179,6 +189,7 @@ public sealed class StubHttpResponseSnapshot
             response.ReasonPhrase,
             headers,
             body,
+            response.BodyTruncated,
             response.BodyFailure is null
                 ? null
                 : new StubHttpFailureSnapshot(
@@ -198,27 +209,28 @@ public sealed class StubHttpResponseSnapshot
             return null;
         }
 
-        var bytes = response.Body.ToArray();
         var contentType = GetContentType(response.Headers);
         if (IsJson(contentType))
         {
             try
             {
-                using var document = JsonDocument.Parse(bytes);
+                using var document = JsonDocument.Parse(response.Body);
                 return document.RootElement.Clone();
             }
             catch (JsonException)
             {
-                return GetEncoding(contentType!.CharSet).GetString(bytes);
+                return GetEncoding(contentType!.CharSet).GetString(response.Body.Span);
             }
         }
 
         if (IsText(contentType))
         {
-            return GetEncoding(contentType!.CharSet).GetString(bytes);
+            return GetEncoding(contentType!.CharSet).GetString(response.Body.Span);
         }
 
-        return new ControllerBinaryBodySnapshot("base64", Convert.ToBase64String(bytes));
+        return new ControllerBinaryBodySnapshot(
+            "base64",
+            Convert.ToBase64String(response.Body.Span));
     }
 
     private static MediaTypeHeaderValue? GetContentType(

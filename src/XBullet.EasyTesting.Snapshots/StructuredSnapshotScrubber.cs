@@ -40,7 +40,7 @@ internal static class StructuredSnapshotScrubber
 
         if (settings.CanonicalizeObjectProperties)
         {
-            root = Canonicalize(root);
+            root = CanonicalizeInPlace(root);
         }
 
         return root?.ToJsonString(settings.JsonSerializerOptions) ?? "null";
@@ -121,7 +121,7 @@ internal static class StructuredSnapshotScrubber
         switch (node)
         {
             case JsonObject jsonObject when segment.IsWildcard:
-                foreach (var property in jsonObject.ToArray())
+                foreach (var property in jsonObject)
                 {
                     FindLocations(
                         property.Value,
@@ -292,19 +292,35 @@ internal static class StructuredSnapshotScrubber
     }
 
     private static JsonNode? Canonicalize(JsonNode? node) =>
-        node switch
+        CanonicalizeInPlace(node?.DeepClone());
+
+    private static JsonNode? CanonicalizeInPlace(JsonNode? node)
+    {
+        switch (node)
         {
-            JsonObject jsonObject => new JsonObject(
-                jsonObject
+            case JsonObject jsonObject:
+                var sortedProperties = jsonObject
                     .OrderBy(property => property.Key, StringComparer.Ordinal)
-                    .Select(property => KeyValuePair.Create(
-                        property.Key,
-                        Canonicalize(property.Value)))),
-            JsonArray jsonArray => new JsonArray(
-                jsonArray.Select(Canonicalize).ToArray()),
-            null => null,
-            _ => node.DeepClone()
-        };
+                    .Select(property => KeyValuePair.Create(property.Key, property.Value))
+                    .ToArray();
+                jsonObject.Clear();
+                foreach (var property in sortedProperties)
+                {
+                    jsonObject.Add(property.Key, CanonicalizeInPlace(property.Value));
+                }
+
+                break;
+            case JsonArray jsonArray:
+                foreach (var item in jsonArray)
+                {
+                    CanonicalizeInPlace(item);
+                }
+
+                break;
+        }
+
+        return node;
+    }
 
     private static void ScrubNode(JsonNode? node, SnapshotSettings settings)
     {
@@ -333,27 +349,29 @@ internal static class StructuredSnapshotScrubber
 
     private static void ScrubObject(JsonObject jsonObject, SnapshotSettings settings)
     {
-        foreach (var property in jsonObject.ToArray())
+        var propertyNames = jsonObject.Select(property => property.Key).ToArray();
+        foreach (var propertyName in propertyNames)
         {
-            if (settings.IgnoredMembers.Contains(property.Key))
+            if (settings.IgnoredMembers.Contains(propertyName))
             {
-                jsonObject.Remove(property.Key);
+                jsonObject.Remove(propertyName);
                 continue;
             }
 
-            if (settings.ScrubbedMembers.Contains(property.Key))
+            if (settings.ScrubbedMembers.Contains(propertyName))
             {
-                jsonObject[property.Key] = "{Scrubbed}";
+                jsonObject[propertyName] = "{Scrubbed}";
                 continue;
             }
 
-            if (TryScrubValue(property.Value, settings, out var replacement))
+            var value = jsonObject[propertyName];
+            if (TryScrubValue(value, settings, out var replacement))
             {
-                jsonObject[property.Key] = replacement;
+                jsonObject[propertyName] = replacement;
             }
             else
             {
-                ScrubNode(property.Value, settings);
+                ScrubNode(value, settings);
             }
         }
     }

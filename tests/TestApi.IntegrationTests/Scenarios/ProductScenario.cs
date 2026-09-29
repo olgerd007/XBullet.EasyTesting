@@ -1,5 +1,5 @@
-using XBullet.EasyTesting.Hosting;
 using TestApi.Models;
+using XBullet.EasyTesting.Hosting;
 
 namespace TestApi.IntegrationTests.Scenarios;
 

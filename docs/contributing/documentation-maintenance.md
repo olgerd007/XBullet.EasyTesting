@@ -45,11 +45,11 @@ documented reason here and remain as narrow as possible.
 | --- | --- | --- | --- | --- | --- |
 | Entry points and package selection | Repository maintainers | Quarterly | Package added, renamed, or split | 2026-09-27 | 2026-12-31 |
 | Core hosts, authentication, and scenarios | Core-package maintainers | Quarterly | Public hosting or authentication change | 2026-09-27 | 2026-12-31 |
-| HTTP, messaging, Azure, and observability boundaries | Owning package maintainers | Quarterly | New matcher, transport, collector, or SDK helper | 2026-09-27 | 2026-12-31 |
+| HTTP, messaging, Azure, and observability boundaries | Owning package maintainers | Quarterly | New matcher, transport, collector, or SDK helper | 2026-09-29 | 2026-12-31 |
 | Testcontainers, Aspire, and Azure Functions | Infrastructure maintainers | Quarterly | Runtime, image, trigger, or framework support change | 2026-09-27 | 2026-12-31 |
-| Snapshot workflows and safety guidance | Snapshot maintainers | Every release | Update, redaction, naming, or package change | 2026-09-27 | Next release |
-| API reference and package landing pages | Public-API owner | Every release | Public API approval changes | 2026-09-27 | Next release |
-| Security, limitations, and migration guidance | Release maintainer | Every release | Security or breaking behavior change | 2026-09-27 | Next release |
+| Snapshot workflows and safety guidance | Snapshot maintainers | Every release | Update, redaction, naming, or package change | 2026-09-29 | Next release |
+| API reference and package landing pages | Public-API owner | Every release | Public API approval changes | 2026-09-29 | Next release |
+| Security, limitations, and migration guidance | Release maintainer | Every release | Security or breaking behavior change | 2026-09-29 | Next release |
 
 A review confirms examples still compile, defaults and limitations remain accurate, external
 requirements are current, links reach the intended material, and sensitive-data guidance matches
@@ -57,7 +57,7 @@ the implementation. Update the dates in this table in the pull request that reco
 
 ## Coverage ownership
 
-Every public feature belongs in `docs/documentation-coverage.md`. A public behavior change must do
+Every public feature belongs in `docs/contributing/documentation-coverage.md`. A public behavior change must do
 one of the following:
 
 1. Update the existing feature or package row and its canonical documentation.

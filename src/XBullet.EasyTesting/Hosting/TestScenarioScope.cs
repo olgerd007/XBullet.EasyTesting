@@ -1,6 +1,6 @@
-using XBullet.EasyTesting.Authentication;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using XBullet.EasyTesting.Authentication;
 
 namespace XBullet.EasyTesting.Hosting;
 

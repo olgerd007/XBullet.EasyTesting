@@ -1,8 +1,8 @@
-using XBullet.EasyTesting.Hosting;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
+using XBullet.EasyTesting.Hosting;
 
 namespace XBullet.EasyTesting.EntityFrameworkCore;
 

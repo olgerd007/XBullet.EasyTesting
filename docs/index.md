@@ -4,9 +4,9 @@ XBullet.EasyTesting provides composable infrastructure for integration testing A
 applications, distributed applications, Azure Functions, external dependencies, and observable
 side effects. All packages target .NET 8, .NET 9, and .NET 10.
 
-Use this page to choose the smallest set of packages for a testing goal. The detailed documentation
-is being expanded according to the [documentation roadmap](documentation-roadmap.md); links below
-lead to the best current guide or package README.
+Use this page to choose the smallest set of packages for a testing goal. Documentation completeness
+and maintenance ownership are tracked in the
+[coverage matrix](contributing/documentation-coverage.md).
 
 Use the [searchable API reference](api/index.md) when you know the package, namespace, type, or
 member you need.
@@ -116,8 +116,9 @@ which workflow owns each snapshot so file naming, review, and acceptance remain 
   files, ports, and infrastructure. See
   [multi-target and parallel execution](concepts/multi-target-and-parallel-execution.md).
 
-See the maintained [limitations register](documentation-coverage.md#limitations-register) for the
-full baseline and the package guides for feature-specific constraints.
+See the maintained
+[limitations register](contributing/documentation-coverage.md#limitations-register) for the full
+baseline and the package guides for feature-specific constraints.
 
 ## Examples and source
 
@@ -141,6 +142,7 @@ Canonical documentation examples use named source regions and are synchronized i
 
 Follow the [documentation style guide](documentation-style-guide.md) and start a new task-oriented
 page from the [feature-guide template](feature-guide-template.md). The
-[coverage baseline](documentation-coverage.md) records current gaps and target milestones. See the
+[coverage baseline](contributing/documentation-coverage.md) records current gaps and maintenance
+ownership. See the
 [maintenance policy](contributing/documentation-maintenance.md) for automated checks and review
 cadence, and use the [release checklist](contributing/release-checklist.md) before tagging packages.

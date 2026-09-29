@@ -1,10 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.EntityFrameworkCore;
+using TestApi.Models;
 using XBullet.EasyTesting.Authentication;
 using XBullet.EasyTesting.Hosting;
 using XBullet.EasyTesting.Snapshots;
-using Microsoft.EntityFrameworkCore;
-using TestApi.Models;
 using Xunit;
 
 namespace TestApi.IntegrationTests;

@@ -4,6 +4,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <AnalysisModeSecurity>AllEnabledByDefault</AnalysisModeSecurity>
     <Deterministic>true</Deterministic>
     <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
@@ -16,7 +17,7 @@
 
     <Authors>olgerd007</Authors>
     <Copyright>Copyright © 2026 olgerd007</Copyright>
-    <VersionPrefix>1.0.14</VersionPrefix>
+    <VersionPrefix>1.0.15</VersionPrefix>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/olgerd007/XBullet.EasyTesting</PackageProjectUrl>
     <RepositoryUrl>https://github.com/olgerd007/XBullet.EasyTesting.git</RepositoryUrl>

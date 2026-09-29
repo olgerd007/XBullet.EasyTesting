@@ -1,8 +1,9 @@
-using XBullet.EasyTesting.Hosting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using XBullet.EasyTesting.Hosting;
 
 namespace XBullet.EasyTesting.EntityFrameworkCore;
 
@@ -35,6 +36,7 @@ public abstract class EntityFrameworkWebApplicationFactory<TEntryPoint, TDbConte
     {
         RemoveDatabaseServices(services);
         ConfigureDatabaseServices(services);
+        ConfigureExpectedDatabaseWarnings(services);
         ConfigureAdditionalServicesForTests(services);
     }
 
@@ -423,7 +425,56 @@ public abstract class EntityFrameworkWebApplicationFactory<TEntryPoint, TDbConte
     {
         RemoveDatabaseServices(services);
         ConfigureScenarioDatabaseServices(services, context);
+        ConfigureExpectedDatabaseWarnings(services);
         ConfigureAdditionalServicesForScenario(services, context);
+    }
+
+    internal static void ConfigureExpectedDatabaseWarnings(IServiceCollection services)
+    {
+        static void Configure(DbContextOptionsBuilder options) =>
+            options.ConfigureWarnings(warnings =>
+                warnings.Ignore(CoreEventId.ManyServiceProvidersCreatedWarning));
+
+#if NET9_0_OR_GREATER
+        services.ConfigureDbContext<TDbContext>(Configure);
+#else
+        // ConfigureDbContext was introduced in EF Core 9. Decorate EF Core 8's options factory so
+        // this policy runs after every configuration supplied by the derived test factory.
+        var optionsServiceType = typeof(DbContextOptions<TDbContext>);
+        var optionsRegistrationIndex = -1;
+        for (var index = services.Count - 1; index >= 0; index--)
+        {
+            if (!services[index].IsKeyedService &&
+                services[index].ServiceType == optionsServiceType)
+            {
+                optionsRegistrationIndex = index;
+                break;
+            }
+        }
+
+        if (optionsRegistrationIndex < 0)
+        {
+            services.AddDbContext<TDbContext>(Configure);
+            return;
+        }
+
+        var optionsRegistration = services[optionsRegistrationIndex];
+        services[optionsRegistrationIndex] = ServiceDescriptor.Describe(
+            optionsServiceType,
+            provider =>
+            {
+                var options = optionsRegistration.ImplementationInstance
+                    ?? optionsRegistration.ImplementationFactory?.Invoke(provider)
+                    ?? ActivatorUtilities.GetServiceOrCreateInstance(
+                        provider,
+                        optionsRegistration.ImplementationType!);
+                var builder = new DbContextOptionsBuilder<TDbContext>(
+                    (DbContextOptions<TDbContext>)options);
+                Configure(builder);
+                return builder.Options;
+            },
+            optionsRegistration.Lifetime);
+#endif
     }
 
     private static void RemoveDatabaseServices(IServiceCollection services)

@@ -6,6 +6,24 @@ namespace XBullet.EasyTesting.Tests;
 
 public sealed class RecordedMessageBusTests
 {
+    [Fact]
+    public void Concurrent_records_are_indexed_by_transport_and_destination()
+    {
+        var recorder = new RecordedMessageBus();
+
+        Parallel.For(0, 1_000, index => recorder.Record(
+            index % 2 == 0 ? MessageTransportNames.Kafka : "kAfKa",
+            index % 4 < 2 ? "orders.created" : "orders.updated",
+            new Message(index, "Recorded")));
+
+        Assert.Equal(1_000, recorder.Count);
+        Assert.Equal(500, recorder.For(MessageTransportNames.Kafka, "orders.created").Count);
+        Assert.Equal(500, recorder.For(MessageTransportNames.Kafka, "orders.updated").Count);
+
+        recorder.Reset();
+        Assert.Empty(recorder.For(MessageTransportNames.Kafka, "orders.created"));
+    }
+
     #region docs-message-recording
 
     [Fact]

@@ -82,3 +82,6 @@ XBullet.EasyTesting.Snapshots.StubHttpResponseSnapshotOptions.RedactingHeaders(p
 XBullet.EasyTesting.Snapshots.StubHttpResponseSnapshotOptions.StubHttpResponseSnapshotOptions() -> void
 XBullet.EasyTesting.Snapshots.StubHttpResponseSnapshotOptions.WithoutBody() -> XBullet.EasyTesting.Snapshots.StubHttpResponseSnapshotOptions!
 XBullet.EasyTesting.Snapshots.StubHttpResponseSnapshotOptions.WithoutHeaders() -> XBullet.EasyTesting.Snapshots.StubHttpResponseSnapshotOptions!
+XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshot.BodyTruncated.get -> bool
+XBullet.EasyTesting.Snapshots.StubHttpRequestSnapshot.BodyTruncated.init -> void
+XBullet.EasyTesting.Snapshots.StubHttpResponseSnapshot.BodyTruncated.get -> bool

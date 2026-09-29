@@ -1,5 +1,4 @@
 using System.Text.Json;
-using XBullet.EasyTesting.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -7,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using TestApi.Data;
 using TestApi.External;
 using TestApi.Models;
+using XBullet.EasyTesting.Hosting;
 using Xunit;
 
 namespace TestApi.IntegrationTests;

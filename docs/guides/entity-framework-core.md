@@ -202,6 +202,12 @@ Override `InitializeScenarioDatabaseAsync` and `CleanupScenarioDatabaseAsync` wh
 requires migrations, schema verification, a database template, or another lifecycle. Do not combine
 shared mutable databases with parallel factory instances unless the isolation boundary is explicit.
 
+Each isolated database name, connection, or schema can produce a distinct EF Core option shape and
+internal service provider. The EF-backed test factories therefore suppress
+`CoreEventId.ManyServiceProvidersCreatedWarning` for factory and scenario contexts. This expected
+test-host behavior remains safe when a suite promotes EF Core warnings to exceptions; every other
+configured EF Core warning keeps its configured behavior.
+
 ## Migrations and production-like tests
 
 When migration behavior matters, replace default `EnsureCreated` initialization with the

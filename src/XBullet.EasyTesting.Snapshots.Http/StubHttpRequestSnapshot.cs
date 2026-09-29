@@ -24,6 +24,12 @@ public sealed record StubHttpRequestSnapshot(
     IReadOnlyDictionary<string, string[]>? Headers,
     object? Body)
 {
+    /// <summary>Gets whether the source request body was truncated during capture.</summary>
+    /// <value><see langword="true"/> when trailing request bytes were omitted; otherwise, false.</value>
+    [System.Text.Json.Serialization.JsonIgnore(
+        Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool BodyTruncated { get; init; }
+
     /// <summary>Creates a deterministic snapshot model from a captured request.</summary>
     /// <param name="request">
     /// The non-null captured request to read. The method does not own, retain, or mutate it.
@@ -66,7 +72,10 @@ public sealed record StubHttpRequestSnapshot(
                 options.ScrubbedQueryParameters,
                 options.UrlPathScrubbers),
             headers,
-            body);
+            body)
+        {
+            BodyTruncated = request.BodyTruncated
+        };
     }
 
     private static object? ReadBody(StubHttpRequest request)

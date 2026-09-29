@@ -1,6 +1,6 @@
 using System.Collections.ObjectModel;
-using XBullet.EasyTesting.Hosting;
 using Microsoft.Extensions.Logging;
+using XBullet.EasyTesting.Hosting;
 
 namespace XBullet.EasyTesting.Observability;
 

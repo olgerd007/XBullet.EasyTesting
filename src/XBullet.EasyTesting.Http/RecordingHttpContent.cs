@@ -4,14 +4,18 @@ namespace XBullet.EasyTesting.Http;
 
 internal sealed class RecordingHttpContent : HttpContent
 {
+    private const int MaximumInitialCapacity = 1_048_576;
     private readonly HttpContent _inner;
-    private readonly Action<byte[], Exception?> _completed;
+    private readonly int? _maximumCaptureBytes;
+    private readonly Action<byte[], bool, Exception?> _completed;
 
     public RecordingHttpContent(
         HttpContent inner,
-        Action<byte[], Exception?> completed)
+        int? maximumCaptureBytes,
+        Action<byte[], bool, Exception?> completed)
     {
         _inner = inner;
+        _maximumCaptureBytes = maximumCaptureBytes;
         _completed = completed;
 
         foreach (var header in inner.Headers)
@@ -56,22 +60,35 @@ internal sealed class RecordingHttpContent : HttpContent
         TransportContext? context,
         CancellationToken cancellationToken)
     {
-        using var capture = new MemoryStream();
-        await using var recordingStream = new RecordingWriteStream(destination, capture);
+        var capacity = _inner.Headers.ContentLength is long contentLength
+            ? (int)Math.Min(
+                Math.Min(contentLength, MaximumInitialCapacity),
+                _maximumCaptureBytes is int maximum ? maximum : MaximumInitialCapacity)
+            : 0;
+        using var capture = new MemoryStream(capacity);
+        await using var recordingStream = new RecordingWriteStream(
+            destination,
+            capture,
+            _maximumCaptureBytes);
         try
         {
             await _inner.CopyToAsync(recordingStream, context, cancellationToken);
-            _completed(capture.ToArray(), null);
+            _completed(capture.ToArray(), recordingStream.Truncated, null);
         }
         catch (Exception exception)
         {
-            _completed(capture.ToArray(), exception);
+            _completed(capture.ToArray(), recordingStream.Truncated, exception);
             throw;
         }
     }
 
-    private sealed class RecordingWriteStream(Stream destination, Stream capture) : Stream
+    private sealed class RecordingWriteStream(
+        Stream destination,
+        Stream capture,
+        int? maximumCaptureBytes) : Stream
     {
+        public bool Truncated { get; private set; }
+
         public override bool CanRead => false;
         public override bool CanSeek => false;
         public override bool CanWrite => true;
@@ -91,13 +108,13 @@ internal sealed class RecordingHttpContent : HttpContent
         public override void Write(byte[] buffer, int offset, int count)
         {
             destination.Write(buffer, offset, count);
-            capture.Write(buffer, offset, count);
+            Capture(buffer.AsSpan(offset, count));
         }
 
         public override void Write(ReadOnlySpan<byte> buffer)
         {
             destination.Write(buffer);
-            capture.Write(buffer);
+            Capture(buffer);
         }
 
         public override async ValueTask WriteAsync(
@@ -105,7 +122,7 @@ internal sealed class RecordingHttpContent : HttpContent
             CancellationToken cancellationToken = default)
         {
             await destination.WriteAsync(buffer, cancellationToken);
-            await capture.WriteAsync(buffer, cancellationToken);
+            Capture(buffer.Span);
         }
 
         public override async Task WriteAsync(
@@ -115,7 +132,7 @@ internal sealed class RecordingHttpContent : HttpContent
             CancellationToken cancellationToken)
         {
             await destination.WriteAsync(buffer.AsMemory(offset, count), cancellationToken);
-            await capture.WriteAsync(buffer.AsMemory(offset, count), cancellationToken);
+            Capture(buffer.AsSpan(offset, count));
         }
 
         public override long Seek(long offset, SeekOrigin origin) =>
@@ -133,5 +150,25 @@ internal sealed class RecordingHttpContent : HttpContent
         }
 
         public override ValueTask DisposeAsync() => ValueTask.CompletedTask;
+
+        private void Capture(ReadOnlySpan<byte> buffer)
+        {
+            if (maximumCaptureBytes is null)
+            {
+                capture.Write(buffer);
+                return;
+            }
+
+            var remaining = maximumCaptureBytes.Value - (int)capture.Length;
+            if (remaining > 0)
+            {
+                capture.Write(buffer[..Math.Min(buffer.Length, remaining)]);
+            }
+
+            if (buffer.Length > remaining)
+            {
+                Truncated = true;
+            }
+        }
     }
 }

@@ -1,8 +1,8 @@
 using System.Net;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.DependencyInjection;
-using TestFunctions.Functions;
 using TestFunctions.External;
+using TestFunctions.Functions;
 using TestFunctions.Models;
 using TestFunctions.Services;
 using XBullet.EasyTesting.AzureFunctions;

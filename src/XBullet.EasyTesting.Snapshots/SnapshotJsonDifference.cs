@@ -89,14 +89,37 @@ internal sealed record SnapshotJsonDifference(
         JsonElement actual,
         string path)
     {
-        var expectedProperties = expected.EnumerateObject().ToArray();
-        var actualProperties = actual.EnumerateObject().ToArray();
-        var sharedCount = Math.Min(expectedProperties.Length, actualProperties.Length);
-
-        for (var index = 0; index < sharedCount; index++)
+        var expectedProperties = expected.EnumerateObject();
+        var actualProperties = actual.EnumerateObject();
+        while (true)
         {
-            var expectedProperty = expectedProperties[index];
-            var actualProperty = actualProperties[index];
+            var hasExpected = expectedProperties.MoveNext();
+            var hasActual = actualProperties.MoveNext();
+            if (!hasExpected || !hasActual)
+            {
+                if (hasExpected)
+                {
+                    var property = expectedProperties.Current;
+                    return new SnapshotJsonDifference(
+                        AppendProperty(path, property.Name),
+                        Describe(property.Value),
+                        Missing);
+                }
+
+                if (hasActual)
+                {
+                    var property = actualProperties.Current;
+                    return new SnapshotJsonDifference(
+                        AppendProperty(path, property.Name),
+                        Missing,
+                        Describe(property.Value));
+                }
+
+                return null;
+            }
+
+            var expectedProperty = expectedProperties.Current;
+            var actualProperty = actualProperties.Current;
             if (!string.Equals(expectedProperty.Name, actualProperty.Name, StringComparison.Ordinal))
             {
                 return new SnapshotJsonDifference(
@@ -114,26 +137,6 @@ internal sealed record SnapshotJsonDifference(
                 return difference;
             }
         }
-
-        if (expectedProperties.Length > sharedCount)
-        {
-            var property = expectedProperties[sharedCount];
-            return new SnapshotJsonDifference(
-                AppendProperty(path, property.Name),
-                Describe(property.Value),
-                Missing);
-        }
-
-        if (actualProperties.Length > sharedCount)
-        {
-            var property = actualProperties[sharedCount];
-            return new SnapshotJsonDifference(
-                AppendProperty(path, property.Name),
-                Missing,
-                Describe(property.Value));
-        }
-
-        return null;
     }
 
     private static SnapshotJsonDifference? CompareArrays(
@@ -141,33 +144,33 @@ internal sealed record SnapshotJsonDifference(
         JsonElement actual,
         string path)
     {
-        var expectedItems = expected.EnumerateArray().ToArray();
-        var actualItems = actual.EnumerateArray().ToArray();
-        var sharedCount = Math.Min(expectedItems.Length, actualItems.Length);
+        var expectedCount = expected.GetArrayLength();
+        var actualCount = actual.GetArrayLength();
+        var sharedCount = Math.Min(expectedCount, actualCount);
 
         for (var index = 0; index < sharedCount; index++)
         {
-            var difference = Compare(expectedItems[index], actualItems[index], $"{path}[{index}]");
+            var difference = Compare(expected[index], actual[index], $"{path}[{index}]");
             if (difference is not null)
             {
                 return difference;
             }
         }
 
-        if (expectedItems.Length > sharedCount)
+        if (expectedCount > sharedCount)
         {
             return new SnapshotJsonDifference(
                 $"{path}[{sharedCount}]",
-                Describe(expectedItems[sharedCount]),
+                Describe(expected[sharedCount]),
                 Missing);
         }
 
-        if (actualItems.Length > sharedCount)
+        if (actualCount > sharedCount)
         {
             return new SnapshotJsonDifference(
                 $"{path}[{sharedCount}]",
                 Missing,
-                Describe(actualItems[sharedCount]));
+                Describe(actual[sharedCount]));
         }
 
         return null;
@@ -181,9 +184,7 @@ internal sealed record SnapshotJsonDifference(
 
     private static string AppendProperty(string path, string propertyName)
     {
-        if (propertyName.Length > 0 &&
-            (char.IsLetter(propertyName[0]) || propertyName[0] == '_') &&
-            propertyName.Skip(1).All(character => char.IsLetterOrDigit(character) || character == '_'))
+        if (IsSimplePropertyName(propertyName))
         {
             return $"{path}.{propertyName}";
         }
@@ -192,6 +193,25 @@ internal sealed record SnapshotJsonDifference(
             .Replace("\\", "\\\\", StringComparison.Ordinal)
             .Replace("'", "\\'", StringComparison.Ordinal);
         return $"{path}['{escaped}']";
+    }
+
+    private static bool IsSimplePropertyName(string propertyName)
+    {
+        if (propertyName.Length == 0 ||
+            (!char.IsLetter(propertyName[0]) && propertyName[0] != '_'))
+        {
+            return false;
+        }
+
+        for (var index = 1; index < propertyName.Length; index++)
+        {
+            if (!char.IsLetterOrDigit(propertyName[index]) && propertyName[index] != '_')
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static string Describe(JsonElement value) =>

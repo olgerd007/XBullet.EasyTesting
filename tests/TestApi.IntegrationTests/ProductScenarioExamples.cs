@@ -1,6 +1,6 @@
 using System.Net;
-using XBullet.EasyTesting.Hosting;
 using TestApi.IntegrationTests.Scenarios;
+using XBullet.EasyTesting.Hosting;
 using Xunit;
 
 namespace TestApi.IntegrationTests;

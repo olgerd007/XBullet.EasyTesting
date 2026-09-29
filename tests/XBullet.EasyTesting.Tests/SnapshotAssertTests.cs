@@ -1514,6 +1514,9 @@ public sealed class SnapshotAssertTests
             .GetProperty("accepted")
             .GetBoolean());
         Assert.Null(snapshot.Failure);
+        var json = JsonSerializer.Serialize(snapshot);
+        Assert.DoesNotContain("\"Failure\"", json);
+        Assert.DoesNotContain("\"BodyFailure\"", json);
     }
 
     [Fact]
@@ -1570,6 +1573,30 @@ public sealed class SnapshotAssertTests
         Assert.NotNull(snapshot.Failure);
         Assert.Equal(typeof(IOException).FullName, snapshot.Failure.Type);
         Assert.Equal("connection lost", snapshot.Failure.Message);
+        using var document = JsonDocument.Parse(JsonSerializer.Serialize(snapshot));
+        var failure = document.RootElement.GetProperty("Failure");
+        Assert.Equal(typeof(IOException).FullName, failure.GetProperty("Type").GetString());
+        Assert.Equal("connection lost", failure.GetProperty("Message").GetString());
+    }
+
+    [Fact]
+    public void Http_exchange_snapshot_serialization_omits_only_null_failures()
+    {
+        var successfulJson = JsonSerializer.Serialize(
+            new HttpExchangeSnapshot(Request: null, Response: null, Failure: null));
+        var failedJson = JsonSerializer.Serialize(
+            new HttpExchangeSnapshot(
+                Request: null,
+                Response: null,
+                Failure: new HttpExchangeFailureSnapshot(
+                    "System.IO.IOException",
+                    "connection lost")));
+
+        Assert.DoesNotContain("\"Failure\"", successfulJson);
+        using var failedDocument = JsonDocument.Parse(failedJson);
+        var failure = failedDocument.RootElement.GetProperty("Failure");
+        Assert.Equal("System.IO.IOException", failure.GetProperty("Type").GetString());
+        Assert.Equal("connection lost", failure.GetProperty("Message").GetString());
     }
 
     [Fact]
@@ -1640,6 +1667,38 @@ public sealed class SnapshotAssertTests
         Assert.Null(excluded.Body);
         Assert.Equal("System.IO.IOException", failed.BodyFailure!.Type);
         Assert.Equal("read failed", failed.BodyFailure.Message);
+        Assert.DoesNotContain("\"BodyFailure\"", JsonSerializer.Serialize(empty));
+        using var failedDocument = JsonDocument.Parse(JsonSerializer.Serialize(failed));
+        var bodyFailure = failedDocument.RootElement.GetProperty("BodyFailure");
+        Assert.Equal("System.IO.IOException", bodyFailure.GetProperty("Type").GetString());
+        Assert.Equal("read failed", bodyFailure.GetProperty("Message").GetString());
+    }
+
+    [Fact]
+    public void Captured_http_snapshots_preserve_body_truncation_metadata()
+    {
+        var request = new StubHttpRequest(
+            HttpMethod.Post,
+            new Uri("/capture", UriKind.Relative),
+            new Dictionary<string, string[]>(),
+            "partial")
+        {
+            BodyTruncated = true
+        };
+        var response = CreateStubResponse(
+            bodyCaptured: true,
+            body: Encoding.UTF8.GetBytes("partial")) with
+        {
+            BodyTruncated = true
+        };
+
+        var requestSnapshot = StubHttpRequestSnapshot.FromRequest(request);
+        var responseSnapshot = StubHttpResponseSnapshot.FromResponse(response);
+
+        Assert.True(requestSnapshot.BodyTruncated);
+        Assert.True(responseSnapshot.BodyTruncated);
+        Assert.Contains("\"BodyTruncated\":true", JsonSerializer.Serialize(requestSnapshot));
+        Assert.Contains("\"BodyTruncated\":true", JsonSerializer.Serialize(responseSnapshot));
     }
 
     [Fact]
@@ -3529,6 +3588,8 @@ public sealed class SnapshotAssertTests
             Assert.Contains("\"Response\"", exchangesVerified);
             Assert.Contains("\"StatusCode\": 201", exchangesVerified);
             Assert.Contains("\"accepted\": true", exchangesVerified);
+            Assert.DoesNotContain("\"Failure\"", exchangesVerified);
+            Assert.DoesNotContain("\"BodyFailure\"", exchangesVerified);
         }
         finally
         {
@@ -3575,6 +3636,8 @@ public sealed class SnapshotAssertTests
             Assert.StartsWith("-\n  Request:", snapshot);
             Assert.Contains("StatusCode: 201", snapshot);
             Assert.Contains("orderId: \"{Scrubbed}\"", snapshot);
+            Assert.DoesNotContain("Failure:", snapshot);
+            Assert.DoesNotContain("BodyFailure:", snapshot);
         }
         finally
         {

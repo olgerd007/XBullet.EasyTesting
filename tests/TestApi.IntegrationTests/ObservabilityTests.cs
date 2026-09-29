@@ -1,10 +1,10 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using System.Text.Json;
-using XBullet.EasyTesting.Hosting;
-using XBullet.EasyTesting.Observability;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using XBullet.EasyTesting.Hosting;
+using XBullet.EasyTesting.Observability;
 using Xunit;
 
 namespace TestApi.IntegrationTests;
