@@ -124,6 +124,8 @@ The database arrangement runs before the request. Disposing the result releases 
 and asynchronously disposing the scope invokes database and scenario-resource cleanup even when an
 assertion fails.
 
+### Match application JSON conventions
+
 `PostJson` and `PutJson` automatically use the hosted application's MVC JSON options, including
 converters configured by `AddControllers().AddJsonOptions(...)`. For a minimal-API-only host, they
 use its HTTP JSON options instead. Override that application convention for one scenario with
