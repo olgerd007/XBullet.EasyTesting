@@ -31,6 +31,9 @@ public void Compatibility_facade_forwards_to_split_snapshot_assemblies()
     Assert.Contains(typeof(HttpExchangeFailureSnapshot), forwardedTypes);
     Assert.Contains(typeof(HttpExchangeSnapshotFormat), forwardedTypes);
     Assert.Contains(typeof(HttpExchangeSnapshotOptionsDefaults), forwardedTypes);
+    Assert.Contains(typeof(HttpResponseSnapshotConfigurationExtensions), forwardedTypes);
+    Assert.Contains(typeof(StubHttpSnapshotConfigurationExtensions), forwardedTypes);
+    Assert.Contains(typeof(TestScenarioSnapshotExtensions), forwardedTypes);
     Assert.Equal(
         "XBullet.EasyTesting.Snapshots.Core",
         typeof(SnapshotAssert).Assembly.GetName().Name);

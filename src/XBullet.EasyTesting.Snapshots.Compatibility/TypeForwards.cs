@@ -1,12 +1,15 @@
 using System.Runtime.CompilerServices;
 using XBullet.EasyTesting.Snapshots;
 
+#pragma warning disable RS0026, RS0027 // Forward callback overloads approved in source packages.
+
 [assembly: TypeForwardedTo(typeof(ControllerBinaryBodySnapshot))]
 [assembly: TypeForwardedTo(typeof(ControllerRequestSnapshot))]
 [assembly: TypeForwardedTo(typeof(ControllerResponseSnapshot))]
 [assembly: TypeForwardedTo(typeof(ControllerSnapshotOptions))]
 [assembly: TypeForwardedTo(typeof(ControllerSnapshotOptionsDefaults))]
 [assembly: TypeForwardedTo(typeof(HttpResponseSnapshotExtensions))]
+[assembly: TypeForwardedTo(typeof(HttpResponseSnapshotConfigurationExtensions))]
 [assembly: TypeForwardedTo(typeof(HttpExchangeFailureSnapshot))]
 [assembly: TypeForwardedTo(typeof(HttpExchangeRecorder))]
 [assembly: TypeForwardedTo(typeof(HttpExchangeSnapshot))]
@@ -35,3 +38,7 @@ using XBullet.EasyTesting.Snapshots;
 [assembly: TypeForwardedTo(typeof(StubHttpFailureSnapshot))]
 [assembly: TypeForwardedTo(typeof(StubHttpResponseSnapshot))]
 [assembly: TypeForwardedTo(typeof(StubHttpResponseSnapshotOptions))]
+[assembly: TypeForwardedTo(typeof(StubHttpSnapshotConfigurationExtensions))]
+[assembly: TypeForwardedTo(typeof(TestScenarioSnapshotExtensions))]
+
+#pragma warning restore RS0026, RS0027

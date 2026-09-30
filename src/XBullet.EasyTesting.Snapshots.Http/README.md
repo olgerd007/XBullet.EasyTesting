@@ -1,8 +1,8 @@
 # XBullet.EasyTesting.Snapshots.Http
 
-Snapshot adapters for requests and complete exchanges captured by `XBullet.EasyTesting.Http`. The package references
-`XBullet.EasyTesting.Snapshots.Core` and keeps the existing
-`XBullet.EasyTesting.Snapshots` namespace.
+Snapshot adapters for requests and complete exchanges captured by `XBullet.EasyTesting.Http`, plus
+hosted scenario integration for `HttpExchangeRecorder`. The package references
+`XBullet.EasyTesting.Snapshots.Core` and keeps the existing `XBullet.EasyTesting.Snapshots` namespace.
 
 The package targets .NET 8, .NET 9, and .NET 10.
 
@@ -19,6 +19,23 @@ using var response = await client.PostAsJsonAsync("/orders", order);
 
 await handler.ShouldMatchExchangesSnapshot();
 ```
+
+For a hosted fluent scenario, `SnapshotScenario()` attaches an `HttpExchangeRecorder` before the
+request is sent:
+
+```csharp
+using var result = await scope.SnapshotScenario(options =>
+        options.Request.RedactingHeader("X-Request-Secret"))
+    .PostJson("/api/products", request)
+    .ExecuteAsync(cancellationToken);
+
+await result.Response.ShouldMatchHttpExchangeSnapshot(
+    configureSnapshot: settings => settings.ScrubMember("id"),
+    cancellationToken: cancellationToken);
+```
+
+Outbound request and exchange assertions likewise accept `configureRequest`, `configureExchange`,
+and `configureSnapshot` callbacks in addition to prebuilt option and settings instances.
 
 Exchange snapshots contain each request and its response status, stable headers, and normalized
 body. Send failures and response-body read failures are captured as stable exception type/message

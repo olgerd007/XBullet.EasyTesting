@@ -124,6 +124,22 @@ The database arrangement runs before the request. Disposing the result releases 
 and asynchronously disposing the scope invokes database and scenario-resource cleanup even when an
 assertion fails.
 
+Configure one JSON convention for all `PostJson` and `PutJson` calls in a scenario with
+`WithJsonOptions`. A per-request options argument overrides this setting:
+
+```csharp
+var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+jsonOptions.Converters.Add(new JsonStringEnumConverter());
+
+using var result = await scope.Scenario()
+    .WithJsonOptions(jsonOptions)
+    .PostJson("/api/users", request)
+    .ExecuteAsync(cancellationToken);
+```
+
+The request recorder captures the resulting wire JSON unchanged, so differences between request
+and response conventions remain visible in complete exchange snapshots.
+
 ## Inspect a failure
 
 Response assertions throw `TestHttpResponseVerificationException` with the expected and actual

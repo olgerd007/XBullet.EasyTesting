@@ -6,6 +6,20 @@ The project follows Semantic Versioning. Package versions are produced from GitH
 
 ## [Unreleased]
 
+## [1.0.16] - 2026-09-30
+
+### Added
+
+- Fluent scenarios can attach delegating handlers with `TestScenarioBuilder.WithHandler`, and
+  `XBullet.EasyTesting.Snapshots.Http` provides `SnapshotScenario()` to configure pre-transport
+  request capture with `HttpExchangeRecorder` automatically.
+- Built-in response, controller, exchange, and outbound HTTP snapshot assertions accept inline
+  `Action<T>` callbacks for capture options and snapshot settings while retaining their existing
+  object-based overloads.
+- `TestScenarioBuilder.WithJsonOptions` applies one JSON convention to scenario request helpers,
+  while `PostJson` and `PutJson` also accept per-request `JsonSerializerOptions` overrides. This
+  allows request payloads to use the application's converters, including string enum serialization.
+
 ## [1.0.15] - 2026-09-29
 
 ### Added

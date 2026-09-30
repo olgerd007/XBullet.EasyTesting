@@ -40,9 +40,11 @@ await response.ShouldMatchControllerSnapshot(
     cancellationToken: cancellationToken);
 
 await response.ShouldMatchHttpExchangeSnapshot(
-    snapshotSettings: settings,
+    configureSnapshot: settings => settings.ScrubMember("id"),
     cancellationToken: cancellationToken);
 ```
+
+Snapshot assertions also continue to accept prebuilt `SnapshotSettings` instances.
 
 Attach `HttpExchangeRecorder` to the real client pipeline when the complete request body must be
 captured before TestServer consumes it.
