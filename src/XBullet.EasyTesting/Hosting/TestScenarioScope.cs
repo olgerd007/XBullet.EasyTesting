@@ -90,7 +90,7 @@ public sealed class TestScenarioScope<TEntryPoint> : IAsyncDisposable
 
     /// <summary>Starts a fluent arrange, client, and HTTP request definition in this scope.</summary>
     /// <returns>A new mutable scenario builder associated with this scope's isolated host.</returns>
-    public TestScenarioBuilder<TEntryPoint> Scenario() => new(Client());
+    public TestScenarioBuilder<TEntryPoint> Scenario() => new(Client(), () => Services);
 
     /// <summary>Gets a configured local JWT authority, optionally by authentication scheme.</summary>
     /// <param name="authenticationScheme">

@@ -30,6 +30,9 @@ public sealed class SnapshotAssertTests
         Assert.Contains(typeof(HttpExchangeFailureSnapshot), forwardedTypes);
         Assert.Contains(typeof(HttpExchangeSnapshotFormat), forwardedTypes);
         Assert.Contains(typeof(HttpExchangeSnapshotOptionsDefaults), forwardedTypes);
+        Assert.Contains(typeof(HttpResponseSnapshotConfigurationExtensions), forwardedTypes);
+        Assert.Contains(typeof(StubHttpSnapshotConfigurationExtensions), forwardedTypes);
+        Assert.Contains(typeof(TestScenarioSnapshotExtensions), forwardedTypes);
         Assert.Equal(
             "XBullet.EasyTesting.Snapshots.Core",
             typeof(SnapshotAssert).Assembly.GetName().Name);
@@ -3007,13 +3010,6 @@ public sealed class SnapshotAssertTests
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         var snapshotDirectory = CreateTemporarySnapshotDirectory();
-        var settings = CreateUpdatingSettings(snapshotDirectory)
-            .Named("http-transcript")
-            .ScrubMember("id");
-        var options = new HttpExchangeSnapshotOptions
-        {
-            Format = HttpExchangeSnapshotFormat.Http
-        };
         using var response = new HttpResponseMessage(HttpStatusCode.Created)
         {
             ReasonPhrase = "Created",
@@ -3027,9 +3023,16 @@ public sealed class SnapshotAssertTests
         try
         {
             await response.ShouldMatchHttpExchangeSnapshot(
-                options,
-                settings,
-                cancellationToken);
+                configureExchange: options =>
+                    options.Format = HttpExchangeSnapshotFormat.Http,
+                configureSnapshot: settings => settings
+                    .InDirectory(snapshotDirectory)
+                    .Named("http-transcript")
+                    .ScrubMember("id")
+                    .Updating(SnapshotUpdateMode.Missing)
+                    .AllowingUpdatesInContinuousIntegration()
+                    .WithoutDiffTool(),
+                cancellationToken: cancellationToken);
 
             var path = Directory.EnumerateFiles(snapshotDirectory, "*.verified.txt").Single();
             var snapshot = await File.ReadAllTextAsync(path, cancellationToken);
@@ -3532,18 +3535,6 @@ public sealed class SnapshotAssertTests
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         var snapshotDirectory = CreateTemporarySnapshotDirectory();
-        var settings = new SnapshotSettings()
-            .InDirectory(snapshotDirectory)
-            .Named("outbound-requests")
-            .Updating(SnapshotUpdateMode.Missing)
-            .AllowingUpdatesInContinuousIntegration()
-            .WithoutDiffTool();
-        var exchangeSettings = new SnapshotSettings()
-            .InDirectory(snapshotDirectory)
-            .Named("outbound-exchanges")
-            .Updating(SnapshotUpdateMode.Missing)
-            .AllowingUpdatesInContinuousIntegration()
-            .WithoutDiffTool();
         using var handler = new StubHttpMessageHandler();
         handler
             .When(HttpMethod.Post, "/orders?notify=true")
@@ -3564,10 +3555,20 @@ public sealed class SnapshotAssertTests
                 cancellationToken);
 
             await handler.ShouldMatchRequestsSnapshot(
-                snapshotSettings: settings,
+                configureSnapshot: settings => settings
+                    .InDirectory(snapshotDirectory)
+                    .Named("outbound-requests")
+                    .Updating(SnapshotUpdateMode.Missing)
+                    .AllowingUpdatesInContinuousIntegration()
+                    .WithoutDiffTool(),
                 cancellationToken: cancellationToken);
             await handler.ShouldMatchExchangesSnapshot(
-                snapshotSettings: exchangeSettings,
+                configureSnapshot: settings => settings
+                    .InDirectory(snapshotDirectory)
+                    .Named("outbound-exchanges")
+                    .Updating(SnapshotUpdateMode.Missing)
+                    .AllowingUpdatesInContinuousIntegration()
+                    .WithoutDiffTool(),
                 cancellationToken: cancellationToken);
 
             var verifiedPaths = Directory
@@ -3604,13 +3605,6 @@ public sealed class SnapshotAssertTests
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         var snapshotDirectory = CreateTemporarySnapshotDirectory();
-        var settings = CreateUpdatingSettings(snapshotDirectory)
-            .Named("stub-yaml")
-            .ScrubMember("orderId");
-        var options = new StubHttpExchangeSnapshotOptions
-        {
-            Format = HttpExchangeSnapshotFormat.Yaml
-        };
         using var handler = new StubHttpMessageHandler();
         handler
             .When(HttpMethod.Post, "/orders")
@@ -3627,9 +3621,16 @@ public sealed class SnapshotAssertTests
                 new { OrderId = 41 },
                 cancellationToken);
             await handler.ShouldMatchExchangesSnapshot(
-                options,
-                settings,
-                cancellationToken);
+                configureExchange: options =>
+                    options.Format = HttpExchangeSnapshotFormat.Yaml,
+                configureSnapshot: settings => settings
+                    .InDirectory(snapshotDirectory)
+                    .Named("stub-yaml")
+                    .ScrubMember("orderId")
+                    .Updating(SnapshotUpdateMode.Missing)
+                    .AllowingUpdatesInContinuousIntegration()
+                    .WithoutDiffTool(),
+                cancellationToken: cancellationToken);
 
             var path = Directory.EnumerateFiles(snapshotDirectory, "*.verified.yaml").Single();
             var snapshot = await File.ReadAllTextAsync(path, cancellationToken);

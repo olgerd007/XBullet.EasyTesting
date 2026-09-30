@@ -4,7 +4,7 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageId>XBullet.EasyTesting.Snapshots.Http</PackageId>
     <SkipPackageValidationBaseline>true</SkipPackageValidationBaseline>
-    <Description>Snapshot adapters for XBullet.EasyTesting outbound HTTP stubs.</Description>
+    <Description>Snapshot adapters for XBullet.EasyTesting HTTP stubs and hosted scenario exchanges.</Description>
     <PackageTags>snapshot-testing;http;integration-testing;dotnet</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>

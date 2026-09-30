@@ -455,3 +455,7 @@ XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint>.WithBearerToken(strin
 XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint>.WithHandler(System.Net.Http.DelegatingHandler! handler) -> XBullet.EasyTesting.Hosting.TestClientBuilder<TEntryPoint!>!
 XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.AsUser(System.Action<XBullet.EasyTesting.Authentication.TestUserBuilder!>! configure, string! authenticationScheme) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
 XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.WithBearerToken(string! token) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.PostJson<T>(string! requestUri, T body, System.Text.Json.JsonSerializerOptions! options) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.PutJson<T>(string! requestUri, T body, System.Text.Json.JsonSerializerOptions! options) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.WithHandler(System.Net.Http.DelegatingHandler! handler) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.WithJsonOptions(System.Text.Json.JsonSerializerOptions! options) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!

@@ -6,6 +6,28 @@ The project follows Semantic Versioning. Package versions are produced from GitH
 
 ## [Unreleased]
 
+## [1.0.16] - 2026-09-30
+
+### Added
+
+- Fluent scenarios can attach delegating handlers with `TestScenarioBuilder.WithHandler`, and
+  `XBullet.EasyTesting.Snapshots.Http` provides `SnapshotScenario()` to configure pre-transport
+  request capture with `HttpExchangeRecorder` automatically. See the
+  [complete TestServer exchange recipe](docs/guides/snapshots/recipes.md#complete-testserver-exchanges)
+  and [snapshot HTTP API reference](docs/api/packages/xbullet-easytesting-snapshots-http.md).
+- Built-in response, controller, exchange, and outbound HTTP snapshot assertions accept inline
+  `Action<T>` callbacks for capture options and snapshot settings while retaining their existing
+  object-based overloads. See the
+  [snapshot recipes](docs/guides/snapshots/recipes.md#complete-testserver-exchanges).
+- `TestScenarioBuilder.WithJsonOptions` applies one JSON convention to scenario request helpers,
+  while `PostJson` and `PutJson` also accept per-request `JsonSerializerOptions` overrides. This
+  allows request payloads to use the application's converters, including string enum serialization.
+  See [application JSON conventions](docs/getting-started/first-controller-test.md#match-application-json-conventions)
+  and the [core API reference](docs/api/packages/xbullet-easytesting.md).
+- Fluent scenarios automatically use the hosted application's MVC JSON options for `PostJson` and
+  `PutJson`, falling back to minimal-API HTTP JSON options when MVC is not registered. Scenario and
+  per-request options remain explicit overrides.
+
 ## [1.0.15] - 2026-09-29
 
 ### Added

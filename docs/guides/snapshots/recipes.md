@@ -142,6 +142,25 @@ public Task Create_matches_custom_snapshot_with_generated_id_scrubbed() =>
 ```
 <!-- end-snippet -->
 
+The `XBullet.EasyTesting.Snapshots.Http` package can also attach the recorder directly to a fluent
+scenario. This is required when the request body belongs in the exchange snapshot because the
+server may consume it before the response is asserted:
+
+```csharp
+using var result = await scope.SnapshotScenario()
+    .PostJson("/api/products", new ProductRequest("Webcam", 79.95m))
+    .ExecuteAsync(cancellationToken);
+
+await result.Response.ShouldMatchHttpExchangeSnapshot(
+    configureSnapshot: settings => settings.ScrubMember("id"),
+    cancellationToken: cancellationToken);
+```
+
+The built-in response, controller, exchange, outbound-request, and outbound-exchange snapshot
+assertions accept `configureSnapshot` callbacks. Assertions with capture options additionally accept
+`configureController`, `configureExchange`, or `configureRequest` callbacks. Existing overloads that
+accept prebuilt settings and options remain available.
+
 JSON is the default. Set `HttpExchangeSnapshotOptions.Format` to `Http` for a transcript or `Yaml`
 for deterministic YAML. An unread streaming body is represented as `{NotRead}`; content-read errors
 are recorded as `BodyFailure`, and send failures are captured separately.
@@ -163,18 +182,6 @@ public async Task Captured_http_requests_have_a_dedicated_snapshot_assertion()
 {
     var cancellationToken = TestContext.Current.CancellationToken;
     var snapshotDirectory = CreateTemporarySnapshotDirectory();
-    var settings = new SnapshotSettings()
-        .InDirectory(snapshotDirectory)
-        .Named("outbound-requests")
-        .Updating(SnapshotUpdateMode.Missing)
-        .AllowingUpdatesInContinuousIntegration()
-        .WithoutDiffTool();
-    var exchangeSettings = new SnapshotSettings()
-        .InDirectory(snapshotDirectory)
-        .Named("outbound-exchanges")
-        .Updating(SnapshotUpdateMode.Missing)
-        .AllowingUpdatesInContinuousIntegration()
-        .WithoutDiffTool();
     using var handler = new StubHttpMessageHandler();
     handler
         .When(HttpMethod.Post, "/orders?notify=true")
@@ -195,10 +202,20 @@ public async Task Captured_http_requests_have_a_dedicated_snapshot_assertion()
             cancellationToken);
 
         await handler.ShouldMatchRequestsSnapshot(
-            snapshotSettings: settings,
+            configureSnapshot: settings => settings
+                .InDirectory(snapshotDirectory)
+                .Named("outbound-requests")
+                .Updating(SnapshotUpdateMode.Missing)
+                .AllowingUpdatesInContinuousIntegration()
+                .WithoutDiffTool(),
             cancellationToken: cancellationToken);
         await handler.ShouldMatchExchangesSnapshot(
-            snapshotSettings: exchangeSettings,
+            configureSnapshot: settings => settings
+                .InDirectory(snapshotDirectory)
+                .Named("outbound-exchanges")
+                .Updating(SnapshotUpdateMode.Missing)
+                .AllowingUpdatesInContinuousIntegration()
+                .WithoutDiffTool(),
             cancellationToken: cancellationToken);
 
         var verifiedPaths = Directory

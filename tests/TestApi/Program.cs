@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.Certificate;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -11,7 +12,9 @@ using TestApi.Messaging;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddDbContext<TestApiDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("TestApi") ?? "Data Source=test-api.db"));
 builder.Services.AddHttpClient<IExternalCatalogClient, ExternalCatalogClient>(client =>
