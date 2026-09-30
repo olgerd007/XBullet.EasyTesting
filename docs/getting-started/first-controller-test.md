@@ -124,8 +124,10 @@ The database arrangement runs before the request. Disposing the result releases 
 and asynchronously disposing the scope invokes database and scenario-resource cleanup even when an
 assertion fails.
 
-Configure one JSON convention for all `PostJson` and `PutJson` calls in a scenario with
-`WithJsonOptions`. A per-request options argument overrides this setting:
+`PostJson` and `PutJson` automatically use the hosted application's MVC JSON options, including
+converters configured by `AddControllers().AddJsonOptions(...)`. For a minimal-API-only host, they
+use its HTTP JSON options instead. Override that application convention for one scenario with
+`WithJsonOptions`; a per-request options argument has the highest precedence:
 
 ```csharp
 var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);

@@ -1,6 +1,11 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using XBullet.EasyTesting.Authentication;
+using HttpJsonOptions = Microsoft.AspNetCore.Http.Json.JsonOptions;
+using MvcJsonOptions = Microsoft.AspNetCore.Mvc.JsonOptions;
 
 namespace XBullet.EasyTesting.Hosting;
 
@@ -18,18 +23,24 @@ public sealed class TestScenarioBuilder<TEntryPoint>
 {
     private readonly TestClientBuilder<TEntryPoint> _client;
     private readonly List<Func<CancellationToken, Task>> _arrangements = [];
+    private readonly Func<JsonSerializerOptions?>? _resolveApplicationJsonOptions;
     private Func<HttpClient, CancellationToken, Task<HttpResponseMessage>>? _send;
     private JsonSerializerOptions? _jsonOptions;
     private bool _executed;
 
     internal TestScenarioBuilder(AuthenticatedWebApplicationFactory<TEntryPoint> factory)
+        : this(factory.Client(), () => factory.Services)
     {
-        _client = factory.Client();
     }
 
-    internal TestScenarioBuilder(TestClientBuilder<TEntryPoint> client)
+    internal TestScenarioBuilder(
+        TestClientBuilder<TEntryPoint> client,
+        Func<IServiceProvider>? resolveServices)
     {
         _client = client;
+        _resolveApplicationJsonOptions = resolveServices is null
+            ? null
+            : () => ResolveApplicationJsonOptions(resolveServices());
     }
 
     /// <summary>Adds an asynchronous arrangement executed before the client is created.</summary>
@@ -421,7 +432,8 @@ public sealed class TestScenarioBuilder<TEntryPoint>
     /// <param name="options">
     /// The non-null options retained and used by <see cref="PostJson{T}(string, T)"/> and
     /// <see cref="PutJson{T}(string, T)"/> when the scenario executes. This replaces any previously
-    /// configured scenario options. Per-request overloads that accept options take precedence.
+    /// resolved application or configured scenario options. Per-request overloads that accept
+    /// options take precedence.
     /// </param>
     /// <returns>This builder so additional scenario steps can be configured.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="options"/> is <see langword="null"/>.</exception>
@@ -505,17 +517,22 @@ public sealed class TestScenarioBuilder<TEntryPoint>
     /// <typeparam name="T">The type serialized as the JSON request body.</typeparam>
     /// <param name="requestUri">The non-empty relative or absolute request URI.</param>
     /// <param name="body">
-    /// The value serialized with options configured by <see cref="WithJsonOptions"/>, or with the
-    /// web defaults used by <see cref="HttpClientJsonExtensions.PostAsJsonAsync{TValue}(HttpClient, string, TValue, CancellationToken)"/>
-    /// when no scenario options were configured.
+    /// The value serialized with per-scenario application JSON options or options configured by
+    /// <see cref="WithJsonOptions"/>. When neither is available, the web defaults used by
+    /// <see cref="HttpClientJsonExtensions.PostAsJsonAsync{TValue}(HttpClient, string, TValue, CancellationToken)"/>
+    /// apply.
     /// </param>
     /// <returns>This builder with its single HTTP request configured.</returns>
     public TestScenarioBuilder<TEntryPoint> PostJson<T>(string requestUri, T body)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(requestUri);
-        return Send((client, token) => _jsonOptions is null
-            ? client.PostAsJsonAsync(requestUri, body, token)
-            : client.PostAsJsonAsync(requestUri, body, _jsonOptions, token));
+        return Send((client, token) =>
+        {
+            var options = _jsonOptions ?? _resolveApplicationJsonOptions?.Invoke();
+            return options is null
+                ? client.PostAsJsonAsync(requestUri, body, token)
+                : client.PostAsJsonAsync(requestUri, body, options, token);
+        });
     }
 
     /// <summary>Defines a POST request with a JSON body and explicit serialization options.</summary>
@@ -541,17 +558,22 @@ public sealed class TestScenarioBuilder<TEntryPoint>
     /// <typeparam name="T">The type serialized as the JSON request body.</typeparam>
     /// <param name="requestUri">The non-empty relative or absolute request URI.</param>
     /// <param name="body">
-    /// The value serialized with options configured by <see cref="WithJsonOptions"/>, or with the
-    /// web defaults used by <see cref="HttpClientJsonExtensions.PutAsJsonAsync{TValue}(HttpClient, string, TValue, CancellationToken)"/>
-    /// when no scenario options were configured.
+    /// The value serialized with per-scenario application JSON options or options configured by
+    /// <see cref="WithJsonOptions"/>. When neither is available, the web defaults used by
+    /// <see cref="HttpClientJsonExtensions.PutAsJsonAsync{TValue}(HttpClient, string, TValue, CancellationToken)"/>
+    /// apply.
     /// </param>
     /// <returns>This builder with its single HTTP request configured.</returns>
     public TestScenarioBuilder<TEntryPoint> PutJson<T>(string requestUri, T body)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(requestUri);
-        return Send((client, token) => _jsonOptions is null
-            ? client.PutAsJsonAsync(requestUri, body, token)
-            : client.PutAsJsonAsync(requestUri, body, _jsonOptions, token));
+        return Send((client, token) =>
+        {
+            var options = _jsonOptions ?? _resolveApplicationJsonOptions?.Invoke();
+            return options is null
+                ? client.PutAsJsonAsync(requestUri, body, token)
+                : client.PutAsJsonAsync(requestUri, body, options, token);
+        });
     }
 
     /// <summary>Defines a PUT request with a JSON body and explicit serialization options.</summary>
@@ -641,5 +663,17 @@ public sealed class TestScenarioBuilder<TEntryPoint>
         {
             throw new InvalidOperationException("The test scenario has already been executed.");
         }
+    }
+
+    private static JsonSerializerOptions ResolveApplicationJsonOptions(IServiceProvider services)
+    {
+        if (services.GetService<IActionDescriptorCollectionProvider>() is not null)
+        {
+            return services.GetRequiredService<IOptions<MvcJsonOptions>>()
+                .Value.JsonSerializerOptions;
+        }
+
+        return services.GetRequiredService<IOptions<HttpJsonOptions>>()
+            .Value.SerializerOptions;
     }
 }

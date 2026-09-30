@@ -19,6 +19,9 @@ The project follows Semantic Versioning. Package versions are produced from GitH
 - `TestScenarioBuilder.WithJsonOptions` applies one JSON convention to scenario request helpers,
   while `PostJson` and `PutJson` also accept per-request `JsonSerializerOptions` overrides. This
   allows request payloads to use the application's converters, including string enum serialization.
+- Fluent scenarios automatically use the hosted application's MVC JSON options for `PostJson` and
+  `PutJson`, falling back to minimal-API HTTP JSON options when MVC is not registered. Scenario and
+  per-request options remain explicit overrides.
 
 ## [1.0.15] - 2026-09-29
 

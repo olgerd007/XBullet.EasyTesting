@@ -116,15 +116,11 @@ public sealed class FluentScenarioTests : IClassFixture<TestApiFactory>
         });
 
     [Fact]
-    public Task Scenario_json_requests_use_configured_serializer_options() =>
+    public Task Scenario_json_requests_use_application_serializer_options() =>
         Run(async (scope, cancellationToken) =>
         {
-            var serializerOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
-            serializerOptions.Converters.Add(new JsonStringEnumConverter());
-
             using var result = await scope.SnapshotScenario(options =>
                 options.Request.IncludeHeaders = false)
-                .WithJsonOptions(serializerOptions)
                 .AsUser(user => user.WithName("Order publisher"))
                 .PostJson(
                     "/api/publishing/kafka/orders",
@@ -141,6 +137,58 @@ public sealed class FluentScenarioTests : IClassFixture<TestApiFactory>
 
             var requestBody = Assert.IsType<JsonElement>(snapshot.Request?.Body);
             Assert.Equal("High", requestBody.GetProperty("priority").GetString());
+        });
+
+    [Fact]
+    public async Task Factory_scenario_uses_application_serializer_options()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var recorder = new HttpExchangeRecorder(new HttpExchangeSnapshotOptions
+        {
+            Request = { IncludeHeaders = false }
+        });
+        using var result = await _factory.Scenario()
+            .WithHandler(recorder)
+            .AsUser(user => user.WithName("Order publisher"))
+            .PostJson(
+                "/api/publishing/kafka/orders",
+                new PublishOrderWithPriorityRequest(
+                    47,
+                    "customer-12",
+                    625.50m,
+                    OrderPriority.High))
+            .ExecuteAsync(cancellationToken);
+
+        var snapshot = await HttpExchangeSnapshot.FromResponseAsync(
+            result.Response,
+            cancellationToken: cancellationToken);
+        var requestBody = Assert.IsType<JsonElement>(snapshot.Request?.Body);
+        Assert.Equal("High", requestBody.GetProperty("priority").GetString());
+    }
+
+    [Fact]
+    public Task Scenario_json_options_override_application_serializer_options() =>
+        Run(async (scope, cancellationToken) =>
+        {
+            using var result = await scope.SnapshotScenario(options =>
+                options.Request.IncludeHeaders = false)
+                .WithJsonOptions(new JsonSerializerOptions(JsonSerializerDefaults.Web))
+                .AsUser(user => user.WithName("Order publisher"))
+                .PostJson(
+                    "/api/publishing/kafka/orders",
+                    new PublishOrderWithPriorityRequest(
+                        46,
+                        "customer-11",
+                        525.50m,
+                        OrderPriority.High))
+                .ExecuteAsync(cancellationToken);
+
+            var snapshot = await HttpExchangeSnapshot.FromResponseAsync(
+                result.Response,
+                cancellationToken: cancellationToken);
+
+            var requestBody = Assert.IsType<JsonElement>(snapshot.Request?.Body);
+            Assert.Equal(1, requestBody.GetProperty("priority").GetInt32());
         });
 
     [Fact]

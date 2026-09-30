@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -15,6 +16,7 @@ using TestApi.Models;
 using XBullet.EasyTesting.Authentication;
 using XBullet.EasyTesting.EntityFrameworkCore;
 using XBullet.EasyTesting.Hosting;
+using XBullet.EasyTesting.Snapshots;
 using Xunit;
 
 namespace TestApi.IntegrationTests;
@@ -97,6 +99,30 @@ public sealed class StartupHostTests
             body.GetProperty("apiUserPortfolio").GetString());
     }
 
+    [Fact]
+    public async Task Startup_scenario_uses_minimal_api_json_options()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var factory = new AuthenticationOnlyFederationTestHost();
+        var recorder = new HttpExchangeRecorder(new HttpExchangeSnapshotOptions
+        {
+            Request = { IncludeHeaders = false }
+        });
+
+        using var result = await factory.Scenario()
+            .WithHandler(recorder)
+            .PostJson(
+                "/federation/context",
+                new MinimalApiJsonRequest(MinimalApiPriority.High))
+            .ExecuteAsync(cancellationToken);
+
+        var snapshot = await HttpExchangeSnapshot.FromResponseAsync(
+            result.Response,
+            cancellationToken: cancellationToken);
+        var requestBody = Assert.IsType<JsonElement>(snapshot.Request?.Body);
+        Assert.Equal("High", requestBody.GetProperty("priority").GetString());
+    }
+
     private sealed class FederationTestHost
         : StartupEntityFrameworkWebApplicationFactory<IntegrationTestStartup, TestApiDbContext>
     {
@@ -145,6 +171,14 @@ public sealed class StartupHostTests
             TestAuthenticationSchemeBuilder authentication) =>
             authentication.MapFederation("Federation");
     }
+
+    private sealed record MinimalApiJsonRequest(MinimalApiPriority Priority);
+
+    private enum MinimalApiPriority
+    {
+        Normal,
+        High
+    }
 }
 
 /// <summary>A Startup-style test application used without an application Program.Main.</summary>
@@ -156,6 +190,8 @@ public sealed class IntegrationTestStartup(IConfiguration configuration)
         services.AddDbContext<TestApiDbContext>(options =>
             options.UseInMemoryDatabase("federation-production-registration"));
         services.AddAuthentication();
+        services.ConfigureHttpJsonOptions(options =>
+            options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
         services.AddAuthorization(options => options.AddPolicy(
             "FederationOnly",
             policy => policy
