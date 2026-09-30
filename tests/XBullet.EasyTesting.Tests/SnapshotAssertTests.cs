@@ -606,6 +606,35 @@ public sealed class SnapshotAssertTests
         }
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Structured_scrubbing_preserves_redacted_scalars_and_header_arrays(bool usePathRules)
+    {
+        const string json =
+            """{"RequestId":["{Redacted}"],"Secret":"{Redacted}","Dynamic":"value"}""";
+        var settings = new SnapshotSettings();
+        if (usePathRules)
+        {
+            settings
+                .ScrubPath("/RequestId")
+                .ScrubPath("/Secret")
+                .ScrubPath("/Dynamic");
+        }
+        else
+        {
+            settings.ScrubMembers("RequestId", "Secret", "Dynamic");
+        }
+
+        var scrubbed = StructuredSnapshotScrubber.Apply(json, settings);
+        using var document = JsonDocument.Parse(scrubbed);
+        var root = document.RootElement;
+
+        Assert.Equal("{Redacted}", root.GetProperty("RequestId")[0].GetString());
+        Assert.Equal("{Redacted}", root.GetProperty("Secret").GetString());
+        Assert.Equal("{Scrubbed}", root.GetProperty("Dynamic").GetString());
+    }
+
     #region docs-snapshots-path-rules
 
     [Fact]

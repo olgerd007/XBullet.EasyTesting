@@ -265,7 +265,9 @@ Controller, TestServer exchange, and outbound-stub options support:
 
 Common secret query names—including `access_token`, `api_key`, `client_secret`, `sas`, `secret`,
 `sig`, and `token`—are redacted by default. If a name is both scrubbed and redacted, security
-redaction wins. Application-specific sensitive names still require explicit configuration.
+redaction wins. Structured member and path scrubbers likewise preserve values already represented
+by `{Redacted}`, including redacted header arrays. Application-specific sensitive names still
+require explicit configuration.
 
 Review the [complete-exchange recipe](recipes.md#sensitive-complete-exchange) for a realistic nested
 body and request-header example.

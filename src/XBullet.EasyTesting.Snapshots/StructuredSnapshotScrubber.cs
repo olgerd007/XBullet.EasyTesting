@@ -8,6 +8,8 @@ namespace XBullet.EasyTesting.Snapshots;
 
 internal static class StructuredSnapshotScrubber
 {
+    private const string RedactedValue = "{Redacted}";
+
     private static readonly JsonSerializerOptions CompactJsonOptions = new()
     {
         WriteIndented = false
@@ -61,7 +63,10 @@ internal static class StructuredSnapshotScrubber
         {
             if (rule.Kind == JsonSnapshotPathRuleKind.Scrub)
             {
-                root = ReplaceLocation(root, location, JsonValue.Create("{Scrubbed}"));
+                if (!IsRedactedValue(location.Value))
+                {
+                    root = ReplaceLocation(root, location, JsonValue.Create("{Scrubbed}"));
+                }
             }
             else if (rule.Kind == JsonSnapshotPathRuleKind.Replace)
             {
@@ -360,7 +365,11 @@ internal static class StructuredSnapshotScrubber
 
             if (settings.ScrubbedMembers.Contains(propertyName))
             {
-                jsonObject[propertyName] = "{Scrubbed}";
+                if (!IsRedactedValue(jsonObject[propertyName]))
+                {
+                    jsonObject[propertyName] = "{Scrubbed}";
+                }
+
                 continue;
             }
 
@@ -375,6 +384,15 @@ internal static class StructuredSnapshotScrubber
             }
         }
     }
+
+    private static bool IsRedactedValue(JsonNode? node) =>
+        node switch
+        {
+            JsonValue value when value.TryGetValue<string>(out var stringValue) =>
+                string.Equals(stringValue, RedactedValue, StringComparison.Ordinal),
+            JsonArray { Count: > 0 } array => array.All(IsRedactedValue),
+            _ => false
+        };
 
     private static bool TryScrubValue(
         JsonNode? node,
