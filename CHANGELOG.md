@@ -6,6 +6,14 @@ The project follows Semantic Versioning. Package versions are produced from GitH
 
 ## [Unreleased]
 
+## [1.0.17] - 2026-10-01
+
+### Changed
+
+- Structured member and path scrubbers now preserve values already represented by `{Redacted}`,
+  including redacted HTTP header arrays, so security redaction remains authoritative. See
+  [HTTP redaction and URL stability](docs/guides/snapshots/stabilizing-data.md#http-redaction-and-url-stability).
+
 ## [1.0.16] - 2026-09-30
 
 ### Added

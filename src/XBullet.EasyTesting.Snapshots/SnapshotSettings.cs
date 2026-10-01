@@ -312,7 +312,8 @@ public sealed class SnapshotSettings
 
     /// <summary>
     /// Replaces values of matching JSON members with <c>{Scrubbed}</c> at every nesting level.
-    /// Member names are matched without regard to case.
+    /// Member names are matched without regard to case. Values already represented by
+    /// <c>{Redacted}</c> are preserved.
     /// </summary>
     /// <param name="memberNames">A non-null array of non-empty names; duplicates are ignored case-insensitively.</param>
     /// <returns>This settings instance, for chaining.</returns>
@@ -348,6 +349,7 @@ public sealed class SnapshotSettings
 
     /// <summary>
     /// Replaces values selected by an extended JSON Pointer with <c>{Scrubbed}</c>.
+    /// Values already represented by <c>{Redacted}</c> are preserved.
     /// Use an empty path for the root, <c>/</c> separators, and <c>*</c> as a wildcard segment.
     /// </summary>
     /// <param name="path">The non-null extended JSON Pointer; an empty string selects the root.</param>
