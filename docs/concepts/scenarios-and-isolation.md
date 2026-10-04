@@ -53,6 +53,171 @@ See the
 [realistic controller scenario](../getting-started/first-controller-test.md#arrange-data-and-assert-the-response)
 for an executable arrange, act, assert, and cleanup example.
 
+## Reusable domain scenarios
+
+Derive from `Scenario<TEntryPoint>` to give arrangements domain-specific names. The base borrows an
+existing `TestScenarioScope<TEntryPoint>` and exposes it through the protected `Scope` property.
+Implement `ArrangeCoreAsync` to seed data, configure stubs, or prepare other domain state. Call
+`EnsureNotArranged` in configuration methods before changing state.
+
+<!-- snippet: tests/TestApi.IntegrationTests/Scenarios/ProductScenario.cs#docs-domain-scenario-base -->
+```csharp
+internal sealed class ProductScenario : Scenario<Program>
+{
+    private readonly TestApiFactory _factory;
+    private readonly List<Product> _products = [];
+
+    public ProductScenario(
+        TestApiFactory factory,
+        TestScenarioScope<Program> scope)
+        : base(scope)
+    {
+        _factory = factory;
+    }
+
+    public const string CollectionUri = "/api/products";
+
+    public ProductScenario WithExistingProduct(
+        int id,
+        string name,
+        decimal price)
+    {
+        EnsureNotArranged();
+        _products.Add(new Product
+        {
+            Id = id,
+            Name = name,
+            Price = price
+        });
+        return this;
+    }
+
+    public static string ResourceUri(int id) => $"{CollectionUri}/{id}";
+
+    protected override Task ArrangeCoreAsync(CancellationToken cancellationToken) =>
+        _factory.Database(Scope)
+            .Seed(_products.ToArray())
+            .ExecuteAsync(cancellationToken);
+}
+```
+<!-- end-snippet -->
+
+`Arrange()` freezes configuration immediately and returns a request builder that runs
+`ArrangeCoreAsync` before sending its request. Existing fluent authentication and response
+assertions remain available. `ArrangeAsync(token)` freezes configuration and applies setup
+immediately without requiring an HTTP request, so subsequent operations can share the same state:
+
+<!-- snippet: tests/TestApi.IntegrationTests/ScenarioPrimitiveTests.cs#docs-domain-scenario-workflow -->
+```csharp
+[Fact]
+public Task Arranged_domain_state_supports_multiple_requests_in_one_scope() =>
+    RunAsync(async (scope, cancellationToken) =>
+    {
+        var products = new ProductScenario(Factory, scope)
+            .WithExistingProduct(861, "Desk lamp", 34.95m);
+        await products.ArrangeAsync(cancellationToken);
+
+        using var client = scope.CreateAuthenticatedClient();
+        using var first = await client.GetAsync(ProductScenario.ResourceUri(861), cancellationToken);
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+
+        using var deleted = await client.DeleteAsync(ProductScenario.ResourceUri(861), cancellationToken);
+        Assert.Equal(HttpStatusCode.NoContent, deleted.StatusCode);
+
+        using var missing = await client.GetAsync(ProductScenario.ResourceUri(861), cancellationToken);
+        Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
+    });
+```
+<!-- end-snippet -->
+
+A domain scenario can be arranged only once. Calling either arrangement method prevents subsequent
+arrangement and guarded configuration changes, including after cancellation or failure. Calling
+`Arrange()` consumes the scenario even when its builder is never executed. The base checks
+cancellation before domain setup and passes the token to `ArrangeCoreAsync`; derived implementations
+must pass it to their asynchronous operations. Instances are mutable and must not be used concurrently.
+
+The caller owns the scope and must keep it alive for setup and all subsequent operations. A domain
+scenario never disposes the scope. Run the workflow through `RunInTestScenarioScopeAsync` or
+`ScopedTest.RunAsync` to capture failures before cleanup. Arrangement called directly on a manually
+owned scope follows that scope's existing diagnostics behavior.
+
+## Scoped test classes
+
+`ScopedTest<TEntryPoint, TFactory>` is an optional, test-framework-independent base. It exposes the
+borrowed concrete `Factory` and provides protected `RunAsync` overloads for callbacks with and
+without a returned value, with scope overrides available through separate overloads. Each call
+delegates to the existing factory runner and owns a fresh scope for the complete callback lifetime.
+
+Supply the test framework's cancellation token to the base constructor. Without a token, runs are
+non-cancelable. Framework fixture registration remains in the test project; the base does not own
+or dispose the shared factory. This xUnit example replaces a repeated factory field and runner:
+
+<!-- snippet: tests/TestApi.IntegrationTests/ProductScenarioExamples.cs#docs-scoped-test-base -->
+```csharp
+public sealed class ProductScenarioExamples : ScopedTest<Program, TestApiFactory>, IClassFixture<TestApiFactory>
+{
+    public ProductScenarioExamples(TestApiFactory factory)
+        : base(factory, TestContext.Current.CancellationToken)
+    {
+    }
+
+    [Fact]
+    public Task Domain_scenario_can_arrange_an_existing_product() =>
+        RunAsync(async (scope, cancellationToken) =>
+        {
+            var products = new ProductScenario(Factory, scope)
+                .WithExistingProduct(841, "Desk lamp", 34.95m);
+
+            using var result = await products.Arrange()
+                .AsUser(user => user.WithName("Product reader"))
+                .Get(ProductScenario.ResourceUri(841))
+                .ExecuteAsync(cancellationToken);
+
+            await result.Should()
+                .HaveStatusCode(HttpStatusCode.OK)
+                .HaveJsonBodyAsync(
+                    new ProductResponse(841, "Desk lamp", 34.95m),
+                    cancellationToken: cancellationToken);
+        });
+
+    [Fact]
+    public Task Domain_scenario_can_compose_multiple_arrangements() =>
+        RunAsync(async (scope, cancellationToken) =>
+        {
+            var products = new ProductScenario(Factory, scope)
+                .WithExistingProduct(852, "Mouse", 45m)
+                .WithExistingProduct(851, "Keyboard", 120m);
+
+            using var result = await products.Arrange()
+                .AsUser(user => user.WithName("Catalog reader"))
+                .Get(ProductScenario.CollectionUri)
+                .ExecuteAsync(cancellationToken);
+
+            await result.Should()
+                .HaveStatusCode(HttpStatusCode.OK)
+                .HaveJsonBodyAsync(
+                    new[]
+                    {
+                        new ProductResponse(851, "Keyboard", 120m),
+                        new ProductResponse(852, "Mouse", 45m)
+                    },
+                    cancellationToken: cancellationToken);
+        });
+
+    private sealed record ProductResponse(int Id, string Name, decimal Price);
+}
+```
+<!-- end-snippet -->
+
+`RunAsync` preserves the factory's serialization gate, failure diagnostics, and cleanup behavior.
+The result-returning overload finishes cleanup before returning its value. Return detached data
+such as records or identifiers; scopes, services, and environment resources cannot outlive the
+callback. The base stores no active scope between runs. A test scope owns an application host and
+test resources, and is broader than a DI service scope.
+
+See the API reference for <xref:XBullet.EasyTesting.Hosting.Scenario`1> and
+<xref:XBullet.EasyTesting.Hosting.ScopedTest`2>.
+
 ## What a scope isolates
 
 Scenario-specific callbacks can replace configuration and services without changing the shared

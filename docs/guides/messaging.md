@@ -122,19 +122,112 @@ Only the application adapter changes; assertions remain transport-neutral.
 
 ## Counts, filtering, payloads, and order
 
-- `Count` and `HaveCount` assert total publication count.
+- `Count` reads the total publication count; `HaveCount(expected)` asserts it.
+- `HaveCount(transport, destination, expected)` asserts the count for one route.
 - `For(transport, destination)` filters recorded messages.
 - `ContainSingle(transport, destination)` selects exactly one matching message.
+- `Contain(predicate)` requires at least one match; `ContainSingle(predicate)` requires exactly one.
+- `NotContain(transport, destination)` and `NotContain(predicate)` assert absence in the current snapshot.
 - `HaveHeader(name)` and `HaveHeader(name, value)` verify metadata.
-- `HavePayload<T>()` deserializes a payload; `HavePayload(expected)` compares serialized structure.
-- `Messages` preserves publication order. Use indexed or sequence assertions when order is part of
-  the contract; otherwise filter by transport and destination to avoid brittle tests.
+- `RecordedMessage.GetPayload<T>()` deserializes a payload; `HavePayload(expected)` compares serialized structure.
+- `HavePayloadMatching<T>(predicate, options)` verifies a partial typed payload expectation.
+- `HaveSequence(...)` verifies exact collection count and ordered positional predicates, globally
+  or for one route.
+
+Transport names are matched without regard to case; destinations use ordinal, case-sensitive
+comparison. Every collection assertion reads a fresh, stable snapshot, so a chain can observe
+later publications between checks. Failure counts and summaries come from the same snapshot.
+Predicates run outside the recorder lock and should be read-only. Predicate and deserialization
+exceptions propagate unchanged.
+
+Select messages by route, headers, or payload properties and apply partial typed expectations:
+
+<!-- snippet: tests/XBullet.EasyTesting.Tests/RecordedMessageCollectionAssertionTests.cs#docs-message-collection-assertions -->
+```csharp
+[Fact]
+public void Collection_assertions_verify_routes_predicates_and_partial_payloads()
+{
+    var recorder = new RecordedMessageBus();
+    recorder.Record(MessageTransportNames.Kafka, "orders", new OrderMessage(42, OrderState.Created));
+    recorder.Record(MessageTransportNames.Kafka, "orders", new OrderMessage(42, OrderState.Shipped));
+    recorder.Record(MessageTransportNames.AzureServiceBus, "audit", new OrderMessage(42, OrderState.Created));
+
+    recorder.Should()
+        .HaveCount(3)
+        .HaveCount(MessageTransportNames.Kafka, "orders", 2)
+        .NotContain(MessageTransportNames.Kafka, "dead-letter")
+        .NotContain(message => message.GetPayload<OrderMessage>()?.OrderId == 99)
+        .Contain(message => message.Destination == "audit");
+
+    recorder.Should()
+        .ContainSingle(message => message.Destination == "orders" &&
+            message.GetPayload<OrderMessage>()?.State == OrderState.Shipped)
+        .HavePayloadMatching<OrderMessage>(payload => payload?.OrderId == 42);
+}
+```
+<!-- end-snippet -->
+
+`HavePayloadMatching<T>` deserializes using the recorder's serializer options unless explicit
+options are supplied. JSON null is passed to the predicate as null for nullable target types.
+The captured `MessageType` does not restrict the target type, so projections are supported.
+Collection predicates calling `GetPayload<T>()` use its web defaults unless options are passed
+explicitly; use the typed payload assertion when recorder-specific conventions matter.
+
+## Assert an exact sequence
+
+Sequence checks first require the exact message count, then invoke one predicate per position,
+stopping at the first mismatch. Global sequences include all routes. Route sequences ignore other
+routes while preserving the selected messages' order. An empty sequence requires an empty selected
+collection. Extra or missing messages fail the count check, including additional duplicate
+publications. Order mismatches identify the first failing position, starting at one, and include
+recorded payloads.
+
+<!-- snippet: tests/XBullet.EasyTesting.Tests/RecordedMessageCollectionAssertionTests.cs#docs-message-sequences -->
+```csharp
+[Fact]
+public void Sequence_assertions_verify_exact_global_and_route_order()
+{
+    var recorder = new RecordedMessageBus();
+    recorder.Record(MessageTransportNames.Kafka, "orders", new OrderMessage(42, OrderState.Created));
+    recorder.Record(MessageTransportNames.AzureServiceBus, "audit", new OrderMessage(42, OrderState.Created));
+    recorder.Record(MessageTransportNames.Kafka, "orders", new OrderMessage(42, OrderState.Shipped));
+
+    recorder.Should().HaveSequence(
+        message => message.Destination == "orders" &&
+            message.GetPayload<OrderMessage>()?.State == OrderState.Created,
+        message => message.Transport == MessageTransportNames.AzureServiceBus && message.Destination == "audit",
+        message => message.Destination == "orders" &&
+            message.GetPayload<OrderMessage>()?.State == OrderState.Shipped);
+
+    // The audit message is ignored when checking only the Kafka orders route.
+    recorder.Should().HaveSequence(MessageTransportNames.Kafka, "orders",
+        message => message.GetPayload<OrderMessage>()?.State == OrderState.Created,
+        message => message.GetPayload<OrderMessage>()?.State == OrderState.Shipped);
+}
+```
+<!-- end-snippet -->
+
+These examples use an `OrderMessage` record with `OrderId` and `State`, and an `OrderState` enum with
+`Created` and `Shipped` values. See the
+[compiled examples](../../tests/XBullet.EasyTesting.Tests/RecordedMessageCollectionAssertionTests.cs).
+
+`Messages` and sequences preserve recorder append order. Concurrent publications are ordered by
+completed recording, rather than call start; this does not prove broker delivery order. Assert
+order only when it is part of the application's contract.
 
 Avoid asserting incidental broker headers generated below the application boundary. Use a broker
 or container integration test when SDK serialization, partition assignment, settlement, delivery,
 or broker configuration is the behavior under test.
 
 ## Negative behavior and diagnostics
+
+Scenario diagnostics capture the message count and message list from the same point-in-time
+snapshot. They remain consistent during concurrent publication or reset, and later recorder changes
+do not alter the captured snapshot.
+
+Negative assertions check the current snapshot only. Wait for a known completion signal before
+using `NotContain` against background work. A passing `Eventually.AssertAsync` around an absence
+check can complete before a later publication; it does not prove absence over a time window.
 
 A rejected request should normally publish nothing:
 
@@ -151,12 +244,15 @@ public Task Invalid_request_does_not_publish_a_message() =>
             cancellationToken);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Equal(0, _factory.PublishedMessages.Count);
+        _factory.PublishedMessages.Should()
+            .HaveCount(0)
+            .NotContain(MessageTransportNames.Kafka, "orders.created");
     });
 ```
 <!-- end-snippet -->
 
-Assertion exceptions report expected and actual counts and include recorded message summaries.
+Assertion exceptions report expected and actual counts and include indexed message summaries with
+transport, destination, type, and payload. Sequence failures report the first mismatched position.
 Header failures name the missing or different header; payload failures include expected and actual
 JSON:
 
@@ -195,3 +291,8 @@ in message payloads or headers. See the canonical
 missing-message, ambiguous-message, and custom-serializer cases.
 
 Browse the [messaging API reference](../api/packages/xbullet-easytesting-messaging.md).
+
+For publishers running in the background, use
+[eventual assertions](eventual-assertions.md#wait-for-a-published-message) to wait for recorded
+messages with timeout diagnostics and caller cancellation. Wait for known completion before
+asserting that no message was published.

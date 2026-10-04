@@ -83,6 +83,21 @@ request carrying the XBullet test-identity header uses the simulated scheme; oth
 application's original default. Hybrid behavior is opt-in so a simulated header cannot silently
 change production-handler tests.
 
+With ASP.NET Core Identity API endpoints, enable hybrid authentication only in the test factory.
+Send an access token returned by `/login?useCookies=false` with `WithBearerToken(token)`, or choose
+`AsUser(...)` for a simulated identity. Both modes can exercise the same ordinary `[Authorize]`
+endpoint without changing its production policies. Identity access tokens use the real Identity
+bearer handler; they do not require `UseEndToEndJwt`.
+
+If both a bearer token and a simulated header are present, the simulated header selects the
+authentication mode. An invalid simulated payload fails authentication without falling back to the
+bearer token. Challenges and forbidden responses retain the application's original schemes.
+
+Hybrid selection applies to default authentication. An endpoint or policy that explicitly names
+`Identity.Bearer` continues to require that scheme and does not accept a simulated identity through
+the hybrid default. Executable Identity login, routing, and authorization coverage lives in
+[`IdentityHybridAuthenticationTests`](../../tests/TestApi.IntegrationTests/IdentityHybridAuthenticationTests.cs).
+
 ## Use multiple identities
 
 `WithIdentity` adds another identity to the principal. `MapFederation` and `AsFederatedUser` build a

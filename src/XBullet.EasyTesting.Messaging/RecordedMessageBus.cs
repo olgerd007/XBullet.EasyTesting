@@ -221,16 +221,17 @@ public sealed class RecordedMessageBus : ITestScenarioResource
     /// </param>
     /// <returns>
     /// An already-completed value task containing a newly allocated serializable object with the
-    /// current count and a message-array snapshot. Headers and JSON payloads are included without
-    /// automatic redaction.
+    /// count and message-array copy from the same point-in-time snapshot. Later records and resets
+    /// do not change this snapshot. Headers and JSON payloads are included without automatic redaction.
     /// </returns>
     public ValueTask<object?> CaptureDiagnosticsAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        var messages = Messages;
         return ValueTask.FromResult<object?>(new
         {
-            Count,
-            Messages
+            Count = messages.Count,
+            Messages = messages
         });
     }
 

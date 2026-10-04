@@ -36,6 +36,23 @@ The fluent host also supports configuration overrides, authentication profiles, 
 isolation, and arrange-and-request workflows. Scenario results provide test-framework-agnostic
 status, header, success, and generic structural JSON body assertions through `result.Should()`.
 
+The host environment defaults to `Testing`. Chain `.UseEnvironment("Development")` before
+`.Build()` to test a different environment. The selection applies during application startup and
+is inherited by scenario hosts.
+
+Derive domain helpers from `Scenario<TEntryPoint>` to share arrangement guards and scope access.
+Use `Arrange()` to prepare one fluent request, or `ArrangeAsync()` to apply setup before multiple
+operations in the same scope. `ScopedTest<TEntryPoint, TFactory>` provides a borrowed `Factory` and
+protected `RunAsync` helpers with automatic isolation, failure diagnostics, and cleanup, without a
+test-framework dependency. Pass the framework's test cancellation token to its constructor and
+keep fixture registration and factory ownership in the test project.
+
+Import `XBullet.EasyTesting` and use `Eventually.AssertAsync` to retry assertions against background
+work, or `Eventually.WaitUntilAsync` to poll a synchronous or asynchronous condition. Both support
+caller cancellation and configurable cooperative deadlines, sequential polling, and `TimeProvider`.
+Timeouts retain the last assertion failure and report elapsed time and attempt count. Callbacks
+must complete promptly or observe the supplied cancellation token.
+
 For an existing `IntegrationTestStartup` pipeline, derive from
 `StartupAuthenticatedWebApplicationFactory<IntegrationTestStartup>`. It creates a `TestServer`
 directly without invoking `Program.Main`, while retaining configuration and scenario overrides.
@@ -75,5 +92,6 @@ diagnostics, and are disposed after the scenario host.
 - [Authentication and scenarios guide](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/authentication-and-scenarios.md)
 - [Test hosts, lifecycle, and authentication concepts](https://github.com/olgerd007/XBullet.EasyTesting/tree/main/docs/concepts)
 - [Response assertions](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/response-assertions.md)
+- [Wait for background work](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/eventual-assertions.md)
 - [Documentation home and package selection](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/index.md)
 - [Executable integration-test examples](https://github.com/olgerd007/XBullet.EasyTesting/tree/main/tests/TestApi.IntegrationTests)

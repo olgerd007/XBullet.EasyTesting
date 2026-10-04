@@ -1,21 +1,24 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Middleware;
 using Microsoft.Extensions.DependencyInjection;
+using XBullet.EasyTesting.Hosting;
 
 namespace XBullet.EasyTesting.AzureFunctions;
 
 /// <summary>Provides function instances and fluent trigger data backed by one service provider.</summary>
-public sealed class AzureFunctionTestHost : IDisposable, IAsyncDisposable
+public sealed partial class AzureFunctionTestHost : IDisposable, IAsyncDisposable
 {
     private readonly ServiceProvider _services;
     private readonly IReadOnlyList<Func<IServiceProvider, IFunctionsWorkerMiddleware>> _middleware;
 
     internal AzureFunctionTestHost(
         ServiceProvider services,
-        IReadOnlyList<Func<IServiceProvider, IFunctionsWorkerMiddleware>> middleware)
+        IReadOnlyList<Func<IServiceProvider, IFunctionsWorkerMiddleware>> middleware,
+        IReadOnlyDictionary<string, ITestScenarioResource> resources)
     {
         _services = services;
         _middleware = middleware;
+        _resources = resources;
     }
 
     /// <summary>Starts a function test-host definition.</summary>
@@ -219,15 +222,41 @@ public sealed class AzureFunctionTestHost : IDisposable, IAsyncDisposable
         TestFunctionContext context,
         Func<IServiceProvider, Task<TResult>> invoke)
     {
-        await using var scope = _services.CreateAsyncScope();
+        var scope = _services.CreateAsyncScope();
         context.InstanceServices = scope.ServiceProvider;
+        Exception? failure = null;
         try
         {
+            context.CancellationToken.ThrowIfCancellationRequested();
             return await invoke(scope.ServiceProvider).ConfigureAwait(false);
+        }
+        catch (Exception exception)
+        {
+            failure = exception;
+            exception.Data[TestScenarioDiagnostics.ExceptionDataKey] = await CaptureDiagnosticsAsync(
+                _activeScenario?.ScenarioId ?? context.InvocationId, context).ConfigureAwait(false);
+            throw;
         }
         finally
         {
             context.InstanceServices = _services;
+            try
+            {
+                await scope.DisposeAsync().ConfigureAwait(false);
+            }
+            catch (Exception exception)
+            {
+                if (failure is not null)
+                {
+                    AddCleanupFailure(failure, exception);
+                }
+                else
+                {
+                    exception.Data[TestScenarioDiagnostics.ExceptionDataKey] = await CaptureDiagnosticsAsync(
+                        _activeScenario?.ScenarioId ?? context.InvocationId, context).ConfigureAwait(false);
+                    throw;
+                }
+            }
         }
     }
 
@@ -252,8 +281,18 @@ public sealed class AzureFunctionTestHost : IDisposable, IAsyncDisposable
             $"Expected {nameof(TestFunctionContext)}, but middleware supplied {context.GetType().FullName}.");
 
     /// <inheritdoc />
-    public void Dispose() => _services.Dispose();
+    public void Dispose()
+    {
+        EnsureNoActiveScenario();
+        _disposed = true;
+        _services.Dispose();
+    }
 
     /// <inheritdoc />
-    public ValueTask DisposeAsync() => _services.DisposeAsync();
+    public ValueTask DisposeAsync()
+    {
+        EnsureNoActiveScenario();
+        _disposed = true;
+        return _services.DisposeAsync();
+    }
 }

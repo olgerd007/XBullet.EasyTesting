@@ -41,6 +41,37 @@ public sealed class PublishingControllerTests : IClassFixture<TestApiFactory>
     #endregion
 
     [Fact]
+    public Task Collection_assertions_verify_multiple_controller_publications() =>
+        Run(async (scope, cancellationToken) =>
+        {
+            using var client = CreateAuthenticatedClient(scope);
+            foreach (var orderId in new[] { 42, 43 })
+            {
+                using var response = await client.PostAsJsonAsync(
+                    "/api/publishing/kafka/orders",
+                    new { OrderId = orderId, CustomerId = "customer-7", Total = 125.50m },
+                    cancellationToken);
+                Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+            }
+
+            using var invoiceResponse = await client.PostAsJsonAsync(
+                "/api/publishing/service-bus/invoices",
+                new { InvoiceId = 84, AccountId = "account-3" },
+                cancellationToken);
+            Assert.Equal(HttpStatusCode.Accepted, invoiceResponse.StatusCode);
+
+            _factory.PublishedMessages.Should()
+                .HaveCount(3)
+                .HaveCount(MessageTransportNames.Kafka, "orders.created", 2)
+                .NotContain(MessageTransportNames.Kafka, "orders.failed")
+                .HaveSequence(MessageTransportNames.Kafka, "orders.created",
+                    message => message.GetPayload<OrderCreatedMessage>()?.OrderId == 42,
+                    message => message.GetPayload<OrderCreatedMessage>()?.OrderId == 43)
+                .ContainSingle(message => message.Headers.TryGetValue("session-id", out var session) && session == "account-3")
+                .HavePayloadMatching<InvoiceRequestedMessage>(payload => payload?.InvoiceId == 84);
+        });
+
+    [Fact]
     public Task Controller_publishes_invoice_to_service_bus_queue() =>
         Run(async (scope, cancellationToken) =>
         {
@@ -110,7 +141,9 @@ public sealed class PublishingControllerTests : IClassFixture<TestApiFactory>
                 cancellationToken);
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-            Assert.Equal(0, _factory.PublishedMessages.Count);
+            _factory.PublishedMessages.Should()
+                .HaveCount(0)
+                .NotContain(MessageTransportNames.Kafka, "orders.created");
         });
 
     #endregion

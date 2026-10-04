@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using XBullet.EasyTesting.Authentication;
@@ -68,6 +69,21 @@ public sealed class EasyTestHostBuilder<TEntryPoint>
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         ArgumentNullException.ThrowIfNull(value);
         return ConfigureHostSettings(settings => settings[key] = value);
+    }
+
+    /// <summary>Sets the host environment before application startup. The default is Testing.</summary>
+    /// <param name="environmentName">The non-empty environment name, such as Development or Production.</param>
+    /// <returns>This builder so additional host behavior can be configured.</returns>
+    /// <remarks>
+    /// The environment applies to the factory and its scenario hosts. Repeated calls and other
+    /// host-setting callbacks run in registration order; the last environment setting wins.
+    /// </remarks>
+    /// <exception cref="ArgumentException">The environment name is null, empty, or whitespace.</exception>
+    /// <exception cref="InvalidOperationException">This builder has already been built.</exception>
+    public EasyTestHostBuilder<TEntryPoint> UseEnvironment(string environmentName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(environmentName);
+        return UseSetting(WebHostDefaults.EnvironmentKey, environmentName);
     }
 
     /// <summary>Adds a test-service configuration action and returns this builder.</summary>

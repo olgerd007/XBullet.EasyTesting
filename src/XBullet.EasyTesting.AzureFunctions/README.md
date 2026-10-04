@@ -32,6 +32,18 @@ var response = await function.RunAsync(request, request.FunctionContext);
 Builders are available for HTTP, timer, Kafka, Service Bus, Queue Storage, Blob, Event Grid, and
 Event Hubs triggers.
 
+Use `UseScenarioResource(name, resource)` to register borrowed state implementing the shared
+`ITestScenarioResource` contract, then `RunInTestScenarioScopeAsync` to reset it before and after
+setup, multiple invocations, and assertions. Scenarios on one host are serialized, and every
+invocation still owns a fresh DI scope. `FunctionScenario` and `FunctionScopedTest` provide guarded
+domain setup and a test runner without an ASP.NET factory. The package references
+`XBullet.EasyTesting` for shared scenario resource, cleanup, and diagnostic contracts.
+
+Invocation and scenario failures attach `TestScenarioDiagnostics` before cleanup. Original
+exceptions and cancellation tokens are preserved when cleanup fails; aggregated cleanup errors
+are attached in `exception.Data`. Registered resources remain caller-owned. Host singleton services
+persist between scenarios unless they participate in the registered reset lifecycle.
+
 Durable orchestrators can use `TestOrchestrationContext` to record activity scheduling and dispatch
 each call to a real activity instance:
 

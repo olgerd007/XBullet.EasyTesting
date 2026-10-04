@@ -29,6 +29,8 @@ items:
     href: guides/service-and-configuration-overrides.md
   - name: Response assertions
     href: guides/response-assertions.md
+  - name: Wait for background work
+    href: guides/eventual-assertions.md
   - name: Outbound HTTP
     href: guides/outbound-http.md
   - name: Entity Framework Core

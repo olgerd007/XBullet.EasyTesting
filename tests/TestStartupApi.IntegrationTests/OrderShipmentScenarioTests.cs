@@ -9,20 +9,18 @@ using Xunit;
 
 namespace TestStartupApi.IntegrationTests;
 
-public sealed class OrderShipmentScenarioTests : IClassFixture<StartupApiFactory>
+public sealed class OrderShipmentScenarioTests : ScopedTest<Startup, StartupApiFactory>, IClassFixture<StartupApiFactory>
 {
-    private readonly StartupApiFactory _factory;
-
     public OrderShipmentScenarioTests(StartupApiFactory factory)
+        : base(factory, TestContext.Current.CancellationToken)
     {
-        _factory = factory;
     }
 
     [Fact]
     public Task Create_shipment_scenario_persists_details_and_calls_post_provider() =>
-        Run(async (scope, cancellationToken) =>
+        RunAsync(async (scope, cancellationToken) =>
         {
-            var orders = new OrderScenario(_factory, scope)
+            var orders = new OrderScenario(Factory, scope)
                 .WithStoredOrder(
                     61,
                     "ext-61",
@@ -71,7 +69,7 @@ public sealed class OrderShipmentScenarioTests : IClassFixture<StartupApiFactory
                 });
 
             orders.VerifyPostProviderCalled("ext-61");
-            var providerRequest = Assert.IsType<PostShipmentRequest>(_factory.PostProvider.Calls
+            var providerRequest = Assert.IsType<PostShipmentRequest>(Factory.PostProvider.Calls
                 .Single(call => call.Operation == PostProviderOperation.CreateShipment)
                 .Request);
             Assert.Equal("Kyiv, Ukraine", providerRequest.Destination);
@@ -80,9 +78,9 @@ public sealed class OrderShipmentScenarioTests : IClassFixture<StartupApiFactory
 
     [Fact]
     public Task Shipment_exceeding_order_quantity_does_not_call_post_provider() =>
-        Run(async (scope, cancellationToken) =>
+        RunAsync(async (scope, cancellationToken) =>
         {
-            var orders = new OrderScenario(_factory, scope)
+            var orders = new OrderScenario(Factory, scope)
                 .WithStoredOrder(
                     62,
                     "ext-62",
@@ -99,10 +97,4 @@ public sealed class OrderShipmentScenarioTests : IClassFixture<StartupApiFactory
             Assert.Equal(HttpStatusCode.Conflict, result.Response.StatusCode);
             orders.VerifyPostProviderCalled("ext-62", expectedCount: 0);
         });
-
-    private Task Run(
-        Func<TestScenarioScope<Startup>, CancellationToken, Task> test) =>
-        _factory.RunInTestScenarioScopeAsync(
-            test,
-            cancellationToken: TestContext.Current.CancellationToken);
 }

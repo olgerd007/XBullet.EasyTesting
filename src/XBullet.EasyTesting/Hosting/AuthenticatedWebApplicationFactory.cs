@@ -143,12 +143,11 @@ public class AuthenticatedWebApplicationFactory<TEntryPoint> : WebApplicationFac
         var hostSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         ConfigureTestHostSettings(hostSettings);
         _configureHostSettings?.Invoke(hostSettings);
+        builder.UseEnvironment("Testing");
         foreach (var setting in hostSettings)
         {
             builder.UseSetting(setting.Key, setting.Value);
         }
-
-        builder.UseEnvironment("Testing");
 
         builder.ConfigureAppConfiguration((_, configuration) =>
         {

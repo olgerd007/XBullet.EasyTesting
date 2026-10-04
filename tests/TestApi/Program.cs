@@ -11,6 +11,9 @@ using TestApi.External;
 using TestApi.Messaging;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddSingleton(new StartupEnvironment(
+    builder.Environment.EnvironmentName,
+    builder.Environment.IsDevelopment()));
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -111,3 +114,5 @@ app.MapControllers();
 app.Run();
 
 public partial class Program;
+
+public sealed record StartupEnvironment(string Name, bool IsDevelopment);
