@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("XBullet.EasyTesting.Azure")]
+[assembly: InternalsVisibleTo("XBullet.EasyTesting.AzureFunctions")]
 [assembly: InternalsVisibleTo("XBullet.EasyTesting.Http")]
 [assembly: InternalsVisibleTo("TestApi.IntegrationTests")]

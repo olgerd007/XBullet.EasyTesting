@@ -5,20 +5,19 @@ using Xunit;
 
 namespace TestApi.IntegrationTests;
 
-public sealed class ProductScenarioExamples : IClassFixture<TestApiFactory>
+#region docs-scoped-test-base
+public sealed class ProductScenarioExamples : ScopedTest<Program, TestApiFactory>, IClassFixture<TestApiFactory>
 {
-    private readonly TestApiFactory _factory;
-
     public ProductScenarioExamples(TestApiFactory factory)
+        : base(factory, TestContext.Current.CancellationToken)
     {
-        _factory = factory;
     }
 
     [Fact]
     public Task Domain_scenario_can_arrange_an_existing_product() =>
-        Run(async (scope, cancellationToken) =>
+        RunAsync(async (scope, cancellationToken) =>
         {
-            var products = new ProductScenario(_factory, scope)
+            var products = new ProductScenario(Factory, scope)
                 .WithExistingProduct(841, "Desk lamp", 34.95m);
 
             using var result = await products.Arrange()
@@ -35,9 +34,9 @@ public sealed class ProductScenarioExamples : IClassFixture<TestApiFactory>
 
     [Fact]
     public Task Domain_scenario_can_compose_multiple_arrangements() =>
-        Run(async (scope, cancellationToken) =>
+        RunAsync(async (scope, cancellationToken) =>
         {
-            var products = new ProductScenario(_factory, scope)
+            var products = new ProductScenario(Factory, scope)
                 .WithExistingProduct(852, "Mouse", 45m)
                 .WithExistingProduct(851, "Keyboard", 120m);
 
@@ -57,10 +56,6 @@ public sealed class ProductScenarioExamples : IClassFixture<TestApiFactory>
                     cancellationToken: cancellationToken);
         });
 
-    private Task Run(Func<TestScenarioScope<Program>, CancellationToken, Task> test) =>
-        _factory.RunInTestScenarioScopeAsync(
-            test,
-            cancellationToken: TestContext.Current.CancellationToken);
-
     private sealed record ProductResponse(int Id, string Name, decimal Price);
 }
+#endregion

@@ -251,6 +251,118 @@ public async Task Invocation_scope_is_disposed_when_function_throws()
 Do not retain `context.InstanceServices` after invocation; the invocation provider has been disposed
 and the context is restored to the host provider.
 
+## Scenario resources and domain helpers
+
+Use `RunInTestScenarioScopeAsync` to wrap setup, multiple invocations, and assertions in one isolated
+resource lifecycle. `CreateTestScenarioScopeAsync` exposes the same lifecycle for manual ownership;
+dispose its result asynchronously before disposing the host. Invocations inside a scenario still
+create separate DI scopes, while registered singleton recorders or stubs retain state until the
+scenario finishes.
+
+Register mutable state with `UseScenarioResource(name, resource)`. It accepts the shared
+`XBullet.EasyTesting.Hosting.ITestScenarioResource` contract. The Functions package references
+`XBullet.EasyTesting` for these resource, cleanup, and diagnostic contracts. Register the resource
+separately in DI when function constructors need it. Names are case-insensitively unique;
+`$Invocation` is reserved for invocation metadata. Registered resources remain caller-owned and
+are reset before and after each scenario, rather than disposed by it.
+
+`FunctionScenario` provides borrowed scope access, guarded configuration through
+`EnsureNotArranged`, and single-use `ArrangeAsync` with an `ArrangeCoreAsync` callback. Failure or
+cancellation consumes the domain helper. `FunctionScopedTest` provides a borrowed `Host`, the test
+cancellation token, and protected `RunAsync` overloads for callbacks with or without a result.
+These counterparts require no ASP.NET entry point or web application factory.
+
+<!-- snippet: tests/TestFunctions.IntegrationTests/FunctionScenarioTests.cs#docs-functions-scenario-resources -->
+```csharp
+[Fact]
+public async Task Scenario_resources_span_invocations_and_reset_between_tests()
+{
+    var resource = new RecordingResource { Value = "stale" };
+    await using var host = AzureFunctionTestHost.CreateBuilder()
+        .AddFunction<RecordingFunction>()
+        .ConfigureServices(services =>
+        {
+            services.AddSingleton(resource);
+            services.AddScoped<InvocationDependency>();
+        })
+        .UseScenarioResource("Published state", resource)
+        .Build();
+
+    var scopedTest = new ExampleScopedTest(host, TestContext.Current.CancellationToken);
+    await scopedTest.Run(async (scope, token) =>
+    {
+        Assert.Null(resource.Value);
+        Assert.Same(resource, scope.GetResource<RecordingResource>("published STATE"));
+        var scenario = new RecordingScenario(scope, "Published state").WithValue("arranged");
+        await scenario.ArrangeAsync(token);
+
+        var first = await scope.Host.InvokeAsync<RecordingFunction, string>(
+            scope.Host.CreateContext("First", token), (function, _) => function.RunAsync());
+        var second = await scope.Host.InvokeAsync<RecordingFunction, string>(
+            scope.Host.CreateContext("Second", token), (function, _) => function.RunAsync());
+
+        Assert.Equal("arranged", first.Result);
+        Assert.Equal("arranged", second.Result);
+        Assert.Equal(2, resource.Invocations.Count);
+        Assert.NotSame(resource.Invocations[0], resource.Invocations[1]);
+        Assert.All(resource.Invocations, dependency => Assert.True(dependency.Disposed));
+    });
+
+    Assert.Null(resource.Value);
+    Assert.Empty(resource.Invocations);
+    Assert.Equal(2, resource.ResetTokens.Count);
+    await scopedTest.Run((scope, _) =>
+    {
+        Assert.Null(scope.GetResource<RecordingResource>("Published state").Value);
+        return Task.CompletedTask;
+    });
+}
+```
+<!-- end-snippet -->
+
+In this compiled example, `ExampleScopedTest` exposes the protected runner, and `RecordingScenario`
+sets the borrowed resource's arranged value. The complete helpers and resource implementation are in
+[`FunctionScenarioTests`](../../tests/TestFunctions.IntegrationTests/FunctionScenarioTests.cs).
+
+Use `scope.Context.OnCleanup`, `DisposeWithScenario(IDisposable)`, or
+`DisposeWithScenario(IAsyncDisposable)` to transfer ownership of temporary scenario objects.
+Cleanup runs in reverse registration order, continues after individual failures, and then resets
+every registered resource. Repeated scope disposal has no effect.
+
+Scenarios on one host run sequentially through a gate, including resource resets and cleanup.
+Cancellation while waiting does not release another scenario's gate. Initialization failures also
+perform cleanup and release the gate. Nested scenarios on the same host are unsupported.
+
+The host service provider is built once. Scenarios isolate registered resource state and owned
+cleanup; they do not recreate singleton services or apply per-scenario DI overrides. Direct
+`InvokeAsync` calls retain their existing invocation-only lifecycle and do not reset resources.
+Avoid mixing direct invocations from another test with an active resource scenario. Use separate
+hosts when tests need independent singleton state or concurrent scenarios.
+
+## Failure diagnostics
+
+Function, middleware, and invocation-disposal failures receive the shared `TestScenarioDiagnostics`
+object in `exception.Data[TestScenarioDiagnostics.ExceptionDataKey]`. Invocation diagnostics use
+the active scenario ID, or the invocation ID for a direct call. The reserved `$Invocation` entry
+contains the invocation ID, function name, and captured input/output binding names. Binding values
+remain available through the caller-owned context; the metadata snapshot does not traverse service
+providers, HTTP streams, or other binding object graphs.
+
+The scenario runner also captures failures thrown by arrangement or assertions outside invocation.
+Resources are captured before reset and disposal; a failing diagnostic callback is represented as
+a `CaptureFailure` value without preventing other captures or cleanup. Resources should return
+detached, serializable snapshots containing safe test data.
+
+Original failure and cancellation exceptions retain their identity and cancellation token when
+cleanup also fails. Invocation disposal and scenario cleanup errors are aggregated in the original
+exception's `Data` under `XBullet.EasyTesting.TestScenarioCleanupException`. Cleanup and automatic
+diagnostic capture use non-cancelable tokens. Cleanup failures after an otherwise successful test
+are thrown as exceptions; scenario cleanup failures are aggregated. The gate is released even when
+cleanup fails.
+
+No automatic reset or diagnostic capture runs when test code resolves a function and calls its
+method directly. Invoke through the host and use the scenario runner for this lifecycle.
+
 ## Troubleshooting
 
 - **Function cannot be resolved:** add it with `AddFunction<TFunction>()` and register every

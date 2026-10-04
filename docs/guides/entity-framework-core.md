@@ -232,6 +232,7 @@ fails. Diagnostics are captured before cleanup so the provider state is still av
 
 ## Related documentation
 
+- [Wait for background database writes](eventual-assertions.md#wait-for-persisted-state)
 - [Scenarios and isolation](../concepts/scenarios-and-isolation.md)
 - [Resources and cleanup](../concepts/resources-and-cleanup.md)
 - [Testcontainers package guide](../../src/XBullet.EasyTesting.Testcontainers/README.md)

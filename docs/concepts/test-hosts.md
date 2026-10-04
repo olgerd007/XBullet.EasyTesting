@@ -104,6 +104,25 @@ Use `UseSetting` for values read during minimal-host startup, such as connection
 immediately after `WebApplication.CreateBuilder`. Later `ConfigureConfiguration` callbacks cannot
 change values that the application has already consumed.
 
+## Choose the host environment
+
+The factory defaults to `Testing`. Use `UseEnvironment` to exercise environment-dependent startup
+and middleware, including `Development`, `Production`, or a custom environment name:
+
+```csharp
+using var factory = EasyTestHost.Create<Program>()
+    .UseEnvironment("Development")
+    .Build();
+```
+
+The selected environment is available when `WebApplication.CreateBuilder` returns, so startup
+checks such as `builder.Environment.IsDevelopment()` and environment-specific configuration use
+that name. Scenario child hosts inherit it. Repeated calls follow host-setting registration order;
+the last environment setting wins. Null, empty, and whitespace names are rejected.
+
+`ConfigureEnvironment` configures external scenario resources; use `UseEnvironment` to select
+the ASP.NET Core host environment.
+
 ## Host a Startup application
 
 The Startup hosts create `TestServer` directly and do not invoke an application entry point. The

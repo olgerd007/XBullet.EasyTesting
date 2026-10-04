@@ -24,6 +24,78 @@ public sealed class RecordedMessageBusTests
         Assert.Empty(recorder.For(MessageTransportNames.Kafka, "orders.created"));
     }
 
+    [Fact]
+    public async Task Diagnostic_count_and_messages_remain_consistent_during_concurrent_record_and_reset()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var recorder = new RecordedMessageBus();
+        using var started = new ManualResetEventSlim();
+        using var stop = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var writer = Task.Factory.StartNew(() =>
+        {
+            var index = 0;
+            started.Set();
+            while (!stop.IsCancellationRequested)
+            {
+                recorder.Record(MessageTransportNames.Kafka, "orders.created", new Message(index++, "Created"));
+                recorder.Reset();
+            }
+        }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+
+        try
+        {
+            started.Wait(cancellationToken);
+            for (var index = 0; index < 50_000; index++)
+            {
+                var diagnostics = await recorder.CaptureDiagnosticsAsync(cancellationToken);
+                var snapshot = JsonSerializer.SerializeToElement(diagnostics);
+
+                Assert.Equal(
+                    snapshot.GetProperty("Messages").GetArrayLength(),
+                    snapshot.GetProperty("Count").GetInt32());
+            }
+        }
+        finally
+        {
+            stop.Cancel();
+            await writer;
+        }
+    }
+
+    [Fact]
+    public async Task Diagnostic_snapshot_survives_reset_and_subsequent_recording()
+    {
+        var recorder = new RecordedMessageBus();
+        recorder.Record(MessageTransportNames.Kafka, "orders.created", new Message(42, "Created"));
+        var diagnostics = await recorder.CaptureDiagnosticsAsync(TestContext.Current.CancellationToken);
+
+        recorder.Reset();
+        recorder.Record(MessageTransportNames.AzureServiceBus, "invoices", new Message(84, "Requested"));
+        var snapshot = JsonSerializer.SerializeToElement(diagnostics);
+
+        Assert.Equal(1, snapshot.GetProperty("Count").GetInt32());
+        var message = Assert.Single(snapshot.GetProperty("Messages").EnumerateArray());
+        Assert.Equal(MessageTransportNames.Kafka, message.GetProperty("Transport").GetString());
+        Assert.Equal("orders.created", message.GetProperty("Destination").GetString());
+        Assert.Equal(42, message.GetProperty("Payload").GetProperty("id").GetInt32());
+    }
+
+    [Fact]
+    public async Task Diagnostic_capture_observes_cancellation_without_changing_messages()
+    {
+        var recorder = new RecordedMessageBus();
+        recorder.Record(MessageTransportNames.Kafka, "orders.created", new Message(42, "Created"));
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        var exception = await Assert.ThrowsAsync<OperationCanceledException>(async () =>
+            await recorder.CaptureDiagnosticsAsync(cancellation.Token));
+
+        Assert.Equal(cancellation.Token, exception.CancellationToken);
+        Assert.Equal(1, recorder.Count);
+        Assert.Equal(new Message(42, "Created"), Assert.Single(recorder.Messages).GetPayload<Message>());
+    }
+
     #region docs-message-recording
 
     [Fact]

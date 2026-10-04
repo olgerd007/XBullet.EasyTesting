@@ -7,19 +7,18 @@ namespace TestApi.IntegrationTests.Scenarios;
 /// Example of a test-project-specific scenario that adds product-domain vocabulary
 /// without replacing the generic request scenario.
 /// </summary>
-internal sealed class ProductScenario
+#region docs-domain-scenario-base
+internal sealed class ProductScenario : Scenario<Program>
 {
     private readonly TestApiFactory _factory;
-    private readonly TestScenarioScope<Program> _scope;
     private readonly List<Product> _products = [];
-    private bool _arranged;
 
     public ProductScenario(
         TestApiFactory factory,
         TestScenarioScope<Program> scope)
+        : base(scope)
     {
         _factory = factory;
-        _scope = scope;
     }
 
     public const string CollectionUri = "/api/products";
@@ -41,24 +40,9 @@ internal sealed class ProductScenario
 
     public static string ResourceUri(int id) => $"{CollectionUri}/{id}";
 
-    public TestScenarioBuilder<Program> Arrange()
-    {
-        EnsureNotArranged();
-        _arranged = true;
-        var products = _products.ToArray();
-
-        return _scope.Scenario()
-            .Arrange(token => _factory.Database(_scope)
-                .Seed(products)
-                .ExecuteAsync(token));
-    }
-
-    private void EnsureNotArranged()
-    {
-        if (_arranged)
-        {
-            throw new InvalidOperationException(
-                "The product scenario has already been arranged.");
-        }
-    }
+    protected override Task ArrangeCoreAsync(CancellationToken cancellationToken) =>
+        _factory.Database(Scope)
+            .Seed(_products.ToArray())
+            .ExecuteAsync(cancellationToken);
 }
+#endregion

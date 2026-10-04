@@ -10,8 +10,12 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Core" Version="2.52.0" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http" Version="3.3.0" />
-    <PackageReference Include="Microsoft.DurableTask.Abstractions" Version="1.24.1" />
+    <PackageReference Include="Microsoft.DurableTask.Abstractions" Version="1.26.0" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Timer" Version="4.3.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\XBullet.EasyTesting\XBullet.EasyTesting.csproj" />
   </ItemGroup>
 
   <ItemGroup>

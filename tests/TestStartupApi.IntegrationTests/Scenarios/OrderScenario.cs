@@ -6,23 +6,21 @@ using XBullet.EasyTesting.Hosting;
 
 namespace TestStartupApi.IntegrationTests.Scenarios;
 
-internal sealed class OrderScenario
+internal sealed class OrderScenario : Scenario<Startup>
 {
     private readonly StartupApiFactory _factory;
-    private readonly TestScenarioScope<Startup> _scope;
     private readonly Dictionary<string, ExternalOrder?> _externalOrders =
         new(StringComparer.Ordinal);
     private readonly Dictionary<string, PostShipmentResult> _postShipments =
         new(StringComparer.Ordinal);
     private readonly List<ImportedOrder> _storedOrders = [];
-    private bool _arranged;
 
     public OrderScenario(
         StartupApiFactory factory,
         TestScenarioScope<Startup> scope)
+        : base(scope)
     {
         _factory = factory;
-        _scope = scope;
     }
 
     public OrderScenario WithExternalOrder(
@@ -92,43 +90,28 @@ internal sealed class OrderScenario
         return this;
     }
 
-    public TestScenarioBuilder<Startup> Arrange()
+    protected override Task ArrangeCoreAsync(CancellationToken cancellationToken)
     {
-        EnsureNotArranged();
-        _arranged = true;
-        var externalOrders = _externalOrders.ToArray();
-        var postShipments = _postShipments.ToArray();
-        var storedOrders = _storedOrders.ToArray();
+        foreach (var externalOrder in _externalOrders)
+        {
+            _factory.ExternalOrders.ReturnsGet(externalOrder.Key, externalOrder.Value);
+        }
 
-        return _scope.Scenario()
-            .Arrange(_ =>
-            {
-                foreach (var externalOrder in externalOrders)
-                {
-                    _factory.ExternalOrders.ReturnsGet(
-                        externalOrder.Key,
-                        externalOrder.Value);
-                }
+        foreach (var postShipment in _postShipments)
+        {
+            _factory.PostProvider.ReturnsCreateShipment(postShipment.Key, postShipment.Value);
+        }
 
-                foreach (var postShipment in postShipments)
-                {
-                    _factory.PostProvider.ReturnsCreateShipment(
-                        postShipment.Key,
-                        postShipment.Value);
-                }
-
-                return Task.CompletedTask;
-            })
-            .Arrange(token => _factory.Database(_scope)
-                .Seed(storedOrders)
-                .ExecuteAsync(token));
+        return _factory.Database(Scope)
+            .Seed(_storedOrders.ToArray())
+            .ExecuteAsync(cancellationToken);
     }
 
     public async Task<ImportedOrder> GetStoredOrderAsync(
         string externalId,
         CancellationToken cancellationToken) =>
         await _factory.QueryDatabaseAsync(
-            _scope,
+            Scope,
             (database, token) => database.Orders
                 .AsNoTracking()
                 .Include(order => order.Items)
@@ -137,7 +120,7 @@ internal sealed class OrderScenario
 
     public Task<int> GetStoredOrderCountAsync(CancellationToken cancellationToken) =>
         _factory.QueryDatabaseAsync(
-            _scope,
+            Scope,
             (database, token) => database.Orders.CountAsync(token),
             cancellationToken);
 
@@ -145,7 +128,7 @@ internal sealed class OrderScenario
         long orderId,
         CancellationToken cancellationToken) =>
         await _factory.QueryDatabaseAsync(
-            _scope,
+            Scope,
             (database, token) => database.OrderShipments
                 .AsNoTracking()
                 .Include(shipment => shipment.Details)
@@ -190,12 +173,4 @@ internal sealed class OrderScenario
     public static string ResourceUri(long id) => $"/api/orders/{id}";
 
     public static string ShipmentsUri(long orderId) => $"/api/orders/{orderId}/shipments";
-
-    private void EnsureNotArranged()
-    {
-        if (_arranged)
-        {
-            throw new InvalidOperationException("The order scenario has already been arranged.");
-        }
-    }
 }

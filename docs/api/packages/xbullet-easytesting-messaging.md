@@ -14,7 +14,10 @@ Transport-neutral message recording and assertions for destinations, headers, pa
 ## Primary APIs
 
 - <xref:XBullet.EasyTesting.Messaging.RecordedMessageBus> records published messages.
-- <xref:XBullet.EasyTesting.Messaging.RecordedMessageBusAssertions> verifies message collections.
+- <xref:XBullet.EasyTesting.Messaging.RecordedMessageBusAssertions> verifies total and route counts,
+  predicates, absence, and exact ordered sequences.
+- <xref:XBullet.EasyTesting.Messaging.RecordedMessageAssertions> verifies headers, structural payloads,
+  and typed payload predicates.
 - <xref:XBullet.EasyTesting.Messaging.RecordedMessage> represents one captured transport message.
 
 See the [messaging guide](../../guides/messaging.md).

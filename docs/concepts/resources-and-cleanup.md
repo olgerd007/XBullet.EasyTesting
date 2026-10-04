@@ -103,12 +103,27 @@ The scope, result, client, response, and external resource have separate ownersh
 
 ## Startup and cleanup failures
 
-If one environment resource fails during startup, the scope disposes that resource and every
-resource that started before it. The scenario gate is released so a later scope can start.
+If one environment resource fails or is canceled during startup, the scope disposes that resource
+and every resource that started before it, in reverse creation order. The original startup exception
+is preserved even if disposal also fails. The scenario gate is released so a later scope can start.
+The same preservation and recovery behavior applies when initialization fails after host creation.
 
-If a scenario fails, diagnostics are captured before cleanup. If cleanup also fails, inspect the
-original exception's diagnostic data and the terminal cleanup exception according to the package's
-documented behavior. Database and SQLite cleanup provide additional diagnostics described in the
+Scope disposal attempts factory cleanup, host disposal, context-owned cleanup, and shared-resource
+reset even if an earlier stage fails. Context-owned resources and custom `OnCleanup` callbacks run
+in reverse registration order; one failure does not prevent the remaining callbacks from running.
+Shared resources are all offered reset. Normal teardown uses a non-cancelable token so a canceled
+test token does not prevent cleanup. Repeated scope disposal does not repeat cleanup operations.
+
+If the test callback fails, diagnostics are captured before cleanup and attached under
+`TestScenarioDiagnostics.ExceptionDataKey`. If cleanup also fails, the original test exception is
+still thrown, with an `AggregateException` attached to its `Data` dictionary under
+`"XBullet.EasyTesting.TestScenarioCleanupException"`. This also preserves the original cancellation
+exception and its token when a callback is canceled. When the callback succeeds, or the scope is
+disposed directly, cleanup failures are thrown as an `AggregateException` instead.
+
+The executable [cleanup failure tests](../../tests/TestApi.IntegrationTests/TestScenarioCleanupTests.cs)
+verify aggregation, reverse disposal, cancellation, idempotence, and gate recovery. Database and
+SQLite cleanup provide additional diagnostics described in the
 [EF Core guide](../guides/entity-framework-core.md#cleanup-and-diagnostics).
 
 ## Related documentation

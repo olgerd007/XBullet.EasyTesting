@@ -3,6 +3,7 @@ using Azure.Core.Serialization;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Middleware;
 using Microsoft.Extensions.DependencyInjection;
+using XBullet.EasyTesting.Hosting;
 
 namespace XBullet.EasyTesting.AzureFunctions;
 
@@ -11,6 +12,7 @@ public sealed class AzureFunctionTestHostBuilder
 {
     private readonly IServiceCollection _services = new ServiceCollection();
     private readonly List<Func<IServiceProvider, IFunctionsWorkerMiddleware>> _middleware = [];
+    private readonly Dictionary<string, ITestScenarioResource> _resources = new(StringComparer.OrdinalIgnoreCase);
 
     internal AzureFunctionTestHostBuilder()
     {
@@ -70,11 +72,29 @@ public sealed class AzureFunctionTestHostBuilder
         return this;
     }
 
+    /// <summary>Registers borrowed mutable state for scenario reset and failure diagnostics.</summary>
+    /// <param name="name">A non-empty, case-insensitively unique name other than the reserved <c>$Invocation</c>.</param>
+    /// <param name="resource">The non-null resource. The caller owns and disposes it.</param>
+    /// <returns>This builder, for chaining.</returns>
+    /// <remarks>Resources are reset before and after explicit scenarios. Register them separately in DI if functions need them.</remarks>
+    public AzureFunctionTestHostBuilder UseScenarioResource(string name, ITestScenarioResource resource)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        ArgumentNullException.ThrowIfNull(resource);
+        if (string.Equals(name, "$Invocation", StringComparison.OrdinalIgnoreCase) || !_resources.TryAdd(name, resource))
+        {
+            throw new ArgumentException("The resource name is reserved or already registered.", nameof(name));
+        }
+
+        return this;
+    }
+
     /// <summary>Creates the configured function test host.</summary>
     /// <returns>
     /// A new host that owns its service provider and must be disposed. Registered singleton and
     /// scoped disposable services are released with the host or invocation scope respectively.
     /// </returns>
     public AzureFunctionTestHost Build() =>
-        new(_services.BuildServiceProvider(), _middleware);
+        new(_services.BuildServiceProvider(), _middleware.ToArray(),
+            new Dictionary<string, ITestScenarioResource>(_resources, StringComparer.OrdinalIgnoreCase));
 }

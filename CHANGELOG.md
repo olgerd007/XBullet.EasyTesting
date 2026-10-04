@@ -6,6 +6,37 @@ The project follows Semantic Versioning. Package versions are produced from GitH
 
 ## [Unreleased]
 
+## [1.0.18] - 2026-10-04
+
+### Added
+
+- Azure Functions hosts now support registered scenario resources, serialized scenario scopes,
+  shared failure diagnostics, and the `FunctionScenario` and `FunctionScopedTest` bases. Original
+  failures and cancellation tokens survive invocation disposal and scenario cleanup errors. See
+  [Functions scenarios](docs/guides/azure-functions.md#scenario-resources-and-domain-helpers).
+- Messaging assertions now support route counts, predicate selection, absence checks, exact global
+  and route sequences, and partial typed payload matching. Collection failures use one consistent
+  snapshot and include message positions, routes, types, and payloads. See
+  [messaging assertions](docs/guides/messaging.md#counts-filtering-payloads-and-order).
+- Added framework-independent `Eventually.AssertAsync` and `Eventually.WaitUntilAsync` for
+  background work, with cooperative deadlines, caller cancellation, sequential polling, fake-time
+  support, and timeout diagnostics retaining the last assertion failure. See
+  [eventual assertions](docs/guides/eventual-assertions.md).
+- `EasyTestHost.Create<TEntryPoint>().UseEnvironment(environmentName)` selects the host environment
+  before application startup, including for scenario child hosts. The default remains `Testing`.
+  See [host environments](docs/concepts/test-hosts.md#choose-the-host-environment).
+- `Scenario<TEntryPoint>` provides reusable domain arrangement, guarded configuration, and
+  immediate or deferred single-use setup. `ScopedTest<TEntryPoint, TFactory>` provides a concrete
+  factory and isolated test runner with cancellation, failure diagnostics, and cleanup. Both bases
+  are test-framework-independent. See
+  [domain scenarios and scoped tests](docs/concepts/scenarios-and-isolation.md#reusable-domain-scenarios).
+
+### Fixed
+
+- Message diagnostics now derive the count and message list from one snapshot, preventing
+  inconsistent counts during concurrent publication or reset. See
+  [messaging diagnostics](docs/guides/messaging.md#negative-behavior-and-diagnostics).
+
 ## [1.0.17] - 2026-10-01
 
 ### Changed
