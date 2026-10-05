@@ -635,6 +635,227 @@ public sealed class SnapshotAssertTests
         Assert.Equal("{Scrubbed}", root.GetProperty("Dynamic").GetString());
     }
 
+    [Theory]
+    [InlineData("/api/action/f5111111-1111-1111-1111-111111111111", "/api/action/{Guid}")]
+    [InlineData("api/f5111111111111111111111111111111/next", "api/{Guid}/next")]
+    [InlineData("/{f5111111-1111-1111-1111-111111111111}/", "/{Guid}/")]
+    [InlineData("//f5111111-1111-1111-1111-111111111111/path", "//f5111111-1111-1111-1111-111111111111/path")]
+    [InlineData("https://f5111111-1111-1111-1111-111111111111/path", "https://f5111111-1111-1111-1111-111111111111/path")]
+    [InlineData("https://example.test/f5111111-1111-1111-1111-111111111111", "https://example.test/{Guid}")]
+    [InlineData("https://example.test?next=/f5111111-1111-1111-1111-111111111111", "https://example.test?next=/f5111111-1111-1111-1111-111111111111")]
+    [InlineData("/api/f5111111-1111-1111-1111-111111111111.json", "/api/f5111111-1111-1111-1111-111111111111.json")]
+    [InlineData("/api/{Guid}?token={Redacted}#section", "/api/{Guid}?token={Redacted}#section")]
+    [InlineData("/f5111111-1111-1111-1111-111111111111?ref=f5111111-1111-1111-1111-111111111111#f5111111-1111-1111-1111-111111111111", "/{Guid}?ref=f5111111-1111-1111-1111-111111111111#f5111111-1111-1111-1111-111111111111")]
+    [InlineData("/api#fragment?/f5111111-1111-1111-1111-111111111111", "/api#fragment?/f5111111-1111-1111-1111-111111111111")]
+    [InlineData("/api?next=https://example.test/f5111111-1111-1111-1111-111111111111", "/api?next=https://example.test/f5111111-1111-1111-1111-111111111111")]
+    [InlineData("/f5111111-1111-1111-1111-111111111111/callback/https://example.test", "/{Guid}/callback/https://example.test")]
+    [InlineData("{Redacted}", "{Redacted}")]
+    [InlineData("", "")]
+    [InlineData(null, null)]
+    public void Snapshot_settings_scrub_only_complete_guid_url_path_segments(string? url, string? expected)
+    {
+        var settings = new SnapshotSettings().ScrubbingUrlPathGuids();
+        var json = JsonSerializer.Serialize(new
+        {
+            Requests = new[] { new { uRL = url } },
+            Other = url,
+            Id = "f5111111-1111-1111-1111-111111111111"
+        });
+        using var document = JsonDocument.Parse(StructuredSnapshotScrubber.Apply(json, settings));
+        var root = document.RootElement;
+
+        Assert.Equal(expected, root.GetProperty("Requests")[0].GetProperty("uRL").GetString());
+        Assert.Equal(url, root.GetProperty("Other").GetString());
+        Assert.Equal("f5111111-1111-1111-1111-111111111111", root.GetProperty("Id").GetString());
+    }
+
+    [Theory]
+    [InlineData("", 0)]
+    [InlineData("/", 0)]
+    [InlineData("/", 2)]
+    [InlineData("/", 4)]
+    [InlineData("https://example.test/", 2)]
+    [InlineData("//example.test/", 2)]
+    public void Url_path_guid_predicate_preserves_selected_positions(string prefix, int preservedPosition)
+    {
+        const string first = "f5111111-1111-1111-1111-111111111111";
+        const string middle = "637717e4-10d3-4302-bff2-846b17f00591";
+        const string last = "3c91271a-a927-4516-b225-41cce45963b5";
+        var url = $"{prefix}{first}/ss/{middle}/end/{last}?ref={first}#{middle}";
+        var seen = new List<(int Position, string Segment)>();
+        var settings = new SnapshotSettings().ScrubbingUrlPathGuids((position, segment) =>
+        {
+            seen.Add((position, segment));
+            return position != preservedPosition;
+        });
+        var json = JsonSerializer.Serialize(new[] { new { Url = url }, new { Url = url } });
+        using var document = JsonDocument.Parse(StructuredSnapshotScrubber.Apply(json, settings));
+        var expected = prefix +
+            $"{(preservedPosition == 0 ? first : "{Guid}")}/ss/" +
+            $"{(preservedPosition == 2 ? middle : "{Guid}")}/end/" +
+            $"{(preservedPosition == 4 ? last : "{Guid}")}?ref={first}#{middle}";
+
+        Assert.All(document.RootElement.EnumerateArray(), item =>
+            Assert.Equal(expected, item.GetProperty("Url").GetString()));
+        Assert.Equal(new[] { (0, first), (2, middle), (4, last), (0, first), (2, middle), (4, last) }, seen);
+    }
+
+    [Fact]
+    public void Url_path_guid_predicate_counts_internal_empty_segments_and_can_select_by_value()
+    {
+        const string first = "f5111111-1111-1111-1111-111111111111";
+        const string second = "637717e4-10d3-4302-bff2-846b17f00591";
+        var positions = new List<int>();
+        var settings = new SnapshotSettings().ScrubbingUrlPathGuids((position, segment) =>
+        {
+            positions.Add(position);
+            return segment != first;
+        });
+        var json = JsonSerializer.Serialize(new { Url = $"/orders//{first}/ss/{second}/" });
+        using var document = JsonDocument.Parse(StructuredSnapshotScrubber.Apply(json, settings));
+
+        Assert.Equal($"/orders//{first}/ss/{{Guid}}/", document.RootElement.GetProperty("Url").GetString());
+        Assert.Equal(new[] { 2, 4 }, positions);
+    }
+
+    [Theory]
+    [InlineData("inherit")]
+    [InlineData("middle")]
+    [InlineData("all")]
+    public void Local_url_path_guid_predicate_overrides_defaults_without_mutating_the_template(string localRule)
+    {
+        const string first = "f5111111-1111-1111-1111-111111111111";
+        const string middle = "637717e4-10d3-4302-bff2-846b17f00591";
+        var json = JsonSerializer.Serialize(new { Url = $"/{first}/ss/{middle}" });
+        var defaults = new SnapshotSettingsDefaults(settings => settings
+            .ScrubbingUrlPathGuids((position, _) => position != 0));
+        var local = new SnapshotSettings();
+        if (localRule == "middle")
+        {
+            local.ScrubbingUrlPathGuids((position, _) => position != 2);
+        }
+        else if (localRule == "all")
+        {
+            local.ScrubbingUrlPathGuids((_, _) => false).ScrubbingUrlPathGuids();
+        }
+
+        var merged = defaults.Create().Merge(local);
+        using var document = JsonDocument.Parse(StructuredSnapshotScrubber.Apply(json, merged));
+        var expected = localRule switch
+        {
+            "inherit" => $"/{first}/ss/{{Guid}}",
+            "middle" => $"/{{Guid}}/ss/{middle}",
+            _ => "/{Guid}/ss/{Guid}"
+        };
+        Assert.Equal(expected, document.RootElement.GetProperty("Url").GetString());
+
+        using var templateDocument = JsonDocument.Parse(StructuredSnapshotScrubber.Apply(json, defaults.Create()));
+        Assert.Equal($"/{first}/ss/{{Guid}}", templateDocument.RootElement.GetProperty("Url").GetString());
+    }
+
+    [Fact]
+    public void Url_path_guid_predicate_rejects_null()
+    {
+        var settings = new SnapshotSettings();
+        var exception = Assert.Throws<ArgumentNullException>(() => settings.ScrubbingUrlPathGuids(null!));
+        Assert.Equal("shouldScrub", exception.ParamName);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Url_path_guid_scrubbing_survives_settings_templates_and_merging(bool enableInTemplate)
+    {
+        const string json = """{"Url":"/api/action/f5111111-1111-1111-1111-111111111111"}""";
+        var defaults = new SnapshotSettingsDefaults(settings =>
+        {
+            if (enableInTemplate)
+            {
+                settings.ScrubbingUrlPathGuids();
+            }
+        });
+        var templateCopy = defaults.Create();
+        var local = new SnapshotSettings();
+        if (!enableInTemplate)
+        {
+            local.ScrubbingUrlPathGuids();
+        }
+
+        var merged = templateCopy.Merge(local);
+        using var document = JsonDocument.Parse(StructuredSnapshotScrubber.Apply(json, merged));
+        Assert.Equal("/api/action/{Guid}", document.RootElement.GetProperty("Url").GetString());
+        Assert.Equal(enableInTemplate, defaults.Create().ScrubUrlPathGuidValues);
+    }
+
+    [Theory]
+    [InlineData(HttpExchangeSnapshotFormat.Json)]
+    [InlineData(HttpExchangeSnapshotFormat.Http)]
+    [InlineData(HttpExchangeSnapshotFormat.Yaml)]
+    public async Task Recorded_http_exchange_can_scrub_url_path_guids_in_snapshot_settings(
+        HttpExchangeSnapshotFormat format)
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var updateMode = SnapshotUpdateMode.Missing;
+        var options = new HttpExchangeSnapshotOptions { Format = format };
+        using var recorder = new HttpExchangeRecorder(options)
+        {
+            InnerHandler = new CallbackHttpMessageHandler(async (request, token) =>
+            {
+                _ = await request.Content!.ReadAsStringAsync(token);
+                request.Content = null;
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    RequestMessage = request,
+                    Content = JsonContent.Create(new { Accepted = true })
+                };
+            })
+        };
+        using var client = new HttpClient(recorder) { BaseAddress = new Uri("https://example.test") };
+
+        try
+        {
+            foreach (var id in new[]
+                     {
+                         "f5111111-1111-1111-1111-111111111111",
+                         "637717e4-10d3-4302-bff2-846b17f00591"
+                     })
+            {
+                using var response = await client.PostAsJsonAsync(
+                    $"/3c91271a-a927-4516-b225-41cce45963b5/action/{id}?token=secret&reference=3c91271a-a927-4516-b225-41cce45963b5",
+                    new { Amount = 42 },
+                    cancellationToken);
+
+                await response.ShouldMatchHttpExchangeSnapshot(
+                    configureSnapshot: settings => settings
+                        .ScrubbingUrlPathGuids((position, _) => position != 0)
+                        .InDirectory(snapshotDirectory)
+                        .Named("assertion-url-scrubbing")
+                        .Updating(updateMode)
+                        .AllowingUpdatesInContinuousIntegration()
+                        .WithoutDiffTool(),
+                    cancellationToken: cancellationToken);
+
+                updateMode = SnapshotUpdateMode.None;
+                var captured = await HttpExchangeSnapshot.FromResponseAsync(
+                    response,
+                    cancellationToken: cancellationToken);
+                Assert.Contains($"/3c91271a-a927-4516-b225-41cce45963b5/action/{id}?token={{Redacted}}", captured.Request!.Url);
+                Assert.Equal(42, Assert.IsType<JsonElement>(captured.Request.Body).GetProperty("amount").GetInt32());
+            }
+
+            var verifiedPath = Directory.EnumerateFiles(snapshotDirectory, "*.verified.*").Single();
+            var verified = await File.ReadAllTextAsync(verifiedPath, cancellationToken);
+            Assert.Contains("/3c91271a-a927-4516-b225-41cce45963b5/action/{Guid}?token={Redacted}", verified);
+            Assert.Contains("reference=3c91271a-a927-4516-b225-41cce45963b5", verified);
+            Assert.DoesNotContain("secret", verified);
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
     #region docs-snapshots-path-rules
 
     [Fact]

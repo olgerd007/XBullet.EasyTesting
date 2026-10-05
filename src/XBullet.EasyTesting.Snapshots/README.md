@@ -47,7 +47,10 @@ await response.ShouldMatchHttpExchangeSnapshot(
 Snapshot assertions also continue to accept prebuilt `SnapshotSettings` instances.
 
 Attach `HttpExchangeRecorder` to the real client pipeline when the complete request body must be
-captured before TestServer consumes it.
+captured before TestServer consumes it. For recorded responses, configure exchange options before
+sending the request; passing `configureExchange` during assertion throws `InvalidOperationException`.
+Use `configureSnapshot` for assertion-time scrubbing. See
+[where to configure exchange options](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/snapshots/recipes.md#choose-where-to-configure-exchange-options).
 
 ## Safety and maintenance
 

@@ -151,6 +151,10 @@ public sealed class SnapshotSettings
 
     internal bool ScrubGuidValues { get; private set; }
 
+    internal bool ScrubUrlPathGuidValues { get; private set; }
+
+    internal Func<int, string, bool>? UrlPathGuidPredicate { get; private set; }
+
     internal bool ScrubDateTimeValues { get; private set; }
 
     internal IReadOnlyList<JsonSnapshotPathRule> PathRules => _pathRules;
@@ -439,6 +443,46 @@ public sealed class SnapshotSettings
         return this;
     }
 
+    /// <summary>
+    /// Replaces complete GUID path segments in JSON string members named <c>Url</c> with
+    /// <c>{Guid}</c>. Member names are matched case-insensitively at every nesting level.
+    /// </summary>
+    /// <remarks>
+    /// Applied after capture and before JSON path rules or custom scrubbers, including for recorded
+    /// HTTP exchanges rendered as JSON, HTTP text, or YAML. Hosts, query strings, and fragments are
+    /// preserved. This setting does not transform plain-text snapshots or other JSON members.
+    /// </remarks>
+    /// <returns>This settings instance, for chaining.</returns>
+    public SnapshotSettings ScrubbingUrlPathGuids()
+    {
+        ScrubUrlPathGuidValues = true;
+        UrlPathGuidPredicate = null;
+        return this;
+    }
+
+    /// <summary>
+    /// Replaces selected complete GUID path segments in JSON string members named <c>Url</c> with
+    /// <c>{Guid}</c>. Member names are matched case-insensitively at every nesting level.
+    /// </summary>
+    /// <remarks>
+    /// Uses the same assertion-time transformation as <see cref="ScrubbingUrlPathGuids()"/>.
+    /// The most recent call selects the rule; an explicit local rule replaces the defaults rule.
+    /// </remarks>
+    /// <param name="shouldScrub">
+    /// Non-null predicate retained and invoked for each GUID segment with its zero-based path
+    /// position and original text. Return true to scrub or false to preserve. Positions count all
+    /// segments, including internal empty segments, but exclude the initial slash and URL authority.
+    /// Positions restart for each URL; use a deterministic predicate without shared mutable state.
+    /// </param>
+    /// <returns>This settings instance, for chaining.</returns>
+    public SnapshotSettings ScrubbingUrlPathGuids(Func<int, string, bool> shouldScrub)
+    {
+        ArgumentNullException.ThrowIfNull(shouldScrub);
+        ScrubUrlPathGuidValues = true;
+        UrlPathGuidPredicate = shouldScrub;
+        return this;
+    }
+
     /// <summary>Replaces every round-trip JSON date/time string with <c>{DateTime}</c>.</summary>
     /// <returns>This settings instance, for chaining.</returns>
     public SnapshotSettings ScrubDateTimes()
@@ -517,6 +561,8 @@ public sealed class SnapshotSettings
             _overrides = _overrides,
             _includesGlobalDefaults = _includesGlobalDefaults,
             ScrubGuidValues = ScrubGuidValues,
+            ScrubUrlPathGuidValues = ScrubUrlPathGuidValues,
+            UrlPathGuidPredicate = UrlPathGuidPredicate,
             ScrubDateTimeValues = ScrubDateTimeValues,
             CanonicalizeObjectProperties = CanonicalizeObjectProperties
         };
@@ -586,6 +632,11 @@ public sealed class SnapshotSettings
         merged._ignoredMembers.UnionWith(local._ignoredMembers);
         merged._pathRules.AddRange(local._pathRules);
         merged.ScrubGuidValues |= local.ScrubGuidValues;
+        if (local.ScrubUrlPathGuidValues)
+        {
+            merged.ScrubUrlPathGuidValues = true;
+            merged.UrlPathGuidPredicate = local.UrlPathGuidPredicate;
+        }
         merged.ScrubDateTimeValues |= local.ScrubDateTimeValues;
         merged.CanonicalizeObjectProperties |= local.CanonicalizeObjectProperties;
         return merged;

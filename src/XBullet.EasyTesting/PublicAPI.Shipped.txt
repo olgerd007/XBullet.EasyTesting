@@ -459,3 +459,54 @@ XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.PostJson<T>(string!
 XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.PutJson<T>(string! requestUri, T body, System.Text.Json.JsonSerializerOptions! options) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
 XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.WithHandler(System.Net.Http.DelegatingHandler! handler) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
 XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint>.WithJsonOptions(System.Text.Json.JsonSerializerOptions! options) -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.EasyTestHostBuilder<TEntryPoint>.UseEnvironment(string! environmentName) -> XBullet.EasyTesting.Hosting.EasyTestHostBuilder<TEntryPoint!>!
+static XBullet.EasyTesting.Eventually.AssertAsync(System.Func<System.Threading.Tasks.Task!>! assertion) -> System.Threading.Tasks.Task!
+static XBullet.EasyTesting.Eventually.AssertAsync(System.Func<System.Threading.Tasks.Task!>! assertion, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+static XBullet.EasyTesting.Eventually.AssertAsync(System.Func<System.Threading.Tasks.Task!>! assertion, XBullet.EasyTesting.EventuallyOptions! options, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+static XBullet.EasyTesting.Eventually.WaitUntilAsync(System.Func<System.Threading.Tasks.Task<bool>!>! condition) -> System.Threading.Tasks.Task!
+static XBullet.EasyTesting.Eventually.WaitUntilAsync(System.Func<System.Threading.Tasks.Task<bool>!>! condition, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+static XBullet.EasyTesting.Eventually.WaitUntilAsync(System.Func<System.Threading.Tasks.Task<bool>!>! condition, XBullet.EasyTesting.EventuallyOptions! options, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+XBullet.EasyTesting.Eventually
+XBullet.EasyTesting.EventuallyOptions
+XBullet.EasyTesting.EventuallyOptions.EventuallyOptions() -> void
+XBullet.EasyTesting.EventuallyTimeoutException
+XBullet.EasyTesting.EventuallyOptions.Timeout.get -> System.TimeSpan
+XBullet.EasyTesting.EventuallyOptions.Timeout.init -> void
+XBullet.EasyTesting.EventuallyOptions.PollInterval.get -> System.TimeSpan
+XBullet.EasyTesting.EventuallyOptions.PollInterval.init -> void
+XBullet.EasyTesting.EventuallyOptions.TimeProvider.get -> System.TimeProvider!
+XBullet.EasyTesting.EventuallyOptions.TimeProvider.init -> void
+XBullet.EasyTesting.EventuallyOptions.Description.get -> string?
+XBullet.EasyTesting.EventuallyOptions.Description.init -> void
+XBullet.EasyTesting.EventuallyOptions.ShouldRetry.get -> System.Func<System.Exception!, bool>?
+XBullet.EasyTesting.EventuallyOptions.ShouldRetry.init -> void
+XBullet.EasyTesting.EventuallyTimeoutException.AttemptCount.get -> int
+XBullet.EasyTesting.EventuallyTimeoutException.Elapsed.get -> System.TimeSpan
+XBullet.EasyTesting.EventuallyTimeoutException.Timeout.get -> System.TimeSpan
+static XBullet.EasyTesting.Eventually.AssertAsync(System.Action! assertion) -> System.Threading.Tasks.Task!
+static XBullet.EasyTesting.Eventually.AssertAsync(System.Action! assertion, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+static XBullet.EasyTesting.Eventually.AssertAsync(System.Action! assertion, XBullet.EasyTesting.EventuallyOptions! options, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+static XBullet.EasyTesting.Eventually.AssertAsync(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task!>! assertion) -> System.Threading.Tasks.Task!
+static XBullet.EasyTesting.Eventually.AssertAsync(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task!>! assertion, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+static XBullet.EasyTesting.Eventually.AssertAsync(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task!>! assertion, XBullet.EasyTesting.EventuallyOptions! options, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+static XBullet.EasyTesting.Eventually.WaitUntilAsync(System.Func<bool>! condition) -> System.Threading.Tasks.Task!
+static XBullet.EasyTesting.Eventually.WaitUntilAsync(System.Func<bool>! condition, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+static XBullet.EasyTesting.Eventually.WaitUntilAsync(System.Func<bool>! condition, XBullet.EasyTesting.EventuallyOptions! options, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+static XBullet.EasyTesting.Eventually.WaitUntilAsync(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<bool>!>! condition) -> System.Threading.Tasks.Task!
+static XBullet.EasyTesting.Eventually.WaitUntilAsync(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<bool>!>! condition, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+static XBullet.EasyTesting.Eventually.WaitUntilAsync(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<bool>!>! condition, XBullet.EasyTesting.EventuallyOptions! options, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+XBullet.EasyTesting.Hosting.Scenario<TEntryPoint>
+XBullet.EasyTesting.Hosting.Scenario<TEntryPoint>.Scenario(XBullet.EasyTesting.Hosting.TestScenarioScope<TEntryPoint!>! scope) -> void
+XBullet.EasyTesting.Hosting.Scenario<TEntryPoint>.Scope.get -> XBullet.EasyTesting.Hosting.TestScenarioScope<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.Scenario<TEntryPoint>.Arrange() -> XBullet.EasyTesting.Hosting.TestScenarioBuilder<TEntryPoint!>!
+XBullet.EasyTesting.Hosting.Scenario<TEntryPoint>.ArrangeAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+XBullet.EasyTesting.Hosting.Scenario<TEntryPoint>.EnsureNotArranged() -> void
+abstract XBullet.EasyTesting.Hosting.Scenario<TEntryPoint>.ArrangeCoreAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+XBullet.EasyTesting.Hosting.ScopedTest<TEntryPoint, TFactory>
+XBullet.EasyTesting.Hosting.ScopedTest<TEntryPoint, TFactory>.ScopedTest(TFactory! factory, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> void
+XBullet.EasyTesting.Hosting.ScopedTest<TEntryPoint, TFactory>.Factory.get -> TFactory!
+XBullet.EasyTesting.Hosting.ScopedTest<TEntryPoint, TFactory>.TestCancellationToken.get -> System.Threading.CancellationToken
+XBullet.EasyTesting.Hosting.ScopedTest<TEntryPoint, TFactory>.RunAsync(System.Func<XBullet.EasyTesting.Hosting.TestScenarioScope<TEntryPoint!>!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>! test) -> System.Threading.Tasks.Task!
+XBullet.EasyTesting.Hosting.ScopedTest<TEntryPoint, TFactory>.RunAsync(System.Func<XBullet.EasyTesting.Hosting.TestScenarioScope<TEntryPoint!>!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>! test, System.Action<XBullet.EasyTesting.Hosting.TestScenarioScopeBuilder!>? configure) -> System.Threading.Tasks.Task!
+XBullet.EasyTesting.Hosting.ScopedTest<TEntryPoint, TFactory>.RunAsync<TResult>(System.Func<XBullet.EasyTesting.Hosting.TestScenarioScope<TEntryPoint!>!, System.Threading.CancellationToken, System.Threading.Tasks.Task<TResult>!>! test) -> System.Threading.Tasks.Task<TResult>!
+XBullet.EasyTesting.Hosting.ScopedTest<TEntryPoint, TFactory>.RunAsync<TResult>(System.Func<XBullet.EasyTesting.Hosting.TestScenarioScope<TEntryPoint!>!, System.Threading.CancellationToken, System.Threading.Tasks.Task<TResult>!>! test, System.Action<XBullet.EasyTesting.Hosting.TestScenarioScopeBuilder!>? configure) -> System.Threading.Tasks.Task<TResult>!

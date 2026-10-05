@@ -114,8 +114,48 @@ sensitive header and query values, and scrub volatile URL segments.
 
 ## Complete TestServer exchanges
 
-Attach an `HttpExchangeRecorder` as a delegating handler when the request body and full response
-belong in one contract. The recorder observes the real TestServer pipeline; it is not a stub:
+`ShouldMatchHttpExchangeSnapshot` supports both direct capture from a response and exchanges
+already captured by an `HttpExchangeRecorder`. Configure exchange options at the point of capture.
+
+### Choose where to configure exchange options
+
+| Response source | When capture happens | Where to configure exchange options |
+| --- | --- | --- |
+| Client without `HttpExchangeRecorder` | During the assertion, from `response` and `response.RequestMessage` | `configureExchange` or `exchangeOptions` on `ShouldMatchHttpExchangeSnapshot` |
+| Client with `HttpExchangeRecorder`, including `SnapshotScenario(...)` | Request before transport; response when received and body when consumed | Recorder or scenario/client creation, before sending the request |
+
+For direct capture, the assertion can configure headers, bodies, redaction, URL scrubbing, and
+output format:
+
+```csharp
+using var response = await client.GetAsync($"/api/action/{id}", cancellationToken);
+
+await response.ShouldMatchHttpExchangeSnapshot(
+    configureExchange: options => options.Request.ScrubbingUrlPathGuids(),
+    cancellationToken: cancellationToken);
+```
+
+This example requires a client without an `HttpExchangeRecorder`. Direct capture reads the data
+still available during assertion; it cannot recover request content already consumed by transport
+or record a send failure that produced no response.
+
+**For a recorded response, passing `configureExchange` to the assertion throws
+`InvalidOperationException`.** The callback creates a separate options instance, which the recorder
+guard rejects even if it only adds URL scrubbing or supplies values identical to the capture
+options. The message starts with
+`This response was captured by an HttpExchangeRecorder with different options.`
+The object overload also rejects a separate `exchangeOptions` instance; it accepts the original
+instance supplied to the recorder or `recorder.Options`. Passing that same instance during assertion
+does not recapture the exchange. Prefer omitting exchange options from recorded-response assertions.
+
+`configureSnapshot` and `snapshotSettings` work for both response sources. They transform the
+snapshot after capture and control naming, storage, comparison, and updates.
+
+### Configure recorder-backed exchange capture
+
+Attach an `HttpExchangeRecorder` as a delegating handler when the request body must be captured
+before transport consumes it. The recorder observes the real TestServer pipeline. The example
+factory's `SnapshotClient(...)` helper attaches this handler:
 
 <!-- snippet: tests/TestApi.IntegrationTests/CrudControllerSnapshotTests.cs#docs-snapshots-complete-exchange -->
 ```csharp
@@ -147,7 +187,11 @@ scenario. This is required when the request body belongs in the exchange snapsho
 server may consume it before the response is asserted:
 
 ```csharp
-using var result = await scope.SnapshotScenario()
+using var result = await scope.SnapshotScenario(options =>
+    {
+        options.Request.ScrubbingUrlPathGuids();
+        options.Response.IgnoringHeaders("Location");
+    })
     .PostJson("/api/products", new ProductRequest("Webcam", 79.95m))
     .ExecuteAsync(cancellationToken);
 
@@ -156,14 +200,22 @@ await result.Response.ShouldMatchHttpExchangeSnapshot(
     cancellationToken: cancellationToken);
 ```
 
-The built-in response, controller, exchange, outbound-request, and outbound-exchange snapshot
-assertions accept `configureSnapshot` callbacks. Assertions with capture options additionally accept
-`configureController`, `configureExchange`, or `configureRequest` callbacks. Existing overloads that
-accept prebuilt settings and options remain available.
+For GUID URL scrubbing during assertion, use `SnapshotSettings` with either response source:
+
+```csharp
+await response.ShouldMatchHttpExchangeSnapshot(
+    configureSnapshot: settings => settings.ScrubbingUrlPathGuids(),
+    cancellationToken: cancellationToken);
+```
+
+See [HTTP redaction and URL stability](stabilizing-data.md#http-redaction-and-url-stability) for
+selective GUID scrubbing. This settings rule leaves the recorded exchange and its capture options
+unchanged.
 
 JSON is the default. Set `HttpExchangeSnapshotOptions.Format` to `Http` for a transcript or `Yaml`
-for deterministic YAML. An unread streaming body is represented as `{NotRead}`; content-read errors
-are recorded as `BodyFailure`, and send failures are captured separately.
+for deterministic YAML, at the capture configuration point shown above. With a recorder, an unread
+streaming response body is represented as `{NotRead}`; content-read errors are recorded as
+`BodyFailure`, and send failures are captured separately.
 
 ## Outbound HTTP stub requests and exchanges
 
