@@ -61,12 +61,37 @@ internal static class SnapshotUrlFormatter
         return $"{path}?{string.Join('&', scrubbed)}{fragment}";
     }
 
-    internal static string ScrubGuidsInPath(string path)
+    internal static string ScrubGuidsInUrl(string url, Func<int, string, bool>? shouldScrub = null)
+    {
+        var pathEnd = url.IndexOfAny(['?', '#']);
+        if (pathEnd < 0)
+        {
+            pathEnd = url.Length;
+        }
+
+        var schemeEnd = url.IndexOf("://", StringComparison.Ordinal);
+        var authorityStart = schemeEnd > 0 && schemeEnd < pathEnd && Uri.CheckSchemeName(url[..schemeEnd])
+            ? schemeEnd + 3
+            : url.StartsWith("//", StringComparison.Ordinal) ? 2 : 0;
+        var pathStart = authorityStart == 0 ? 0 : url.IndexOf('/', authorityStart);
+        if (pathStart < 0 || pathStart >= pathEnd)
+        {
+            return url;
+        }
+
+        return url[..pathStart] + ScrubGuidsInPath(url[pathStart..pathEnd], shouldScrub) + url[pathEnd..];
+    }
+
+    internal static string ScrubGuidsInPath(string path) => ScrubGuidsInPath(path, shouldScrub: null);
+
+    private static string ScrubGuidsInPath(string path, Func<int, string, bool>? shouldScrub)
     {
         var segments = path.Split('/');
-        for (var index = 0; index < segments.Length; index++)
+        var firstSegment = path.StartsWith("/", StringComparison.Ordinal) ? 1 : 0;
+        for (var index = firstSegment; index < segments.Length; index++)
         {
-            if (Guid.TryParse(segments[index], out _))
+            if (Guid.TryParse(segments[index], out _) &&
+                (shouldScrub is null || shouldScrub(index - firstSegment, segments[index])))
             {
                 segments[index] = "{Guid}";
             }

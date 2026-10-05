@@ -6,6 +6,23 @@ The project follows Semantic Versioning. Package versions are produced from GitH
 
 ## [Unreleased]
 
+## [1.0.19] - 2026-10-05
+
+### Added
+
+- `SnapshotSettings.ScrubbingUrlPathGuids()` stabilizes GUID path segments in JSON `Url` members
+  during assertion, including recorder-backed exchanges rendered as JSON, HTTP text, or YAML.
+  A predicate overload selects GUID segments by zero-based path position or original value.
+  Hosts, query strings, and fragments are preserved. See
+  [HTTP redaction and URL stability](docs/guides/snapshots/stabilizing-data.md#http-redaction-and-url-stability).
+
+### Changed
+
+- Exchange snapshot documentation now compares direct and recorder-backed capture, highlights
+  the guard against separate recorder options during assertion, and shows where to configure
+  capture options and assertion-time scrubbing. See
+  [exchange option ownership](docs/guides/snapshots/recipes.md#choose-where-to-configure-exchange-options).
+
 ## [1.0.18] - 2026-10-04
 
 ### Added

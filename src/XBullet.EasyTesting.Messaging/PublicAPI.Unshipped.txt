@@ -1,9 +1,1 @@
 #nullable enable
-XBullet.EasyTesting.Messaging.RecordedMessageBusAssertions.HaveCount(string! transport, string! destination, int expected) -> XBullet.EasyTesting.Messaging.RecordedMessageBusAssertions!
-XBullet.EasyTesting.Messaging.RecordedMessageBusAssertions.Contain(System.Func<XBullet.EasyTesting.Messaging.RecordedMessage!, bool>! predicate) -> XBullet.EasyTesting.Messaging.RecordedMessageBusAssertions!
-XBullet.EasyTesting.Messaging.RecordedMessageBusAssertions.ContainSingle(System.Func<XBullet.EasyTesting.Messaging.RecordedMessage!, bool>! predicate) -> XBullet.EasyTesting.Messaging.RecordedMessageAssertions!
-XBullet.EasyTesting.Messaging.RecordedMessageBusAssertions.NotContain(string! transport, string! destination) -> XBullet.EasyTesting.Messaging.RecordedMessageBusAssertions!
-XBullet.EasyTesting.Messaging.RecordedMessageBusAssertions.NotContain(System.Func<XBullet.EasyTesting.Messaging.RecordedMessage!, bool>! predicate) -> XBullet.EasyTesting.Messaging.RecordedMessageBusAssertions!
-XBullet.EasyTesting.Messaging.RecordedMessageBusAssertions.HaveSequence(params System.Func<XBullet.EasyTesting.Messaging.RecordedMessage!, bool>![]! expectations) -> XBullet.EasyTesting.Messaging.RecordedMessageBusAssertions!
-XBullet.EasyTesting.Messaging.RecordedMessageBusAssertions.HaveSequence(string! transport, string! destination, params System.Func<XBullet.EasyTesting.Messaging.RecordedMessage!, bool>![]! expectations) -> XBullet.EasyTesting.Messaging.RecordedMessageBusAssertions!
-XBullet.EasyTesting.Messaging.RecordedMessageAssertions.HavePayloadMatching<T>(System.Func<T?, bool>! predicate, System.Text.Json.JsonSerializerOptions? options = null) -> XBullet.EasyTesting.Messaging.RecordedMessageAssertions!

@@ -105,10 +105,14 @@ public static class HttpResponseSnapshotConfigurationExtensions
             sourceFile: sourceFile,
             testName: testName);
 
-    /// <summary>Configures exchange options and optional snapshot settings inline.</summary>
+    /// <summary>Configures direct exchange capture and optional snapshot settings inline.</summary>
     /// <remarks>
-    /// Configure recorder-backed responses when creating the recorder or snapshot scenario. A
-    /// recorded response does not accept replacement exchange options during assertion.
+    /// For responses without an HttpExchangeRecorder, capture happens during this assertion.
+    /// This overload creates a separate exchange options instance and throws for recorder-backed
+    /// responses, even when the options only add scrubbing or match the capture options by value.
+    /// Configure recorded exchanges when creating the recorder or snapshot scenario, then assert
+    /// without configureExchange. Use configureSnapshot for assertion-time transformations such
+    /// as SnapshotSettings.ScrubbingUrlPathGuids().
     /// </remarks>
     /// <param name="response">The non-null caller-owned response representing the exchange.</param>
     /// <param name="configureExchange">The non-null callback applied once to independent effective exchange options.</param>
@@ -117,6 +121,7 @@ public static class HttpResponseSnapshotConfigurationExtensions
     /// <param name="sourceFile">Calling source-file path supplied by the compiler for snapshot placement.</param>
     /// <param name="testName">Calling member name supplied by the compiler for snapshot naming.</param>
     /// <returns>A task that completes when the configured exchange snapshot matches or is updated.</returns>
+    /// <exception cref="InvalidOperationException">The response was already captured by an HttpExchangeRecorder.</exception>
     public static Task ShouldMatchHttpExchangeSnapshot(
         this HttpResponseMessage response,
         Action<HttpExchangeSnapshotOptions> configureExchange,

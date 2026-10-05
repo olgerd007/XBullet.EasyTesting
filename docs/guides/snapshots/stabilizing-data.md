@@ -260,7 +260,7 @@ Controller, TestServer exchange, and outbound-stub options support:
 - Ignoring a header or query parameter entirely.
 - Redacting its value as `{Redacted}` while retaining its presence.
 - Explicitly including a normally excluded value when it is safe and stable.
-- Scrubbing GUID route segments and selected query values as `{Scrubbed}`.
+- Scrubbing GUID route segments as `{Guid}` and selected query values as `{Scrubbed}`.
 - Replacing custom route values with `ScrubbingUrlPath`.
 
 Common secret query names—including `access_token`, `api_key`, `client_secret`, `sas`, `secret`,
@@ -268,6 +268,49 @@ Common secret query names—including `access_token`, `api_key`, `client_secret`
 redaction wins. Structured member and path scrubbers likewise preserve values already represented
 by `{Redacted}`, including redacted header arrays. Application-specific sensitive names still
 require explicit configuration.
+
+To scrub GUID route segments during assertion, use `SnapshotSettings.ScrubbingUrlPathGuids()`:
+
+```csharp
+await response.ShouldMatchHttpExchangeSnapshot(
+    configureSnapshot: settings => settings.ScrubbingUrlPathGuids(),
+    cancellationToken: cancellationToken);
+```
+
+This transforms JSON string members named `Url`, matched case-insensitively at every nesting level,
+so `/api/action/3c91271a-a927-4516-b225-41cce45963b5` becomes `/api/action/{Guid}`. It works with
+recorder-backed responses, controller snapshots, and outbound request snapshots, including
+collections. Exchange snapshots apply the rule before rendering JSON, HTTP text, or YAML.
+Hosts, query strings, fragments, other members, and plain-text snapshots are preserved.
+The rule also works in prebuilt settings and reusable defaults.
+
+Pass a predicate to preserve selected GUID segments:
+
+```csharp
+await response.ShouldMatchHttpExchangeSnapshot(
+    configureSnapshot: settings => settings
+        .ScrubbingUrlPathGuids((position, segment) => position != 0),
+    cancellationToken: cancellationToken);
+```
+
+For `/<guid1>/ss/<guid2>`, this preserves `<guid1>` and replaces `<guid2>` with `{Guid}`.
+Use `position != 2` to preserve the middle GUID in `/<guid1>/ss/<guid2>/end/<guid3>`.
+Positions are zero-based and count every path segment, including ordinary text and internal
+empty segments. The initial slash and URL authority are excluded. The predicate runs only for
+complete GUID segments and receives their original text; positions restart for each URL.
+Keep it deterministic without shared mutable counters. To preserve a known GUID anywhere,
+use `(position, segment) => !Guid.Parse(segment).Equals(knownId)`.
+
+The most recent `ScrubbingUrlPathGuids` call selects the rule. Calling it without a predicate
+scrubs every GUID segment again. An explicit local rule replaces a reusable or global defaults
+rule without mutating the template.
+
+Use `ScrubGuids()` separately to scrub JSON values that consist entirely of a GUID.
+For recorder-backed responses, configure exchange capture options on the recorder or
+`SnapshotScenario(...)`; passing `configureExchange` during assertion throws `InvalidOperationException`.
+This settings rule transforms the captured snapshot without changing capture options or the
+recorded exchange. See [where to configure exchange options](recipes.md#choose-where-to-configure-exchange-options)
+for the direct-capture and recorder workflows.
 
 Review the [complete-exchange recipe](recipes.md#sensitive-complete-exchange) for a realistic nested
 body and request-header example.

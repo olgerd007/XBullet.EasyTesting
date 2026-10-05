@@ -26,6 +26,7 @@ internal static class StructuredSnapshotScrubber
         if (settings.ScrubbedMembers.Count == 0 &&
             settings.IgnoredMembers.Count == 0 &&
             !settings.ScrubGuidValues &&
+            !settings.ScrubUrlPathGuidValues &&
             !settings.ScrubDateTimeValues &&
             settings.PathRules.Count == 0 &&
             !settings.CanonicalizeObjectProperties)
@@ -377,6 +378,13 @@ internal static class StructuredSnapshotScrubber
             if (TryScrubValue(value, settings, out var replacement))
             {
                 jsonObject[propertyName] = replacement;
+            }
+            else if (settings.ScrubUrlPathGuidValues &&
+                propertyName.Equals("Url", StringComparison.OrdinalIgnoreCase) &&
+                value is JsonValue urlValue &&
+                urlValue.TryGetValue<string>(out var url))
+            {
+                jsonObject[propertyName] = SnapshotUrlFormatter.ScrubGuidsInUrl(url, settings.UrlPathGuidPredicate);
             }
             else
             {

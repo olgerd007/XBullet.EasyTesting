@@ -113,14 +113,18 @@ public static class HttpResponseSnapshotExtensions
     /// </summary>
     /// <param name="response">The caller-owned, non-null response to capture. It and its request and content objects are read but not disposed.</param>
     /// <param name="exchangeOptions">
-    /// Optional capture, redaction, and format options. <see langword="null"/> uses recorder options when available, otherwise the effective global or default options;
-    /// supplying different options for a recorded response is not accepted.
+    /// Optional capture, redaction, and format options for direct capture during assertion.
+    /// For a recorded response, omit this argument or supply the original options instance passed
+    /// to the recorder or its Options instance; a separate instance is rejected even when its
+    /// values match. Supplying the same instance does not recapture the exchange.
+    /// <see langword="null"/> uses recorder options when available, otherwise global or package defaults.
     /// </param>
     /// <param name="snapshotSettings">Optional snapshot settings. <see langword="null"/> uses the effective global or default settings.</param>
     /// <param name="cancellationToken">Token that cancels response reading and snapshot file operations. The default token does not cancel the operation.</param>
     /// <param name="sourceFile">Calling source-file path used to locate and name the snapshot. The compiler supplies this value by default.</param>
     /// <param name="testName">Calling member name used as the default snapshot name. The compiler supplies this value by default.</param>
     /// <returns>A task that completes when the captured exchange matches or is updated; a mismatch writes a received file and throws.</returns>
+    /// <exception cref="InvalidOperationException">Separate exchange options were supplied for a response already captured by an HttpExchangeRecorder.</exception>
     public static async Task ShouldMatchHttpExchangeSnapshot(
         this HttpResponseMessage response,
         HttpExchangeSnapshotOptions? exchangeOptions = null,
