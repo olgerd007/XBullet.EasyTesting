@@ -10,6 +10,19 @@ observability, real containers, Aspire, Azure SDK clients, Azure Functions, and 
 
 All packages target .NET 8, .NET 9, and .NET 10.
 
+## Agent skills
+
+The [portable agent kit](docs/guides/ai-agents.md) provides reusable skills and shared instructions
+for **GitHub Copilot, Claude Code, and Codex** in applications that use XBullet.EasyTesting:
+
+- `easytesting-integration-tests`: authenticated endpoint tests, test hosts, and scenario isolation.
+- `easytesting-application-boundaries`: persistence, outbound HTTP, messaging, and observable effects.
+- `easytesting-snapshots`: real HTTP contracts, exchange capture, redaction, and baseline review.
+
+[Install the kit in your application](agent-kit/README.md#install-in-a-consuming-repository) to use
+these workflows with your existing test runner and project conventions. The kit is distributed with
+the source; installing NuGet packages does not install agent guidance.
+
 ## Get started
 
 Install the core package in the test project:
@@ -93,6 +106,7 @@ prerequisites, common combinations, and the recommended package for each testing
 - [.NET isolated Azure Functions](docs/guides/azure-functions.md)
 - [Built-in snapshot testing](docs/guides/snapshots.md)
 - [Verify.Xunit controller snapshots](docs/guides/verify-xunit.md)
+- [Agent skills for GitHub Copilot, Claude Code, and Codex](docs/guides/ai-agents.md)
 
 The [task-oriented documentation index](docs/index.md#find-documentation-by-goal) provides the
 complete navigation map.

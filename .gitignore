@@ -10,3 +10,7 @@ docs/api/generated/
 *.received.*
 *.user
 *.suo
+**/__pycache__/
+
+# Keep the maintained Docfx configuration available to source control.
+!/docs/docfx.json

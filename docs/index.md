@@ -27,10 +27,21 @@ identities inside `TestServer` or send credentials through the application's rea
 handlers. These are different kinds of tests: simulated authentication is fast and focused, while
 end-to-end authentication validates token, certificate, or API-key handling.
 
+## Use agent skills in your application
+
+The [agent skills guide](guides/ai-agents.md) introduces reusable workflows for GitHub Copilot,
+Claude Code, and Codex. Choose a skill for authenticated integration tests, application boundaries,
+or snapshot contracts, then install it in the consuming repository with the portable agent kit.
+Shared instructions keep package selection, isolation, and validation consistent across agents.
+
+The kit is distributed with the source, separately from NuGet packages. Follow the guide for
+installation and example requests using the three skill names.
+
 ## Find documentation by goal
 
 | I want to... | Start with | Package |
 | --- | --- | --- |
+| Help a coding agent write and maintain EasyTesting tests | [Install and use agent skills](guides/ai-agents.md) | Source-distributed agent kit |
 | Test an authenticated controller | [Run your first controller test](getting-started/first-controller-test.md) | `XBullet.EasyTesting` |
 | Isolate setup and cleanup for every test | [Scenarios and isolation](concepts/scenarios-and-isolation.md) | `XBullet.EasyTesting` |
 | Test a `Startup`-based application without executing `Program.Main` | [Choose a test host](concepts/test-hosts.md#host-a-startup-application) | `XBullet.EasyTesting` |

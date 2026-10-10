@@ -6,6 +6,33 @@ The project follows Semantic Versioning. Package versions are produced from GitH
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-10
+
+### Added
+
+#### Agent skills for GitHub Copilot, Claude Code, and Codex
+
+Version 1.1.0 introduces three reusable skills for applications that use XBullet.EasyTesting:
+
+- [`easytesting-integration-tests`](agent-kit/skills/easytesting-integration-tests/SKILL.md)
+  guides host setup, authenticated endpoint tests, scenario isolation, and response assertions.
+- [`easytesting-application-boundaries`](agent-kit/skills/easytesting-application-boundaries/SKILL.md)
+  guides persistence, outbound HTTP, messaging, observability, and specialized dependency tests.
+- [`easytesting-snapshots`](agent-kit/skills/easytesting-snapshots/SKILL.md)
+  guides real HTTP and Newtonsoft.Json contracts, complete exchanges, redaction, and baseline review.
+
+The portable kit includes shared instructions and an installer that preserves existing project
+instructions and copies complete skill folders into each agent's native location. It is distributed
+with the source, separately from the NuGet packages. Start with the
+[agent skills guide](docs/guides/ai-agents.md) for installation and example requests.
+
+### Changed
+
+- Updated `Aspire.Hosting.Testing` to 13.6.0 and `Verify.XunitV3` to 31.28.0.
+- Updated the Azure Blob SDK test dependency, `Azure.Storage.Blobs`, to 12.30.0.
+- The Azure Blob emulator smoke test explicitly uses service API version `2026-06-06`, matching
+  the pinned Azurite 3.37.0 image rather than the SDK's newer default.
+
 ## [1.0.19] - 2026-10-05
 
 ### Added
