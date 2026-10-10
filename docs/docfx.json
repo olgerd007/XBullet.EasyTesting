@@ -53,6 +53,7 @@
           "CONTRIBUTING.md",
           "README.md",
           "SECURITY.md",
+          "agent-kit/**/*.md",
           "src/*/README.md",
           "tests/**/*.cs"
         ],

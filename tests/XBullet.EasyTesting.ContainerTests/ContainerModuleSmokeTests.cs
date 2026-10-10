@@ -169,7 +169,9 @@ public sealed class ContainerModuleSmokeTests
             .Build();
         await using var scope = await CreateScopeAsync(factory);
         var container = scope.GetTestcontainer<Program, AzuriteContainer>("Azurite");
-        var service = new BlobServiceClient(container.GetConnectionString());
+        // Azurite 3.37.0 supports service API versions through 2026-06-06.
+        var clientOptions = new BlobClientOptions(BlobClientOptions.ServiceVersion.V2026_06_06);
+        var service = new BlobServiceClient(container.GetConnectionString(), clientOptions);
         var blobContainer = service.GetBlobContainerClient($"xbullet-{Guid.NewGuid():N}");
         await blobContainer.CreateAsync(cancellationToken: TestContext.Current.CancellationToken);
         var blob = blobContainer.GetBlobClient("ready.txt");

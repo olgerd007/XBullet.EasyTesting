@@ -21,6 +21,8 @@ items:
     href: concepts/multi-target-and-parallel-execution.md
 - name: Guides
   items:
+  - name: Agent skills and instructions
+    href: guides/ai-agents.md
   - name: Application boundaries
     href: guides/application-boundaries.md
   - name: Authentication and scenarios

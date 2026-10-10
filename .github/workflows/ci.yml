@@ -52,6 +52,9 @@ jobs:
         shell: pwsh
         run: ./eng/sync-documentation-snippets.ps1 -Check
 
+      - name: Verify portable agent-kit installer
+        run: python -m unittest discover -s agent-kit/tests -v
+
       - name: Build
         run: >-
           dotnet build XBullet.EasyTesting.sln
