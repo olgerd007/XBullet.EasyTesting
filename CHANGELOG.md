@@ -21,6 +21,11 @@ The project follows Semantic Versioning. Package versions are produced from GitH
 - Functions test factories reject further use after host service disposal fails, while keeping
   active-scenario disposal rejections retryable and preserving the original cleanup exception.
 
+### Security
+
+- Pinned Aspire's transitive MessagePack dependency to 2.5.303 and the container-test SqlClient
+  dependency System.Security.Cryptography.Pkcs to 9.0.21 to resolve dependency audit findings.
+
 ## [1.1.0] - 2026-10-10
 
 ### Added
