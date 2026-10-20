@@ -13,6 +13,8 @@ In-process invocation tools for .NET isolated-worker functions and trigger data.
 
 ## Primary APIs
 
+- <xref:XBullet.EasyTesting.AzureFunctions.AzureFunctionTestFactory`1> reuses an executable application's
+  startup configuration and DI container with test overrides.
 - <xref:XBullet.EasyTesting.AzureFunctions.AzureFunctionTestHost> resolves and invokes functions.
 - <xref:XBullet.EasyTesting.AzureFunctions.AzureFunctionTestHostBuilder> configures services and middleware.
 - <xref:XBullet.EasyTesting.AzureFunctions.AzureFunctionTestScenarioScope> owns resource resets and scenario cleanup.

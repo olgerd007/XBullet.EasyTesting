@@ -32,6 +32,17 @@ var response = await function.RunAsync(request, request.FunctionContext);
 Builders are available for HTTP, timer, Kafka, Service Bus, Queue Storage, Blob, Event Grid, and
 Event Hubs triggers.
 
+To reuse a Functions application's `Program.cs`, derive from
+`AzureFunctionTestFactory<TEntryPoint>`, override `ConfigureHost`, `ConfigureTestHost`, or
+`ConfigureTestServices` as needed, and await `CreateHostAsync(cancellationToken)`. The factory
+captures the production generic host at construction, retains its configuration and service
+registrations, and exposes the existing invocation and scenario APIs without starting hosted
+services or worker transport. It owns the returned host and must be asynchronously disposed.
+Worker-native middleware requires explicit registration through `ConfigureTestHost` for in-process
+invocation. Startup code before host construction still executes; see the
+[factory guide](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/azure-functions.md#reuse-programcs-with-a-factory)
+for lifetime, cancellation, and timeout behavior.
+
 Use `UseScenarioResource(name, resource)` to register borrowed state implementing the shared
 `ITestScenarioResource` contract, then `RunInTestScenarioScopeAsync` to reset it before and after
 setup, multiple invocations, and assertions. Scenarios on one host are serialized, and every

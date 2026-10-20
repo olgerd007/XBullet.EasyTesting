@@ -1,6 +1,7 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Middleware;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using XBullet.EasyTesting.Hosting;
 
 namespace XBullet.EasyTesting.AzureFunctions;
@@ -8,7 +9,8 @@ namespace XBullet.EasyTesting.AzureFunctions;
 /// <summary>Provides function instances and fluent trigger data backed by one service provider.</summary>
 public sealed partial class AzureFunctionTestHost : IDisposable, IAsyncDisposable
 {
-    private readonly ServiceProvider _services;
+    private readonly IServiceProvider _services;
+    private readonly IDisposable _serviceOwner;
     private readonly IReadOnlyList<Func<IServiceProvider, IFunctionsWorkerMiddleware>> _middleware;
 
     internal AzureFunctionTestHost(
@@ -17,6 +19,18 @@ public sealed partial class AzureFunctionTestHost : IDisposable, IAsyncDisposabl
         IReadOnlyDictionary<string, ITestScenarioResource> resources)
     {
         _services = services;
+        _serviceOwner = services;
+        _middleware = middleware;
+        _resources = resources;
+    }
+
+    internal AzureFunctionTestHost(
+        IHost host,
+        IReadOnlyList<Func<IServiceProvider, IFunctionsWorkerMiddleware>> middleware,
+        IReadOnlyDictionary<string, ITestScenarioResource> resources)
+    {
+        _services = host.Services;
+        _serviceOwner = host;
         _middleware = middleware;
         _resources = resources;
     }
@@ -285,7 +299,7 @@ public sealed partial class AzureFunctionTestHost : IDisposable, IAsyncDisposabl
     {
         EnsureNoActiveScenario();
         _disposed = true;
-        _services.Dispose();
+        _serviceOwner.Dispose();
     }
 
     /// <inheritdoc />
@@ -293,6 +307,12 @@ public sealed partial class AzureFunctionTestHost : IDisposable, IAsyncDisposabl
     {
         EnsureNoActiveScenario();
         _disposed = true;
-        return _services.DisposeAsync();
+        if (_serviceOwner is IAsyncDisposable asynchronousOwner)
+        {
+            return asynchronousOwner.DisposeAsync();
+        }
+
+        _serviceOwner.Dispose();
+        return ValueTask.CompletedTask;
     }
 }

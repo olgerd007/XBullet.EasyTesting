@@ -6,6 +6,21 @@ The project follows Semantic Versioning. Package versions are produced from GitH
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-10-20
+
+### Added
+
+- Added `AzureFunctionTestFactory<TEntryPoint>` to reuse a Functions application's `Program.cs`,
+  production configuration, and service provider, with final test overrides, function discovery,
+  bounded startup waits, and factory-owned async disposal. Hosted services remain stopped;
+  in-process middleware is configured explicitly. See the
+  [Functions factory guide](docs/guides/azure-functions.md#reuse-programcs-with-a-factory).
+
+### Fixed
+
+- Functions test factories reject further use after host service disposal fails, while keeping
+  active-scenario disposal rejections retryable and preserving the original cleanup exception.
+
 ## [1.1.0] - 2026-10-10
 
 ### Added
