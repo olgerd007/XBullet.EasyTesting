@@ -14,12 +14,16 @@ The project follows Semantic Versioning. Package versions are produced from GitH
   production configuration, and service provider, with final test overrides, function discovery,
   bounded startup waits, and factory-owned async disposal. Hosted services remain stopped;
   in-process middleware is configured explicitly. See the
-  [Functions factory guide](docs/guides/azure-functions.md#reuse-programcs-with-a-factory).
+  [Functions factory guide](docs/guides/azure-functions.md#reuse-programcs-with-a-factory)
+  and [Azure Functions API reference](docs/api/packages/xbullet-easytesting-azurefunctions.md).
 
 ### Fixed
 
 - Functions test factories reject further use after host service disposal fails, while keeping
   active-scenario disposal rejections retryable and preserving the original cleanup exception.
+- Documentation API navigation now opens valid package and namespace pages from the navigation menu.
+- Release package validation now runs against the 1.1.0 compatibility baseline when projects
+  use the SDK's default packaging setting.
 
 ### Security
 

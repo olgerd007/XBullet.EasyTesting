@@ -16,6 +16,7 @@ namespace XBullet.EasyTesting.AzureFunctions;
 /// middleware and scenario resources through <see cref="ConfigureTestHost"/>. Dispose active scenarios
 /// before disposing this factory. Startup code preceding host construction still executes normally.
 /// </remarks>
+/// <seealso href="https://olgerd007.github.io/XBullet.EasyTesting/guides/azure-functions.html#reuse-programcs-with-a-factory">Functions factory guide</seealso>
 public class AzureFunctionTestFactory<TEntryPoint> : IAsyncDisposable where TEntryPoint : class
 {
     private readonly SemaphoreSlim _lifetimeGate = new(1, 1);
@@ -55,6 +56,14 @@ public class AzureFunctionTestFactory<TEntryPoint> : IAsyncDisposable where TEnt
     /// Calls are serialized. Completed initialization failures can be retried. Application code
     /// continuing after a canceled startup wait can outlive that wait and its configuration callbacks.
     /// </remarks>
+    /// <exception cref="ObjectDisposedException">The factory has been disposed.</exception>
+    /// <exception cref="ArgumentNullException"><see cref="GetArguments"/> returned null.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><see cref="StartupTimeout"/> is not a positive finite timer duration.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// The entry-point assembly is not executable, arguments contain null elements, or Program exits without building a supported host.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> canceled gate acquisition or the startup wait.</exception>
+    /// <exception cref="TimeoutException">Program did not build its host within <see cref="StartupTimeout"/>.</exception>
     public async Task<AzureFunctionTestHost> CreateHostAsync(CancellationToken cancellationToken = default)
     {
         await _lifetimeGate.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -131,7 +140,14 @@ public class AzureFunctionTestFactory<TEntryPoint> : IAsyncDisposable where TEnt
         }
     }
 
-    /// <inheritdoc />
+    /// <summary>Disposes the factory-owned host and its service provider asynchronously.</summary>
+    /// <returns>A task representing disposal of the host and its owned services.</returns>
+    /// <remarks>
+    /// Dispose active scenarios first. An active scenario rejects disposal without closing the factory,
+    /// allowing disposal to be retried. Service disposal failures propagate and leave the factory closed.
+    /// Repeated disposal after the factory has closed has no effect.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">A scenario is still active on the factory-owned host.</exception>
     public async ValueTask DisposeAsync()
     {
         await _lifetimeGate.WaitAsync().ConfigureAwait(false);
