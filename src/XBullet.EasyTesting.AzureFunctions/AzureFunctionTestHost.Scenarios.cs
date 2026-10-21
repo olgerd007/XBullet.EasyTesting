@@ -11,6 +11,8 @@ public sealed partial class AzureFunctionTestHost
     private AzureFunctionTestScenarioScope? _activeScenario;
     private bool _disposed;
 
+    internal bool IsDisposed => _disposed;
+
     /// <summary>Starts an isolated resource lifecycle while retaining per-invocation DI scopes.</summary>
     /// <param name="cancellationToken">Cancels gate acquisition and initial resource resets.</param>
     /// <returns>A caller-owned scenario scope that must be asynchronously disposed.</returns>

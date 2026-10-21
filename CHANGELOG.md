@@ -6,6 +6,30 @@ The project follows Semantic Versioning. Package versions are produced from GitH
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-10-20
+
+### Added
+
+- Added `AzureFunctionTestFactory<TEntryPoint>` to reuse a Functions application's `Program.cs`,
+  production configuration, and service provider, with final test overrides, function discovery,
+  bounded startup waits, and factory-owned async disposal. Hosted services remain stopped;
+  in-process middleware is configured explicitly. See the
+  [Functions factory guide](docs/guides/azure-functions.md#reuse-programcs-with-a-factory)
+  and [Azure Functions API reference](docs/api/packages/xbullet-easytesting-azurefunctions.md).
+
+### Fixed
+
+- Functions test factories reject further use after host service disposal fails, while keeping
+  active-scenario disposal rejections retryable and preserving the original cleanup exception.
+- Documentation API navigation now opens valid package and namespace pages from the navigation menu.
+- Release package validation now runs against the 1.1.0 compatibility baseline when projects
+  use the SDK's default packaging setting.
+
+### Security
+
+- Pinned Aspire's transitive MessagePack dependency to 2.5.303 and the container-test SqlClient
+  dependency System.Security.Cryptography.Pkcs to 9.0.21 to resolve dependency audit findings.
+
 ## [1.1.0] - 2026-10-10
 
 ### Added

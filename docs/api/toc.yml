@@ -2,6 +2,7 @@ items:
 - name: Overview
   href: index.md
 - name: Packages
+  href: index.md#packages
   items:
   - name: XBullet.EasyTesting
     href: packages/xbullet-easytesting.md
@@ -31,3 +32,4 @@ items:
     href: packages/xbullet-easytesting-verify-xunit.md
 - name: Namespaces and members
   href: generated/toc.yml
+  homepage: generated/XBullet.EasyTesting.yml

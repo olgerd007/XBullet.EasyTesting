@@ -28,6 +28,123 @@ The host is asynchronous disposable. Each `InvokeAsync` call creates one DI scop
 middleware in registration order, invokes the function delegate, captures outputs, and disposes the
 scope even when the function or middleware throws.
 
+## Reuse Program.cs with a factory
+
+Derive from `AzureFunctionTestFactory<TEntryPoint>` to reuse the real Functions application's
+configuration and dependency registrations. `TEntryPoint` identifies the executable assembly;
+use its `Program` type or another type from the same assembly. For a top-level entry point,
+expose the generated type by adding `public partial class Program;` after the startup statements.
+
+The factory executes the assembly entry point and intercepts the first generic host built by
+`HostBuilder` or `HostApplicationBuilder`. The resulting `AzureFunctionTestHost` uses that host's
+service provider and its disposal lifetime. The factory stops entry-point execution at host
+construction, before `Run`, `RunAsync`, or hosted-service startup. Functions Core Tools and a worker
+gRPC endpoint are not required.
+
+<!-- snippet: tests/TestFunctions.IntegrationTests/AzureFunctionTestFactoryTests.cs#docs-functions-program-factory-definition -->
+```csharp
+private sealed class OrderFunctionFactory : AzureFunctionTestFactory<Program>
+{
+    public StubHttpMessageHandler Pricing { get; } = new();
+    public RecordingResource Recorder { get; } = new();
+
+    protected override void ConfigureHost(IHostBuilder builder) =>
+        builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(
+            new Dictionary<string, string?> { ["OrderPricing:BaseUrl"] = "https://factory-pricing.test/" }));
+
+    protected override void ConfigureTestHost(AzureFunctionTestHostBuilder builder) =>
+        builder.UseScenarioResource("Recorded invocations", Recorder);
+
+    protected override void ConfigureTestServices(IServiceCollection services)
+    {
+        services.RemoveAll<ITriggerInvocationSink>();
+        services.AddSingleton<ITriggerInvocationSink>(Recorder);
+        // Keep the typed client registration and base address configured by Program.cs.
+        services.AddHttpClient<IOrderPricingClient, OrderPricingClient>()
+            .ConfigurePrimaryHttpMessageHandler(() => Pricing)
+            .SetHandlerLifetime(Timeout.InfiniteTimeSpan);
+    }
+}
+```
+<!-- end-snippet -->
+
+This example's `RecordingResource` implements `ITriggerInvocationSink` and `ITestScenarioResource`;
+its reset clears recorded invocations and its diagnostics return a detached array. The HTTP stub
+replaces transport while keeping the typed client and base address registered by `Program.cs`.
+Function classes marked with `[Function]` are discovered in the entry-point assembly and registered
+transiently unless the application already registered them. Additional function assemblies can be
+registered explicitly through `ConfigureTestHost`.
+
+<!-- snippet: tests/TestFunctions.IntegrationTests/AzureFunctionTestFactoryTests.cs#docs-functions-program-factory -->
+```csharp
+[Fact]
+public async Task Factory_reuses_program_configuration_and_services_with_test_overrides()
+{
+    await using var factory = new OrderFunctionFactory();
+    var host = await factory.CreateHostAsync(TestContext.Current.CancellationToken);
+    factory.Pricing.When(HttpMethod.Get, "/products/42/price")
+        .RespondJson(new ProductPrice(42, 19.95m, "USD"));
+
+    await host.RunInTestScenarioScopeAsync(async (scope, token) =>
+    {
+        var trigger = KafkaTriggerData.JsonTrigger(
+            new OrderPricingRequestedMessage("order-42", 42, 3), topic: "order-pricing");
+        await scope.Host.InvokeAsync<PriceOrderKafkaFunction, string>(
+            nameof(PriceOrderKafkaFunction), trigger,
+            (function, message, context) => function.RunAsync(message, context), token);
+
+        Assert.Equal(59.85m, Assert.Single(factory.Recorder.Invocations).Amount);
+        factory.Pricing.VerifyCalled(HttpMethod.Get, "/products/42/price");
+    }, TestContext.Current.CancellationToken);
+}
+```
+<!-- end-snippet -->
+
+### Override startup for tests
+
+- `ConfigureHost(IHostBuilder)` adds configuration callbacks before service construction. For
+  `HostApplicationBuilder`, host settings initialized before `Build` may reject changes; pass
+  appropriate arguments through `GetArguments` when the application's builder consumes `args`.
+- `ConfigureTestHost(AzureFunctionTestHostBuilder)` registers scenario resources, additional
+  functions, and the middleware used by the in-process invocation pipeline.
+- `ConfigureTestServices(IServiceCollection)` applies final overrides after production and
+  test-host registrations, using the existing production service collection.
+- `GetArguments()` supplies copied command-line arguments to the entry point; the default is empty.
+- `StartupTimeout` bounds the startup wait and defaults to thirty seconds. It must be positive and
+  within the finite .NET timer range.
+
+`CreateHostAsync` lazily creates one factory-owned host and returns the cached instance to later
+callers. Pass the test cancellation token. Finish and dispose all scenarios, then dispose the
+factory with `await using`; callers borrow the returned host and must not dispose it separately.
+Independent factories have independent containers. No new NuGet dependency is required for this API.
+
+### Startup and middleware boundaries
+
+This factory reuses configuration and DI registrations. Worker-native middleware configured by
+`ConfigureFunctionsWorkerDefaults` or `ConfigureFunctionsWebApplication` is not automatically
+replayed against synthetic invocation contexts. Configure the middleware needed by a test through
+`ConfigureTestHost`; the existing host pipeline preserves that middleware's ordering and scope.
+The worker's RPC logger provider is removed before host construction, while other application
+logging providers remain available. Neither worker nor application hosted services are started.
+Applications must still replace external clients or startup dependencies that their own code
+resolves eagerly.
+
+Code preceding host construction executes normally, including external calls and other side
+effects. The factory cannot interrupt arbitrary application code. If cancellation or timeout ends
+the wait, the capture listener remains attached to that execution until it exits; a late-built
+host is intercepted before `Run` and disposed asynchronously. That application code and its test
+configuration callbacks can outlive the canceled wait, so avoid immediately reusing mutable test
+dependencies while it is still running. Initialization errors that have completed can be retried.
+
+`Program` code that catches `HostAbortedException` should allow shutdown rather than starting
+another host. Entry points that never build a generic host fail with an explanatory error. The
+factory does not change process-wide environment variables or the current working directory;
+configure paths explicitly when startup depends on them.
+
+See the complete
+[`AzureFunctionTestFactoryTests`](../../tests/TestFunctions.IntegrationTests/AzureFunctionTestFactoryTests.cs)
+for cancellation, timeout, parallel-factory isolation, ownership, and startup-failure examples.
+
 ## Direct function invocation
 
 For an HTTP function, build a request, resolve the real function class, and call its entry point:

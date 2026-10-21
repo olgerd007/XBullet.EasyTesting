@@ -3,6 +3,7 @@ using Azure.Core.Serialization;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Middleware;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using XBullet.EasyTesting.Hosting;
 
 namespace XBullet.EasyTesting.AzureFunctions;
@@ -10,17 +11,26 @@ namespace XBullet.EasyTesting.AzureFunctions;
 /// <summary>Fluently builds a dependency-injection host for isolated-worker function tests.</summary>
 public sealed class AzureFunctionTestHostBuilder
 {
-    private readonly IServiceCollection _services = new ServiceCollection();
+    private readonly IServiceCollection _services;
     private readonly List<Func<IServiceProvider, IFunctionsWorkerMiddleware>> _middleware = [];
     private readonly Dictionary<string, ITestScenarioResource> _resources = new(StringComparer.OrdinalIgnoreCase);
 
     internal AzureFunctionTestHostBuilder()
+        : this(new ServiceCollection())
     {
         _services.AddLogging();
         _services.Configure<WorkerOptions>(options =>
             options.Serializer = new JsonObjectSerializer(
                 new JsonSerializerOptions(JsonSerializerDefaults.Web)));
     }
+
+    internal AzureFunctionTestHostBuilder(IServiceCollection services)
+    {
+        _services = services;
+    }
+
+    internal AzureFunctionTestHost Build(IHost host) => new(host, _middleware.ToArray(),
+        new Dictionary<string, ITestScenarioResource>(_resources, StringComparer.OrdinalIgnoreCase));
 
     /// <summary>Adds a function class that can be resolved from the test host.</summary>
     /// <typeparam name="TFunction">The reference-type function class registered with transient lifetime.</typeparam>

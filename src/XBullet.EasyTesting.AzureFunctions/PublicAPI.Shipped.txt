@@ -249,3 +249,12 @@ XBullet.EasyTesting.AzureFunctions.FunctionScopedTest.Host.get -> XBullet.EasyTe
 XBullet.EasyTesting.AzureFunctions.FunctionScopedTest.TestCancellationToken.get -> System.Threading.CancellationToken
 XBullet.EasyTesting.AzureFunctions.FunctionScopedTest.RunAsync(System.Func<XBullet.EasyTesting.AzureFunctions.AzureFunctionTestScenarioScope!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>! test) -> System.Threading.Tasks.Task!
 XBullet.EasyTesting.AzureFunctions.FunctionScopedTest.RunAsync<TResult>(System.Func<XBullet.EasyTesting.AzureFunctions.AzureFunctionTestScenarioScope!, System.Threading.CancellationToken, System.Threading.Tasks.Task<TResult>!>! test) -> System.Threading.Tasks.Task<TResult>!
+XBullet.EasyTesting.AzureFunctions.AzureFunctionTestFactory<TEntryPoint>
+XBullet.EasyTesting.AzureFunctions.AzureFunctionTestFactory<TEntryPoint>.AzureFunctionTestFactory() -> void
+XBullet.EasyTesting.AzureFunctions.AzureFunctionTestFactory<TEntryPoint>.CreateHostAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<XBullet.EasyTesting.AzureFunctions.AzureFunctionTestHost!>!
+XBullet.EasyTesting.AzureFunctions.AzureFunctionTestFactory<TEntryPoint>.DisposeAsync() -> System.Threading.Tasks.ValueTask
+virtual XBullet.EasyTesting.AzureFunctions.AzureFunctionTestFactory<TEntryPoint>.StartupTimeout.get -> System.TimeSpan
+virtual XBullet.EasyTesting.AzureFunctions.AzureFunctionTestFactory<TEntryPoint>.GetArguments() -> string![]!
+virtual XBullet.EasyTesting.AzureFunctions.AzureFunctionTestFactory<TEntryPoint>.ConfigureHost(Microsoft.Extensions.Hosting.IHostBuilder! builder) -> void
+virtual XBullet.EasyTesting.AzureFunctions.AzureFunctionTestFactory<TEntryPoint>.ConfigureTestHost(XBullet.EasyTesting.AzureFunctions.AzureFunctionTestHostBuilder! builder) -> void
+virtual XBullet.EasyTesting.AzureFunctions.AzureFunctionTestFactory<TEntryPoint>.ConfigureTestServices(Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> void

@@ -1,7 +1,13 @@
 <Project>
+  <PropertyGroup>
+    <!-- Package validation is configured before NuGet's pack targets assign this default. -->
+    <IsPackable
+      Condition="'$(IsPackable)' == '' and '$(IsTestProject)' != 'true' and '$(IsTestingPlatformApplication)' != 'true'">true</IsPackable>
+  </PropertyGroup>
+
   <PropertyGroup Condition="'$(IsPackable)' == 'true'">
     <EnablePackageValidation>true</EnablePackageValidation>
-    <PackageValidationBaselineVersion Condition="'$(SkipPackageValidationBaseline)' != 'true'">1.0.12</PackageValidationBaselineVersion>
+    <PackageValidationBaselineVersion Condition="'$(SkipPackageValidationBaseline)' != 'true'">1.1.0</PackageValidationBaselineVersion>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(IsPackable)' == 'true'">

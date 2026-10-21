@@ -16,3 +16,5 @@ var host = new HostBuilder()
     .Build();
 
 host.Run();
+
+public partial class Program;

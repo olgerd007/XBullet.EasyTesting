@@ -51,6 +51,9 @@ documented reason here and remain as narrow as possible.
 | API reference and package landing pages | Public-API owner | Every release | Public API approval changes | 2026-10-05 | Next release |
 | Security, limitations, and migration guidance | Release maintainer | Every release | Security or breaking behavior change | 2026-10-01 | Next release |
 
+The Azure Functions factory guide, factory API comments, and API navigation were reviewed on
+2026-10-21 for startup and disposal boundaries, failure modes, guide links, package selection, and search.
+
 A review confirms examples still compile, defaults and limitations remain accurate, external
 requirements are current, links reach the intended material, and sensitive-data guidance matches
 the implementation. Update the dates in this table in the pull request that records a full review.
