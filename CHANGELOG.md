@@ -6,6 +6,8 @@ The project follows Semantic Versioning. Package versions are produced from GitH
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-23
+
 ### Added
 
 - `TestDurableWorkflow.WithRetries` simulates SDK retry policies and handlers for activities and
@@ -21,7 +23,8 @@ The project follows Semantic Versioning. Package versions are produced from GitH
 - Added opt-in `SnapshotSettings.NormalizeStringLineEndings()` to compare JSON string values
   across Windows and Linux. Decoded CRLF and CR become LF in actual and existing verified JSON
   without rewriting reviewed files; literal backslash sequences and trailing newlines within
-  values are preserved. Reusable and global defaults retain the setting.
+  values are preserved. Reusable and global defaults retain the setting. See
+  [snapshot line endings](docs/guides/snapshots/stabilizing-data.md#windows-and-linux-line-endings).
 - Durable Entity test helpers record orchestrator calls/signals, provide `client.Entities` metadata
   fixtures and explicit query/cleanup handlers, and execute real SDK entity implementations against
   serialized test-controlled state. Scenario diagnostics/reset include entity client interactions.
@@ -36,11 +39,6 @@ The project follows Semantic Versioning. Package versions are produced from GitH
   scenario-resource diagnostics/reset support client workflow tests. `TestOrchestrationMetadataBuilder`
   supplies seeded metadata fixtures with typed payloads, status, failure details, and timestamps.
   See the [Durable client guide](docs/guides/azure-functions-durable.md#test-http-starters).
-
-## [1.3.0] - 2026-10-22
-
-### Added
-
 - `TestOrchestrationContext` supports typed input, instance metadata, replay-aware logging, manually
   advanced timers, buffered external events, child orchestration dispatch, and named activity handlers.
   Fluent overrides configure metadata, GUID generation, version comparison, and entity stubs;
@@ -68,6 +66,8 @@ The project follows Semantic Versioning. Package versions are produced from GitH
   for the new in-memory defaults and explicit control of time, events, and child dispatch.
 - See the [snapshot upgrade guidance](docs/guides/snapshots/migration.md#upgrade-to-130) for
   assertion-time exchange configuration and capture-time redaction limits.
+- Connected workflow retries, payload serialization, and JSON string line-ending normalization
+  are opt-in. Standalone contexts and existing snapshot assertions retain their documented defaults.
 
 ## [1.2.1] - 2026-10-20
 

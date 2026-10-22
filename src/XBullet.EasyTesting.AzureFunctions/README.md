@@ -174,9 +174,12 @@ Use `WithCustomStatus`, `WithCustomStatusHandler`, and `WithContinueAsNewHandler
 
 ## Limitations
 
-These controls do not implement durable history, automatic replay, persistence, retries, child-instance
-lifecycle management, or remote event delivery. Entity defaults do not implement state or distributed
-locking; GUID sequences do not reproduce the runtime algorithm, and continuation requests do not restart execution.
+Standalone orchestration contexts do not implement durable history, automatic replay, persistence,
+retries, child-instance lifecycle management, or remote event delivery. Connected workflows explicitly
+dispatch children and events, with opt-in retry and serialization checks as described above; they
+still do not provide production persistence or replay. Entity defaults do not implement state or
+distributed locking; GUID sequences do not reproduce the runtime algorithm, and continuation requests
+do not restart execution.
 
 ## Documentation
 

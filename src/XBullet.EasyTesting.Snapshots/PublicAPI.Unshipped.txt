@@ -1,2 +1,1 @@
 #nullable enable
-XBullet.EasyTesting.Snapshots.SnapshotSettings.NormalizeStringLineEndings() -> XBullet.EasyTesting.Snapshots.SnapshotSettings!

@@ -60,6 +60,10 @@ The Azure Functions factory guide, factory API comments, and API navigation were
 The Durable context defaults, fluent overrides, orchestration recipes, snapshot assertion options,
 and their API approvals and upgrade guidance were reviewed on 2026-10-22 for the 1.3.0 release.
 
+The Durable client, entity, connected workflow, retry, and serialization guides and API approvals
+were reviewed on 2026-10-23, together with JSON string line-ending normalization and package entry points.
+The coverage inventory includes these features and their executable tests.
+
 A review confirms examples still compile, defaults and limitations remain accurate, external
 requirements are current, links reach the intended material, and sensitive-data guidance matches
 the implementation. Update the dates in this table in the pull request that records a full review.
