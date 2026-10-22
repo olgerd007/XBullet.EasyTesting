@@ -38,11 +38,16 @@ public sealed partial class TestOrchestrationContext : TaskOrchestrationContext
     private IReadOnlyDictionary<string, object?> _properties = new ReadOnlyDictionary<string, object?>(new Dictionary<string, object?>());
     private TaskOrchestrationEntityFeature _entities = new StubOrchestrationEntityFeature();
     private object? _customStatus;
+    private object? _serializedCustomStatus;
     private Func<Guid>? _guidGenerator;
     private long _guidSequence;
     private Func<string, string, int> _versionComparer = StringComparer.Ordinal.Compare;
     private Action<object?>? _customStatusHandler;
     private Action<ContinueAsNewOptions>? _continueAsNewHandler;
+    internal CancellationToken ExecutionCancellation { get; set; }
+    internal Action<RecordedOrchestrationEvent>? EventDispatcher { get; set; }
+    internal DataConverter? PayloadConverter { get; set; }
+    internal object? MetadataCustomStatus => PayloadConverter is null ? CustomStatus : Volatile.Read(ref _serializedCustomStatus);
 
     /// <summary>Creates an in-memory context whose activity and child handlers return default result values.</summary>
     public TestOrchestrationContext()
@@ -115,7 +120,7 @@ public sealed partial class TestOrchestrationContext : TaskOrchestrationContext
     /// <returns>This context, for chaining.</returns>
     public TestOrchestrationContext WithInput(object? input)
     {
-        _input = input;
+        _input = SerializedDurablePayload.Capture(input, PayloadConverter);
         return this;
     }
 
@@ -169,7 +174,8 @@ public sealed partial class TestOrchestrationContext : TaskOrchestrationContext
     /// <summary>Delivers an external event to the oldest matching wait or buffers it until a wait is created.</summary>
     /// <param name="eventName">A non-empty case-insensitive event name.</param>
     /// <param name="payload">The event payload retained without cloning; null is allowed for nullable result types.</param>
-    public void RaiseEvent(string eventName, object? payload) => _scheduler.RaiseEvent(eventName, payload);
+    public void RaiseEvent(string eventName, object? payload) =>
+        _scheduler.RaiseEvent(eventName, SerializedDurablePayload.Capture(payload, PayloadConverter));
 
     /// <inheritdoc />
     public override TaskName Name => _name;
@@ -202,11 +208,12 @@ public sealed partial class TestOrchestrationContext : TaskOrchestrationContext
     /// <inheritdoc />
     protected override ILoggerFactory LoggerFactory => _loggerFactory;
 
-    /// <summary>Gets input previously supplied by <see cref="WithInput"/> without serialization.</summary>
-    /// <typeparam name="T">The type assignable from the supplied input.</typeparam>
-    /// <returns>The retained input, or default when no input was supplied.</returns>
+    /// <summary>Gets configured input, deserializing when attached to a workflow with serialization enabled.</summary>
+    /// <typeparam name="T">The assignable input type, or the deserialization target for serialized workflows.</typeparam>
+    /// <returns>The retained or deserialized input, or default when no input was supplied.</returns>
     /// <exception cref="InvalidOperationException">The non-null input cannot be assigned to T.</exception>
-    public override T GetInput<T>() => _input is null ? default! : ConvertResult<T>(_input, "Orchestration input");
+    public override T GetInput<T>() => _input is null or SerializedDurablePayload { Data: null }
+        ? default! : ConvertResult<T>(_input, "Orchestration input");
 
     /// <inheritdoc />
     public override async Task<TResult> CallActivityAsync<TResult>(
@@ -235,7 +242,29 @@ public sealed partial class TestOrchestrationContext : TaskOrchestrationContext
     /// <param name="cancellationToken">Cancels the pending timer with the caller's token.</param>
     /// <returns>A task completed when simulated time reaches fireAt, or canceled when cancellation wins.</returns>
     public override Task CreateTimer(DateTime fireAt, CancellationToken cancellationToken) =>
-        _scheduler.CreateTimer(fireAt, cancellationToken);
+        ExecutionCancellation.CanBeCanceled
+            ? CreateConnectedTimerAsync(fireAt, cancellationToken)
+            : _scheduler.CreateTimer(fireAt, cancellationToken);
+
+    private async Task CreateConnectedTimerAsync(DateTime fireAt, CancellationToken cancellationToken)
+    {
+        using var linked = LinkExecutionCancellation(cancellationToken);
+        try
+        {
+            await _scheduler.CreateTimer(fireAt, linked?.Token ?? EffectiveCancellation(cancellationToken)).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw new OperationCanceledException(cancellationToken);
+        }
+    }
+
+    private CancellationTokenSource? LinkExecutionCancellation(CancellationToken caller) =>
+        ExecutionCancellation.CanBeCanceled && caller.CanBeCanceled && caller != ExecutionCancellation
+            ? CancellationTokenSource.CreateLinkedTokenSource(caller, ExecutionCancellation) : null;
+
+    private CancellationToken EffectiveCancellation(CancellationToken caller) =>
+        caller.CanBeCanceled ? caller : ExecutionCancellation;
 
     /// <summary>Waits for the next matching buffered or raised event.</summary>
     /// <typeparam name="T">The type assignable from the event payload.</typeparam>
@@ -246,8 +275,16 @@ public sealed partial class TestOrchestrationContext : TaskOrchestrationContext
         string eventName,
         CancellationToken cancellationToken = default)
     {
-        var payload = await _scheduler.WaitForEvent(eventName, cancellationToken).ConfigureAwait(false);
-        return ConvertResult<T>(payload, $"External event '{eventName}'");
+        using var linked = LinkExecutionCancellation(cancellationToken);
+        try
+        {
+            var payload = await _scheduler.WaitForEvent(eventName, linked?.Token ?? EffectiveCancellation(cancellationToken)).ConfigureAwait(false);
+            return ConvertResult<T>(payload, $"External event '{eventName}'");
+        }
+        catch (OperationCanceledException) when (ExecutionCancellation.CanBeCanceled && cancellationToken.IsCancellationRequested)
+        {
+            throw new OperationCanceledException(cancellationToken);
+        }
     }
 
     /// <summary>Records an outbound event and delivers it locally when the target is this instance.</summary>
@@ -259,11 +296,16 @@ public sealed partial class TestOrchestrationContext : TaskOrchestrationContext
         ArgumentException.ThrowIfNullOrWhiteSpace(instanceId);
         ArgumentException.ThrowIfNullOrWhiteSpace(eventName);
         ArgumentNullException.ThrowIfNull(payload);
+        var recorded = new RecordedOrchestrationEvent(instanceId, eventName, payload);
         lock (_recordingGate)
         {
-            _sentEvents.Add(new RecordedOrchestrationEvent(instanceId, eventName, payload));
+            _sentEvents.Add(recorded);
         }
-        if (string.Equals(instanceId, InstanceId, StringComparison.Ordinal))
+        if (EventDispatcher is { } dispatch)
+        {
+            dispatch(recorded);
+        }
+        else if (string.Equals(instanceId, InstanceId, StringComparison.Ordinal))
         {
             RaiseEvent(eventName, payload);
         }
@@ -273,6 +315,8 @@ public sealed partial class TestOrchestrationContext : TaskOrchestrationContext
     /// <param name="customStatus">The status retained without cloning; null clears the status.</param>
     public override void SetCustomStatus(object? customStatus)
     {
+        var captured = SerializedDurablePayload.Capture(customStatus, PayloadConverter);
+        Volatile.Write(ref _serializedCustomStatus, captured);
         Volatile.Write(ref _customStatus, customStatus);
         _customStatusHandler?.Invoke(customStatus);
     }
@@ -351,6 +395,11 @@ public sealed partial class TestOrchestrationContext : TaskOrchestrationContext
 
     private static TResult ConvertResult<TResult>(object? result, string operation)
     {
+        if (result is SerializedDurablePayload payload)
+        {
+            return payload.Read<TResult>();
+        }
+
         if (result is TResult typedResult)
         {
             return typedResult;

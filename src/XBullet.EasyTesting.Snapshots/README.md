@@ -58,6 +58,13 @@ await response.ShouldMatchHttpExchangeSnapshot(
 
 Snapshot assertions also continue to accept prebuilt `SnapshotSettings` instances.
 
+Use `.NormalizeStringLineEndings()` on snapshot settings when JSON string values contain
+platform-specific newlines, such as validation messages generated on Windows and Linux. This
+opt-in rule converts decoded CRLF and CR to LF in both actual and verified JSON without rewriting
+existing verified files. It preserves trailing newlines within values and literal backslash
+sequences, and works with reusable or global defaults. HTTP text and YAML output retain their
+existing behavior. See [stabilizing snapshot data](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/snapshots/stabilizing-data.md#windows-and-linux-line-endings).
+
 Attach `HttpExchangeRecorder` to the real client pipeline when the complete request body must be
 captured before TestServer consumes it. Recorded responses accept `configureExchange` and separate
 `exchangeOptions` during assertion to omit or further scrub captured data and select output format.

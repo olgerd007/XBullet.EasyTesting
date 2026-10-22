@@ -6,6 +6,37 @@ The project follows Semantic Versioning. Package versions are produced from GitH
 
 ## [Unreleased]
 
+### Added
+
+- `TestDurableWorkflow.WithRetries` simulates SDK retry policies and handlers for activities and
+  children with manual time, bounded attempts, failure filters, and attempt diagnostics. Fresh
+  scopes and inspectable child retry IDs support failure/recovery tests. `TestDurableTaskSequence<TResult>`
+  supplies ordered results and failures with explicit exhaustion and reset. See the
+  [retry guide](docs/guides/azure-functions-durable-retries.md).
+- `TestDurableWorkflow.WithSerialization` optionally snapshots inputs, results, events, and custom
+  status with the SDK JSON converter or a caller-supplied `DataConverter`. Typed reads deserialize
+  independent values, metadata reuses captured payloads, and converter failures remain observable.
+  Direct assignment remains the default. See the
+  [workflow guide](docs/guides/azure-functions-durable-workflows.md#enable-serialization-compatibility-checks).
+- Added opt-in `SnapshotSettings.NormalizeStringLineEndings()` to compare JSON string values
+  across Windows and Linux. Decoded CRLF and CR become LF in actual and existing verified JSON
+  without rewriting reviewed files; literal backslash sequences and trailing newlines within
+  values are preserved. Reusable and global defaults retain the setting.
+- Durable Entity test helpers record orchestrator calls/signals, provide `client.Entities` metadata
+  fixtures and explicit query/cleanup handlers, and execute real SDK entity implementations against
+  serialized test-controlled state. Scenario diagnostics/reset include entity client interactions.
+  See the [entity guide](docs/guides/azure-functions-durable-entities.md).
+- `TestDurableWorkflow` connects client scheduling to named orchestrators, activities, children,
+  and external events through host middleware and isolated DI scopes. Result and metadata waits,
+  manual context time, scenario diagnostics, and bounded cancellation/drain cleanup support
+  application workflow tests. See the [connected workflow guide](docs/guides/azure-functions-durable-workflows.md).
+- `TestDurableTaskClient` records orchestration scheduling attempts and supports HTTP starter
+  tests using the SDK's status-response helpers. Management handlers cover termination, purge,
+  restart, rewind, and history retrieval. Ordered operation recording, fluent assertions, and
+  scenario-resource diagnostics/reset support client workflow tests. `TestOrchestrationMetadataBuilder`
+  supplies seeded metadata fixtures with typed payloads, status, failure details, and timestamps.
+  See the [Durable client guide](docs/guides/azure-functions-durable.md#test-http-starters).
+
 ## [1.3.0] - 2026-10-22
 
 ### Added

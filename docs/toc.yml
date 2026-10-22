@@ -59,6 +59,12 @@ items:
     href: guides/azure-functions-durable.md
   - name: Durable Functions recipes
     href: guides/azure-functions-durable-recipes.md
+  - name: Connected Durable workflows
+    href: guides/azure-functions-durable-workflows.md
+  - name: Durable retry and failure sequences
+    href: guides/azure-functions-durable-retries.md
+  - name: Durable Entity tests
+    href: guides/azure-functions-durable-entities.md
   - name: Snapshots
     href: guides/snapshots.md
     items:

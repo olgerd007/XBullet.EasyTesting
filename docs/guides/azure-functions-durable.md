@@ -8,6 +8,244 @@ Remaining context members have lightweight defaults with fluent overrides for be
 For complete scenarios, see the [orchestration recipes](azure-functions-durable-recipes.md): partial
 batch failure, approval/timeouts, isolated child fan-out, and explicit paged continuations.
 
+## Test HTTP starters
+
+Use `TestDurableTaskClient` wherever a starter accepts `[DurableClient] DurableTaskClient`.
+Pass it explicitly through the host's invocation delegate, or register it as `DurableTaskClient`
+when the application uses constructor injection. The host does not resolve binding parameters
+automatically. The worker Durable extension remains an application/test dependency for attributes
+and HTTP helpers; the test package adds only `Microsoft.DurableTask.Client` for the client abstraction.
+
+This test invokes an HTTP starter through the middleware pipeline and uses the SDK's real
+`CreateCheckStatusResponseAsync` implementation:
+
+<!-- snippet: tests/TestFunctions.IntegrationTests/DurableClientTests.cs#docs-functions-durable-client -->
+```csharp
+[Fact]
+public async Task Http_starter_records_scheduling_and_returns_sdk_management_response()
+{
+    var builder = AzureFunctionTestHost.CreateBuilder();
+    builder.AddFunction<StartOrderOrchestrationFunction>();
+    await using var host = builder.Build();
+    await using var client = new TestDurableTaskClient();
+    var cancellationToken = TestContext.Current.CancellationToken;
+    var request = host.HttpRequest(nameof(StartOrderOrchestrationFunction), cancellationToken)
+        .WithMethod(HttpMethod.Post)
+        .WithUrl("https://example.test/api/orders")
+        .WithTextBody("order input")
+        .Build();
+
+    var invocation = await host.InvokeAsync<StartOrderOrchestrationFunction, HttpResponseData>(
+        (TestFunctionContext)request.FunctionContext,
+        (function, context) => function.RunAsync(request, client, context.CancellationToken));
+    var response = Assert.IsAssignableFrom<HttpResponseData>(invocation.Result);
+    var payload = await response.ReadBodyAsJsonAsync<JsonElement>(cancellationToken: cancellationToken);
+
+    Assert.True(invocation.FunctionExecuted);
+    Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+    Assert.Equal("order-42", payload.GetProperty("id").GetString());
+    Assert.Equal(
+        payload.GetProperty("statusQueryGetUri").GetString(),
+        Assert.Single(response.Headers.GetValues("Location")));
+    Assert.StartsWith("https://example.test/runtime/webhooks/durabletask/instances/order-42",
+        payload.GetProperty("statusQueryGetUri").GetString());
+    var call = Assert.Single(client.ScheduledOrchestrations);
+    Assert.Equal("ProcessOrder", call.OrchestratorName.Name);
+    Assert.Equal("order input", call.Input);
+    Assert.Equal("order-42", call.InstanceId);
+}
+```
+<!-- end-snippet -->
+
+The starter calls `ScheduleNewOrchestrationInstanceAsync` and returns the SDK response. Both
+`CreateCheckStatusResponse` and `CreateCheckStatusResponseAsync` work with the test host's HTTP
+request and worker serializer. Management links use the request origin; these links are not
+served endpoints and do not include production binding credentials or task-hub query parameters.
+
+- `ScheduledOrchestrations` returns a snapshot in scheduling order, including failed handler
+  attempts. Each record contains the `TaskName`, input, options, and selected instance ID.
+- Explicit `StartOrchestrationOptions.InstanceId` values are honored. Otherwise IDs are generated
+  as `test-instance-1`, `test-instance-2`, and so on per client. Scheduling does not enforce
+  deduplication or start-time policies. Input and options are retained by reference without cloning
+  or serialization; the recorded instance ID is fixed when the call begins.
+- `ScheduleHandler` receives the recorded attempt and caller token and can return a custom ID,
+  throw a failure, or explicitly dispatch to application code. Its returned ID must be non-empty;
+  it does not replace the originally recorded ID. Pre-canceled calls are neither recorded nor
+  dispatched. Configure handlers before concurrent use.
+- `GetInstanceHandler` receives the instance ID, payload inclusion flag, and caller token.
+  Without a handler, lookups read explicitly seeded metadata and return null when none matches.
+  Scheduling does not seed metadata automatically.
+- `RaiseEventHandler`, `WaitForStartHandler`, `WaitForCompletionHandler`, `SuspendHandler`,
+  `ResumeHandler`, and `QueryHandler` provide explicit test behavior for the other abstract client
+  operations. Calling these without configuration throws `InvalidOperationException` identifying
+  the missing handler. Handlers receive original arguments and own any simulated state or waits.
+  Pageable query cancellation belongs to the returned `AsyncPageable`.
+- Termination, purge, history, rewind, and restart have explicit handlers described below.
+  `Entities` exposes a recording entity client; see [Durable Entity tests](azure-functions-durable-entities.md).
+  Completion-time ID listing retains the SDK's unsupported behavior. Disposal owns no runtime
+  resources and leaves recorded calls available for assertions.
+
+Scheduling records intent without running an orchestrator. To exercise orchestration logic next,
+create a separate `TestOrchestrationContext` using the recorded input and instance ID and invoke the
+real orchestrator explicitly. Persistence, replay, retries, lifecycle behavior, and the management
+HTTP endpoints still require runtime-level testing.
+
+For automatic in-memory dispatch through the host's DI scopes and middleware, use the optional
+[connected workflow harness](azure-functions-durable-workflows.md). It connects starters, named
+orchestrators, activities, children, and external events without changing these standalone defaults.
+
+## Record client management calls
+
+`Operations` is a snapshot of every validated client call attempt, recorded before dispatch.
+`Sequence` starts at one and represents invocation order, including failed and missing handlers;
+it does not indicate completion or success. Pre-canceled and invalid calls are excluded.
+`ScheduledOrchestrations` remains available for scheduling-specific assertions.
+
+Each `RecordedDurableClientOperation` exposes an operation kind, target `InstanceId`, and read-only
+`Arguments` keyed by the SDK parameter names below. Values retain original references, including
+mutable inputs and options. `GetArgument<T>(name)` reads without conversion; missing arguments
+throw `KeyNotFoundException`, mismatched non-null types throw `InvalidOperationException`, and
+null arguments return `default(T)`. Cancellation tokens are propagated to handlers but not stored.
+
+| Operation | Handler | Recorded arguments |
+| --- | --- | --- |
+| `Schedule` | `ScheduleHandler` | `orchestratorName`, `input`, `options` |
+| `GetInstance` | `GetInstanceHandler` or seeded metadata | `getInputsAndOutputs` |
+| `RaiseEvent` | `RaiseEventHandler` | `eventName`, `eventPayload` |
+| `WaitForStart` | `WaitForStartHandler` | `getInputsAndOutputs` |
+| `WaitForCompletion` | `WaitForCompletionHandler` | `getInputsAndOutputs` |
+| `Suspend` | `SuspendHandler` | `reason` |
+| `Resume` | `ResumeHandler` | `reason` |
+| `Query` | `QueryHandler` | `filter` |
+| `Terminate` | `TerminateHandler` | `options` |
+| `PurgeInstance` | `PurgeHandler` | `options` |
+| `PurgeAll` | `PurgeAllHandler` | `filter`, `options` |
+| `Restart` | `RestartHandler` | `restartWithNewInstanceId` |
+| `Rewind` | `RewindHandler` | `reason` |
+| `GetHistory` | `HistoryHandler` | None |
+
+Query and bulk-purge calls have no target instance ID. SDK overloads delegate to one recorded
+operation, including both instance lookup aliases. Management handlers receive original arguments
+and cancellation tokens, return their configured results, and propagate failures unchanged. Restart
+results must be non-empty. Apart from scheduling and metadata lookup defaults, handlers must be
+configured; missing handlers throw `InvalidOperationException` naming the required property.
+Management calls do not change seeded metadata, execute history, or enforce backend policies.
+
+## Build instance metadata
+
+`TestOrchestrationMetadataBuilder` creates SDK `OrchestrationMetadata` values with a pending status,
+Unix epoch timestamps, and the SDK JSON converter. Configure status, input, output, custom status,
+tags, failure details, and timestamps as needed:
+
+<!-- snippet: tests/TestFunctions.IntegrationTests/DurableMetadataTests.cs#docs-functions-durable-metadata -->
+```csharp
+[Fact]
+public async Task Seeded_metadata_supports_status_endpoints_and_typed_payload_reads()
+{
+    var metadata = new TestOrchestrationMetadataBuilder("Order", "order-42")
+        .WithRuntimeStatus(OrchestrationRuntimeStatus.Completed)
+        .WithInput(new OrderInput(42))
+        .WithOutput("accepted")
+        .WithCustomStatus(new { Step = "finished" })
+        .Build();
+    await using var client = new TestDurableTaskClient().WithInstance(metadata);
+    var token = TestContext.Current.CancellationToken;
+
+    var summary = await client.GetInstanceAsync("order-42", token);
+    Assert.Equal(OrchestrationRuntimeStatus.Completed, summary!.RuntimeStatus);
+    Assert.Null(summary.SerializedInput);
+    Assert.Throws<InvalidOperationException>(() => summary.ReadInputAs<OrderInput>());
+
+    var details = await client.GetInstanceAsync("order-42", getInputsAndOutputs: true, cancellation: token);
+    Assert.Equal(new OrderInput(42), details!.ReadInputAs<OrderInput>());
+    Assert.Equal("accepted", details.ReadOutputAs<string>());
+    Assert.Equal("finished", details.ReadCustomStatusAs<JsonElement>().GetProperty("Step").GetString());
+    client.Should().HaveOperation(DurableClientOperation.GetInstance, "order-42", times: 2);
+}
+```
+<!-- end-snippet -->
+
+`WithFailure(exception)` captures SDK failure details, including inner exceptions, and sets Failed
+status. `WithFailure(details)` accepts an existing descriptor. Choosing a non-failed status clears
+failure details. `WithTimestamps(createdAt, lastUpdatedAt)` normalizes to UTC and rejects updates
+before creation. `WithTags(tags)` copies tags. `WithDataConverter(converter)` customizes payload
+serialization and typed readers; the converter remains caller-owned.
+
+Payloads are serialized at `Build()` time, so later input changes affect future builds but cannot
+change an already built payload. Each build returns fresh metadata and tag containers. Failure
+descriptors and the converter are retained by reference.
+
+`client.WithInstance(metadata)` seeds or replaces one fixture using case-sensitive instance IDs.
+It copies scalar values and tags. Lookups return fresh snapshots: without `getInputsAndOutputs`,
+serialized payloads, failure details, and the converter are omitted. A configured
+`GetInstanceHandler` overrides fixture lookup. Queries and waits still use their explicit handlers;
+fixtures do not implement runtime state transitions, polling, or automatic scheduling.
+
+## Assert calls and capture diagnostics
+
+`client.Should()` provides fluent checks over recorded attempts:
+
+```csharp
+client.Should()
+    .HaveScheduledOrchestration("Order", "order-42")
+    .HaveRaisedEvent("order-42", "Approved")
+    .HaveOperation(DurableClientOperation.Terminate, "order-42", times: 0);
+```
+
+Counts are exact and default to one; zero asserts absence. Orchestration names and instance IDs
+use ordinal case-sensitive comparison; event names are case-insensitive. `HaveCount` counts all
+operations, including reads. `BeEmpty` requires no calls. `HaveOperationSequence` checks the whole
+ordered sequence. `HaveMatchingOperations(predicate, times)` supports argument checks through
+`GetArgument<T>`; predicate exceptions propagate. A failed check throws
+`TestDurableTaskClientVerificationException` with the expectation and a timeline of operation names,
+instance IDs, and orchestration/event targets, excluding payload values and handler failure text.
+
+The client implements `ITestScenarioResource`. Register it with `UseScenarioResource` to attach its
+timeline to scenario failures and reset state before and after each scenario:
+
+<!-- snippet: tests/TestFunctions.IntegrationTests/DurableClientManagementTests.cs#docs-functions-durable-client-diagnostics -->
+```csharp
+[Fact]
+public async Task Scenario_failure_attaches_timeline_before_resetting_client_state()
+{
+    await using var client = new TestDurableTaskClient
+    {
+        RaiseEventHandler = (_, _, _, _) => Task.CompletedTask
+    };
+    await using var host = AzureFunctionTestHost.CreateBuilder()
+        .UseScenarioResource("Durable", client)
+        .Build();
+    var error = await Assert.ThrowsAsync<TestDurableTaskClientVerificationException>(() =>
+        host.RunInTestScenarioScopeAsync(async (_, token) =>
+        {
+            client.WithInstance(new TestOrchestrationMetadataBuilder("Order", "order-42").Build());
+            await client.RaiseEventAsync("order-42", "Approved", new { Secret = "private-payload" }, token);
+            client.Should().HaveRaisedEvent("order-42", "Rejected");
+        }, TestContext.Current.CancellationToken));
+
+    var diagnostics = Assert.IsType<TestScenarioDiagnostics>(error.Data[TestScenarioDiagnostics.ExceptionDataKey]);
+    var json = JsonSerializer.Serialize(diagnostics.Resources["Durable"]);
+    Assert.Contains("RaiseEvent", json);
+    Assert.Contains("Approved", json);
+    Assert.Contains("order-42", json);
+    Assert.DoesNotContain("private-payload", json);
+    Assert.Contains("Recorded attempts:", error.Message);
+    client.Should().BeEmpty();
+    Assert.Null(await client.GetInstanceAsync("order-42", TestContext.Current.CancellationToken));
+}
+```
+<!-- end-snippet -->
+
+`CaptureDiagnosticsAsync` returns a detached serializable snapshot of the timeline and seeded
+instance names, IDs, and statuses. Payloads, options, reasons, history contents, and failure details
+are excluded. Names and IDs are included without automatic redaction. This also allows capture when
+an original payload cannot be serialized. Scenario diagnostics are attached before cleanup.
+
+`ResetAsync` clears recordings, fixtures, and both ID/operation sequences, preserving configured
+handlers. Arrange fixtures inside the scenario after its initial reset. Await in-flight calls before
+resetting; reset does not cancel handlers or external side effects. A pre-canceled reset leaves state
+unchanged. The host borrows the registered resource; the caller retains disposal ownership.
+
 ## Dispatch to a real activity
 
 Provide an async handler that maps recorded calls to real activity instances or explicit test
@@ -215,7 +453,7 @@ public async Task Fluent_overrides_replace_in_memory_defaults()
 | `Parent` | `null` | `WithParent(parent)`, including null to clear |
 | `Version` | Empty string | `WithVersion(version)` |
 | `Properties` | Empty read-only dictionary | `WithProperties(dictionary)` shallow-copies configuration |
-| `Entities` | Calls return `default(T)`, signals complete, lock scopes maintain local critical-section markers | `WithEntities(feature)` supplies custom entity behavior |
+| `Entities` | Calls return `default(T)`, signals complete, lock scopes maintain local critical-section markers | `WithEntities(new TestOrchestrationEntityFeature())` adds recording and configured calls |
 | `NewGuid()` | Repeatable per-instance sequence | `WithGuidGenerator(generator)` |
 | `CompareVersionTo(version)` | Ordinal comparison of current and supplied version | `WithVersionComparer(comparer)` for numeric or application-specific ordering |
 | `SetCustomStatus(status)` | Retains the latest value in `CustomStatus`; null clears it | `WithCustomStatus(status)`, `WithCustomStatusHandler(handler)` |
@@ -231,6 +469,9 @@ queues unchanged, regardless of its event-preservation flag.
 The default GUID sequence is repeatable for matching instance IDs and call order, but does not reproduce
 the Durable runtime's GUID algorithm. Entity stubs do not execute entity logic, persist state, or acquire
 distributed locks; overlapping local scopes only affect `InCriticalSection` until disposed.
+
+Use the [entity helpers](azure-functions-durable-entities.md) for recorded calls/signals and explicit
+execution of real entity implementations against test-controlled state.
 
 ## Upgrade to 1.3.0
 

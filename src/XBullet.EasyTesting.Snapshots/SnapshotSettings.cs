@@ -161,6 +161,8 @@ public sealed class SnapshotSettings
 
     internal bool CanonicalizeObjectProperties { get; private set; }
 
+    internal bool NormalizeStringLineEndingValues { get; private set; }
+
     /// <summary>
     /// Gets or sets automatic snapshot-update behavior. The default can be selected with
     /// <c>INTEGRATION_TESTS_UPDATE_SNAPSHOTS=missing</c> or <c>all</c>.
@@ -435,6 +437,20 @@ public sealed class SnapshotSettings
         return this;
     }
 
+    /// <summary>Normalizes CRLF and CR to LF in JSON string values before snapshot comparison.</summary>
+    /// <remarks>
+    /// Opt-in for JSON snapshots, including controller and exchange snapshots rendered as JSON.
+    /// Applied after scrubbing to both actual content and existing verified content in memory.
+    /// Preserves trailing newlines inside strings, property names, and literal backslash sequences.
+    /// Does not transform HTTP text or YAML snapshots. Reusable and global defaults retain this option.
+    /// </remarks>
+    /// <returns>This settings instance, for chaining.</returns>
+    public SnapshotSettings NormalizeStringLineEndings()
+    {
+        NormalizeStringLineEndingValues = true;
+        return this;
+    }
+
     /// <summary>Replaces every JSON string containing a GUID with <c>{Guid}</c>.</summary>
     /// <returns>This settings instance, for chaining.</returns>
     public SnapshotSettings ScrubGuids()
@@ -564,7 +580,8 @@ public sealed class SnapshotSettings
             ScrubUrlPathGuidValues = ScrubUrlPathGuidValues,
             UrlPathGuidPredicate = UrlPathGuidPredicate,
             ScrubDateTimeValues = ScrubDateTimeValues,
-            CanonicalizeObjectProperties = CanonicalizeObjectProperties
+            CanonicalizeObjectProperties = CanonicalizeObjectProperties,
+            NormalizeStringLineEndingValues = NormalizeStringLineEndingValues
         };
 
         foreach (var scrubber in Scrubbers)
@@ -639,6 +656,7 @@ public sealed class SnapshotSettings
         }
         merged.ScrubDateTimeValues |= local.ScrubDateTimeValues;
         merged.CanonicalizeObjectProperties |= local.CanonicalizeObjectProperties;
+        merged.NormalizeStringLineEndingValues |= local.NormalizeStringLineEndingValues;
         return merged;
     }
 

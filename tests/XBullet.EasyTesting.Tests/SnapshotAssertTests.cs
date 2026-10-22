@@ -1551,6 +1551,255 @@ public sealed class SnapshotAssertTests
         Assert.NotEqual(first, different);
     }
 
+    [Theory]
+    [InlineData("\r\n", "\n")]
+    [InlineData("\n", "\r\n")]
+    [InlineData("\r", "\n")]
+    [InlineData("\r\n", "\r")]
+    public async Task Json_string_line_endings_match_existing_snapshots_without_rewriting_them(
+        string expectedLineEnding,
+        string actualLineEnding)
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var settings = CreateUpdatingSettings(snapshotDirectory).Named("line-endings");
+
+        try
+        {
+            await SnapshotAssert.MatchAsync(
+                new { Message = $"Validation failed:{expectedLineEnding} -- Amount must be positive{expectedLineEnding}" },
+                settings,
+                cancellationToken);
+            var verifiedPath = Directory.EnumerateFiles(snapshotDirectory, "*.verified.json").Single();
+            var original = await File.ReadAllBytesAsync(verifiedPath, cancellationToken);
+
+            Assert.Same(settings, settings.NormalizeStringLineEndings());
+            settings.Updating(SnapshotUpdateMode.None);
+            await SnapshotAssert.MatchAsync(
+                new { Message = $"Validation failed:{actualLineEnding} -- Amount must be positive{actualLineEnding}" },
+                settings,
+                cancellationToken);
+
+            Assert.Equal(original, await File.ReadAllBytesAsync(verifiedPath, cancellationToken));
+            Assert.Empty(Directory.EnumerateFiles(snapshotDirectory, "*.received.*"));
+
+            var mismatch = await Assert.ThrowsAsync<SnapshotMismatchException>(() => SnapshotAssert.MatchAsync(
+                new { Message = $"Changed:{actualLineEnding}" },
+                settings,
+                cancellationToken));
+            using var received = JsonDocument.Parse(await File.ReadAllTextAsync(mismatch.ReceivedPath, cancellationToken));
+            Assert.Equal("Changed:\n", received.RootElement.GetProperty("Message").GetString());
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Theory]
+    [InlineData("\"first\\r\\nsecond\\r\"", "\"first\\nsecond\\n\"")]
+    [InlineData("[\"first\\rsecond\",null,42,true]", "[\"first\\nsecond\",null,42,true]")]
+    [InlineData("{\"nested\":{\"messages\":[\"a\\r\\nb\",\"c\\rd\"]}}", "{\"nested\":{\"messages\":[\"a\\nb\",\"c\\nd\"]}}")]
+    [InlineData("\"first\\u000D\\u000Asecond\"", "\"first\\nsecond\"")]
+    [InlineData("null", "null")]
+    public async Task Json_string_line_endings_are_normalized_at_every_depth(string originalJson, string normalizedJson)
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var settings = CreateUpdatingSettings(snapshotDirectory)
+            .Named("normalized-json")
+            .NormalizeStringLineEndings();
+
+        try
+        {
+            await SnapshotAssert.MatchJsonAsync(originalJson, settings, cancellationToken);
+            var verified = await ReadSingleVerifiedSnapshotAsync(snapshotDirectory, cancellationToken);
+            using var expected = JsonDocument.Parse(normalizedJson);
+            Assert.Equal(
+                JsonSerializer.Serialize(expected.RootElement, settings.JsonSerializerOptions)
+                    .Replace("\r\n", "\n", StringComparison.Ordinal),
+                verified);
+
+            settings.Updating(SnapshotUpdateMode.None);
+            await SnapshotAssert.MatchJsonAsync(normalizedJson, settings, cancellationToken);
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
+    public void Json_string_line_ending_normalization_preserves_other_tokens_and_formatting()
+    {
+        const string original = """
+            { "unicode":"é😀", "line\r\nkey" : "a\r\nb\rc\n", "literal":"a\\r\\nb\\rc", "numbers": [123456789012345678901234567890,1e400,0.12345678901234567890123456789] }
+            """;
+        const string expected = """
+            { "unicode":"é😀", "line\r\nkey" : "a\nb\nc\n", "literal":"a\\r\\nb\\rc", "numbers": [123456789012345678901234567890,1e400,0.12345678901234567890123456789] }
+            """;
+
+        Assert.Equal(expected, JsonSnapshotContent.NormalizeStringLineEndings(original, new JsonSerializerOptions()));
+    }
+
+    [Fact]
+    public async Task Json_string_line_ending_normalization_is_opt_in()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var settings = CreateUpdatingSettings(snapshotDirectory).Named("strict-line-endings");
+
+        try
+        {
+            await SnapshotAssert.MatchAsync("first\r\nsecond", settings, cancellationToken);
+            settings.Updating(SnapshotUpdateMode.None);
+
+            await Assert.ThrowsAsync<SnapshotMismatchException>(() => SnapshotAssert.MatchAsync(
+                "first\nsecond", settings, cancellationToken));
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task Json_string_line_ending_normalization_survives_defaults_copy_and_global_merge()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var originalDefaults = SnapshotSettingsDefaults.Global;
+        var settings = CreateUpdatingSettings(snapshotDirectory).Named("global-line-endings");
+
+        try
+        {
+            await SnapshotAssert.MatchAsync("first\r\nsecond", settings, cancellationToken);
+            settings.Updating(SnapshotUpdateMode.None);
+
+            var defaults = new SnapshotSettingsDefaults(template => template.NormalizeStringLineEndings());
+            var copy = defaults.Create();
+            Assert.True(copy.NormalizeStringLineEndingValues);
+            Assert.True(copy.Copy().NormalizeStringLineEndingValues);
+            Assert.True(new SnapshotSettings().Merge(copy).NormalizeStringLineEndingValues);
+            Assert.False(new SnapshotSettings().NormalizeStringLineEndingValues);
+            SnapshotSettingsDefaults.Global = defaults;
+
+            await SnapshotAssert.MatchAsync("first\nsecond", settings, cancellationToken);
+        }
+        finally
+        {
+            SnapshotSettingsDefaults.Global = originalDefaults;
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task Json_string_line_ending_normalization_preserves_invalid_baseline_mismatch_diagnostics()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var settings = CreateUpdatingSettings(snapshotDirectory).Named("invalid-baseline").NormalizeStringLineEndings();
+
+        try
+        {
+            await SnapshotAssert.MatchAsync("first\r\nsecond", settings, cancellationToken);
+            var verifiedPath = Directory.EnumerateFiles(snapshotDirectory, "*.verified.json").Single();
+            await File.WriteAllTextAsync(verifiedPath, "[\"first\\rsecond\",", cancellationToken);
+            settings.Updating(SnapshotUpdateMode.None);
+
+            var mismatch = await Assert.ThrowsAsync<SnapshotMismatchException>(() => SnapshotAssert.MatchAsync(
+                "first\nsecond", settings, cancellationToken));
+
+            Assert.Equal(verifiedPath, mismatch.VerifiedPath);
+            Assert.True(File.Exists(mismatch.ReceivedPath));
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task Json_string_line_ending_normalization_applies_after_custom_scrubbers()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var settings = CreateUpdatingSettings(snapshotDirectory)
+            .Named("scrubbed-line-endings")
+            .Scrub(json => json.Replace("dynamic", "first\\r\\nsecond", StringComparison.Ordinal))
+            .NormalizeStringLineEndings();
+
+        try
+        {
+            await SnapshotAssert.MatchAsync(new { Message = "dynamic" }, settings, cancellationToken);
+
+            using var verified = JsonDocument.Parse(await ReadSingleVerifiedSnapshotAsync(snapshotDirectory, cancellationToken));
+            Assert.Equal("first\nsecond", verified.RootElement.GetProperty("Message").GetString());
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task Json_string_line_ending_normalization_applies_to_http_snapshot_entry_points()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var settings = CreateUpdatingSettings(snapshotDirectory);
+        var exchangeOptions = new HttpExchangeSnapshotOptions();
+        exchangeOptions.Response.IgnoringHeaders("Content-Length");
+        using var windows = new HttpResponseMessage(HttpStatusCode.BadRequest)
+        {
+            Content = new StringContent("""{"Message":"Validation failed:\r\n -- Amount"}""", Encoding.UTF8, "application/json")
+        };
+        using var linux = new HttpResponseMessage(HttpStatusCode.BadRequest)
+        {
+            Content = new StringContent("""{"Message":"Validation failed:\n -- Amount"}""", Encoding.UTF8, "application/json")
+        };
+
+        try
+        {
+            await windows.ShouldMatchControllerSnapshot(snapshotSettings: settings.Named("controller"), cancellationToken: cancellationToken);
+            await windows.ShouldMatchJsonBodySnapshot(snapshotSettings: settings.Named("body"), cancellationToken: cancellationToken);
+            await windows.ShouldMatchHttpExchangeSnapshot(exchangeOptions, settings.Named("exchange"), cancellationToken);
+
+            settings.NormalizeStringLineEndings().Updating(SnapshotUpdateMode.None);
+            await linux.ShouldMatchControllerSnapshot(snapshotSettings: settings.Named("controller"), cancellationToken: cancellationToken);
+            await linux.ShouldMatchJsonBodySnapshot(snapshotSettings: settings.Named("body"), cancellationToken: cancellationToken);
+            await linux.ShouldMatchHttpExchangeSnapshot(exchangeOptions, settings.Named("exchange"), cancellationToken);
+
+            Assert.Equal(3, Directory.EnumerateFiles(snapshotDirectory, "*.verified.json").Count());
+            Assert.Empty(Directory.EnumerateFiles(snapshotDirectory, "*.received.*"));
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task Json_string_line_ending_normalization_preserves_literal_escapes_in_text_snapshots()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var settings = CreateUpdatingSettings(snapshotDirectory).NormalizeStringLineEndings();
+
+        try
+        {
+            await SnapshotAssert.MatchTextAsync("literal \\r\\n", settings, cancellationToken);
+            settings.Updating(SnapshotUpdateMode.None);
+
+            await Assert.ThrowsAsync<SnapshotMismatchException>(() => SnapshotAssert.MatchTextAsync(
+                "literal \\n", settings, cancellationToken));
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
     #region docs-snapshots-plain-text
 
     [Fact]
