@@ -57,6 +57,9 @@ documented reason here and remain as narrow as possible.
 The Azure Functions factory guide, factory API comments, and API navigation were reviewed on
 2026-10-21 for startup and disposal boundaries, failure modes, guide links, package selection, and search.
 
+The Durable context defaults, fluent overrides, orchestration recipes, snapshot assertion options,
+and their API approvals and upgrade guidance were reviewed on 2026-10-22 for the 1.3.0 release.
+
 A review confirms examples still compile, defaults and limitations remain accurate, external
 requirements are current, links reach the intended material, and sensitive-data guidance matches
 the implementation. Update the dates in this table in the pull request that records a full review.

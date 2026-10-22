@@ -15,9 +15,11 @@ The project follows Semantic Versioning. Package versions are produced from GitH
   Fluent overrides configure metadata, GUID generation, version comparison, and entity stubs;
   custom status and continuation requests are recorded for assertions. See the
   [Durable context guide](docs/guides/azure-functions-durable.md) and
-  [complex orchestration recipes](docs/guides/azure-functions-durable-recipes.md).
+  [complex orchestration recipes](docs/guides/azure-functions-durable-recipes.md), with the
+  [Azure Functions API reference](docs/api/packages/xbullet-easytesting-azurefunctions.md).
 - `ShouldMatchSnapshot` extensions support serializable values, inline settings, and named snapshot
-  variants. See [snapshot naming](docs/guides/snapshots/files-and-naming.md).
+  variants. See [snapshot naming](docs/guides/snapshots/files-and-naming.md) and the
+  [snapshot core API reference](docs/api/packages/xbullet-easytesting-snapshots-core.md).
 - Added executable examples for complete application workflows, Durable orchestration, and
   [end-to-end integration flows](docs/guides/end-to-end-flows.md).
 
@@ -28,6 +30,13 @@ The project follows Semantic Versioning. Package versions are produced from GitH
   preserve the original recording and cannot restore data excluded or redacted during capture.
 - Durable orchestration tests can create and use replay-safe loggers without requiring a running
   Durable runtime.
+
+### Upgrade notes
+
+- See the [Durable context upgrade guidance](docs/guides/azure-functions-durable.md#upgrade-to-130)
+  for the new in-memory defaults and explicit control of time, events, and child dispatch.
+- See the [snapshot upgrade guidance](docs/guides/snapshots/migration.md#upgrade-to-130) for
+  assertion-time exchange configuration and capture-time redaction limits.
 
 ## [1.2.1] - 2026-10-20
 

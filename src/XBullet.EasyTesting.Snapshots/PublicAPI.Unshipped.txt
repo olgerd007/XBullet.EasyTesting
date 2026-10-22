@@ -1,5 +1,1 @@
 #nullable enable
-XBullet.EasyTesting.Snapshots.SnapshotAssertionExtensions
-static XBullet.EasyTesting.Snapshots.SnapshotAssertionExtensions.ShouldMatchSnapshot(this object? actual, XBullet.EasyTesting.Snapshots.SnapshotSettings? snapshotSettings = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken), string! sourceFile = "", string! testName = "") -> System.Threading.Tasks.Task!
-static XBullet.EasyTesting.Snapshots.SnapshotAssertionExtensions.ShouldMatchSnapshot(this object? actual, string! variant, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken), string! sourceFile = "", string! testName = "") -> System.Threading.Tasks.Task!
-static XBullet.EasyTesting.Snapshots.SnapshotAssertionExtensions.ShouldMatchSnapshot(this object? actual, System.Action<XBullet.EasyTesting.Snapshots.SnapshotSettings!>! configureSnapshot, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken), string! sourceFile = "", string! testName = "") -> System.Threading.Tasks.Task!

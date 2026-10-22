@@ -232,6 +232,19 @@ The default GUID sequence is repeatable for matching instance IDs and call order
 the Durable runtime's GUID algorithm. Entity stubs do not execute entity logic, persist state, or acquire
 distributed locks; overlapping local scopes only affect `InCriticalSection` until disposed.
 
+## Upgrade to 1.3.0
+
+The existing activity-handler constructor remains supported. Context operations that previously
+threw `NotSupportedException` now use the documented in-memory defaults. Tests that asserted those
+exceptions should instead assert the recorded operation or configure the corresponding `With...`
+handler to model the failure they need.
+
+Timers and event waits remain pending until the test advances time, raises an event, or cancels the
+wait. Activity, entity, and child stubs do not run application implementations automatically; register
+handlers when their results matter. `ContinueAsNew` records a request without restarting the
+orchestrator. The [orchestration recipes](azure-functions-durable-recipes.md) show explicit dispatch
+and continuation across separate test contexts.
+
 ## Runtime boundary
 
 The test context does not emulate:

@@ -258,3 +258,64 @@ virtual XBullet.EasyTesting.AzureFunctions.AzureFunctionTestFactory<TEntryPoint>
 virtual XBullet.EasyTesting.AzureFunctions.AzureFunctionTestFactory<TEntryPoint>.ConfigureHost(Microsoft.Extensions.Hosting.IHostBuilder! builder) -> void
 virtual XBullet.EasyTesting.AzureFunctions.AzureFunctionTestFactory<TEntryPoint>.ConfigureTestHost(XBullet.EasyTesting.AzureFunctions.AzureFunctionTestHostBuilder! builder) -> void
 virtual XBullet.EasyTesting.AzureFunctions.AzureFunctionTestFactory<TEntryPoint>.ConfigureTestServices(Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> void
+XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext.WithActivityHandler(string! activityName, System.Func<string!, object?, System.Threading.Tasks.Task<object?>!>! handler) -> XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext!
+override XBullet.EasyTesting.AzureFunctions.RecordedOrchestrationEvent.Equals(object? obj) -> bool
+override XBullet.EasyTesting.AzureFunctions.RecordedOrchestrationEvent.GetHashCode() -> int
+override XBullet.EasyTesting.AzureFunctions.RecordedOrchestrationEvent.ToString() -> string!
+override XBullet.EasyTesting.AzureFunctions.RecordedSubOrchestrationCall.Equals(object? obj) -> bool
+override XBullet.EasyTesting.AzureFunctions.RecordedSubOrchestrationCall.GetHashCode() -> int
+override XBullet.EasyTesting.AzureFunctions.RecordedSubOrchestrationCall.ToString() -> string!
+static XBullet.EasyTesting.AzureFunctions.RecordedOrchestrationEvent.operator !=(XBullet.EasyTesting.AzureFunctions.RecordedOrchestrationEvent? left, XBullet.EasyTesting.AzureFunctions.RecordedOrchestrationEvent? right) -> bool
+static XBullet.EasyTesting.AzureFunctions.RecordedOrchestrationEvent.operator ==(XBullet.EasyTesting.AzureFunctions.RecordedOrchestrationEvent? left, XBullet.EasyTesting.AzureFunctions.RecordedOrchestrationEvent? right) -> bool
+static XBullet.EasyTesting.AzureFunctions.RecordedSubOrchestrationCall.operator !=(XBullet.EasyTesting.AzureFunctions.RecordedSubOrchestrationCall? left, XBullet.EasyTesting.AzureFunctions.RecordedSubOrchestrationCall? right) -> bool
+static XBullet.EasyTesting.AzureFunctions.RecordedSubOrchestrationCall.operator ==(XBullet.EasyTesting.AzureFunctions.RecordedSubOrchestrationCall? left, XBullet.EasyTesting.AzureFunctions.RecordedSubOrchestrationCall? right) -> bool
+XBullet.EasyTesting.AzureFunctions.RecordedOrchestrationEvent
+XBullet.EasyTesting.AzureFunctions.RecordedOrchestrationEvent.<Clone>$() -> XBullet.EasyTesting.AzureFunctions.RecordedOrchestrationEvent!
+XBullet.EasyTesting.AzureFunctions.RecordedOrchestrationEvent.Deconstruct(out string! InstanceId, out string! EventName, out object? Payload) -> void
+XBullet.EasyTesting.AzureFunctions.RecordedOrchestrationEvent.Equals(XBullet.EasyTesting.AzureFunctions.RecordedOrchestrationEvent? other) -> bool
+XBullet.EasyTesting.AzureFunctions.RecordedOrchestrationEvent.EventName.get -> string!
+XBullet.EasyTesting.AzureFunctions.RecordedOrchestrationEvent.EventName.init -> void
+XBullet.EasyTesting.AzureFunctions.RecordedOrchestrationEvent.InstanceId.get -> string!
+XBullet.EasyTesting.AzureFunctions.RecordedOrchestrationEvent.InstanceId.init -> void
+XBullet.EasyTesting.AzureFunctions.RecordedOrchestrationEvent.Payload.get -> object?
+XBullet.EasyTesting.AzureFunctions.RecordedOrchestrationEvent.Payload.init -> void
+XBullet.EasyTesting.AzureFunctions.RecordedOrchestrationEvent.RecordedOrchestrationEvent(string! InstanceId, string! EventName, object? Payload) -> void
+XBullet.EasyTesting.AzureFunctions.RecordedSubOrchestrationCall
+XBullet.EasyTesting.AzureFunctions.RecordedSubOrchestrationCall.<Clone>$() -> XBullet.EasyTesting.AzureFunctions.RecordedSubOrchestrationCall!
+XBullet.EasyTesting.AzureFunctions.RecordedSubOrchestrationCall.Deconstruct(out string! OrchestratorName, out object? Input, out Microsoft.DurableTask.TaskOptions? Options, out System.Type! ResultType) -> void
+XBullet.EasyTesting.AzureFunctions.RecordedSubOrchestrationCall.Equals(XBullet.EasyTesting.AzureFunctions.RecordedSubOrchestrationCall? other) -> bool
+XBullet.EasyTesting.AzureFunctions.RecordedSubOrchestrationCall.Input.get -> object?
+XBullet.EasyTesting.AzureFunctions.RecordedSubOrchestrationCall.Input.init -> void
+XBullet.EasyTesting.AzureFunctions.RecordedSubOrchestrationCall.Options.get -> Microsoft.DurableTask.TaskOptions?
+XBullet.EasyTesting.AzureFunctions.RecordedSubOrchestrationCall.Options.init -> void
+XBullet.EasyTesting.AzureFunctions.RecordedSubOrchestrationCall.OrchestratorName.get -> string!
+XBullet.EasyTesting.AzureFunctions.RecordedSubOrchestrationCall.OrchestratorName.init -> void
+XBullet.EasyTesting.AzureFunctions.RecordedSubOrchestrationCall.RecordedSubOrchestrationCall(string! OrchestratorName, object? Input, Microsoft.DurableTask.TaskOptions? Options, System.Type! ResultType) -> void
+XBullet.EasyTesting.AzureFunctions.RecordedSubOrchestrationCall.ResultType.get -> System.Type!
+XBullet.EasyTesting.AzureFunctions.RecordedSubOrchestrationCall.ResultType.init -> void
+XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext.AdvanceTimeBy(System.TimeSpan duration) -> XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext!
+XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext.AdvanceTimeTo(System.DateTime utcDateTime) -> XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext!
+XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext.RaiseEvent(string! eventName, object? payload) -> void
+XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext.SentEvents.get -> System.Collections.Generic.IReadOnlyList<XBullet.EasyTesting.AzureFunctions.RecordedOrchestrationEvent!>!
+XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext.SubOrchestrationCalls.get -> System.Collections.Generic.IReadOnlyList<XBullet.EasyTesting.AzureFunctions.RecordedSubOrchestrationCall!>!
+XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext.SubOrchestratorHandler.get -> System.Func<XBullet.EasyTesting.AzureFunctions.RecordedSubOrchestrationCall!, System.Threading.Tasks.Task<object?>!>!
+XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext.SubOrchestratorHandler.set -> void
+XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext.WithInput(object? input) -> XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext!
+XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext.WithInstanceId(string! instanceId) -> XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext!
+XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext.WithLoggerFactory(Microsoft.Extensions.Logging.ILoggerFactory! loggerFactory) -> XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext!
+XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext.WithReplayState(bool isReplaying) -> XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext!
+XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext.ContinueAsNewRequests.get -> System.Collections.Generic.IReadOnlyList<Microsoft.DurableTask.ContinueAsNewOptions!>!
+XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext.CustomStatus.get -> object?
+XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext.TestOrchestrationContext() -> void
+XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext.WithActivityHandler(System.Func<XBullet.EasyTesting.AzureFunctions.RecordedActivityCall!, System.Threading.Tasks.Task<object?>!>! handler) -> XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext!
+XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext.WithContinueAsNewHandler(System.Action<Microsoft.DurableTask.ContinueAsNewOptions!>! handler) -> XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext!
+XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext.WithCustomStatus(object? status) -> XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext!
+XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext.WithCustomStatusHandler(System.Action<object?>! handler) -> XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext!
+XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext.WithEntities(Microsoft.DurableTask.Entities.TaskOrchestrationEntityFeature! entities) -> XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext!
+XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext.WithGuidGenerator(System.Func<System.Guid>! generator) -> XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext!
+XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext.WithName(Microsoft.DurableTask.TaskName name) -> XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext!
+XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext.WithParent(Microsoft.DurableTask.ParentOrchestrationInstance? parent) -> XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext!
+XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext.WithProperties(System.Collections.Generic.IReadOnlyDictionary<string!, object?>! properties) -> XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext!
+XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext.WithSubOrchestratorHandler(System.Func<XBullet.EasyTesting.AzureFunctions.RecordedSubOrchestrationCall!, System.Threading.Tasks.Task<object?>!>! handler) -> XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext!
+XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext.WithVersion(string! version) -> XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext!
+XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext.WithVersionComparer(System.Func<string!, string!, int>! comparer) -> XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext!

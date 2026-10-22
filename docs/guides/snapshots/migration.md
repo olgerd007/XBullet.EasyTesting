@@ -88,6 +88,18 @@ snapshots are used.
 Do not mix facade and specific package versions arbitrarily. Keep all XBullet snapshot packages on
 the same release version to avoid assembly-resolution surprises.
 
+## Upgrade to 1.3.0
+
+Recorded HTTP responses, including `SnapshotScenario()` results, now accept per-assertion exchange
+options. Existing assertions without local options retain their behavior. A `configureExchange`
+callback starts from a copy of the effective recorder options, so it can add scrubbing, omit fields,
+or select an output format without changing the original recording.
+
+Local options operate on captured data. They cannot restore headers or bodies excluded during
+capture, reverse redaction, or read content again. Keep capture requirements on the recorder or
+scenario and use assertion options for further transformations. See the
+[exchange configuration recipes](recipes.md#choose-where-to-configure-exchange-options).
+
 ## Verify.Xunit is separate
 
 `XBullet.EasyTesting.Verify.Xunit` is not a replacement assembly for the built-in engine; it is an
