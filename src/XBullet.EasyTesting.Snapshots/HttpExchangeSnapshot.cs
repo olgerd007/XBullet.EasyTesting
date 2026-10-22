@@ -18,7 +18,8 @@ public sealed record HttpExchangeSnapshot(
     /// <param name="response">The caller-owned, non-null response to capture. It and its request and content are read but not disposed or modified.</param>
     /// <param name="options">
     /// Optional capture and redaction options. <see langword="null"/> uses options attached by an <see cref="HttpExchangeRecorder"/> when present,
-    /// otherwise the effective global or default options. Different options are not accepted for a recorded response.
+    /// otherwise the effective global or default options. For recorded responses, local options transform a
+    /// copy of captured data; excluded or redacted data cannot be restored and content is not read again.
     /// </param>
     /// <param name="cancellationToken">Token that cancels direct response-content reading. The default token does not cancel the operation.</param>
     /// <returns>A task whose result is a new deterministic snapshot, or the stable snapshot associated with a recorded response.</returns>
@@ -46,6 +47,41 @@ public sealed record HttpExchangeSnapshot(
 
         return new HttpExchangeSnapshot(request, capturedResponse, Failure: null);
     }
+
+    internal HttpExchangeSnapshot ApplyOptions(HttpExchangeSnapshotOptions options) =>
+        this with
+        {
+            Request = Request is null ? null : Request with
+            {
+                Url = SnapshotUrlFormatter.FormatCapturedUrl(
+                    Request.Url,
+                    options.Request.RedactedQueryParameters,
+                    options.Request.ScrubbedQueryParameters,
+                    options.Request.UrlPathScrubbers),
+                Headers = options.Request.IncludeHeaders
+                    ? FilterCapturedHeaders(Request.Headers, options.Request.IgnoredHeaders, options.Request.RedactedHeaders)
+                    : null,
+                Body = options.Request.IncludeBody ? Request.Body : null
+            },
+            Response = Response is null ? null : Response with
+            {
+                Headers = options.Response.IncludeHeaders
+                    ? FilterCapturedHeaders(Response.Headers, options.Response.IgnoredHeaders, options.Response.RedactedHeaders)
+                    : null,
+                Body = options.Response.IncludeBody ? Response.Body : null
+            }
+        };
+
+    private static Dictionary<string, string[]>? FilterCapturedHeaders(
+        IReadOnlyDictionary<string, string[]>? headers,
+        ISet<string> ignoredHeaders,
+        ISet<string> redactedHeaders) =>
+        headers?
+            .Where(header => !ignoredHeaders.Contains(header.Key))
+            .ToDictionary(
+                header => header.Key,
+                header => redactedHeaders.Contains(header.Key) ? new[] { "{Redacted}" } : header.Value.ToArray(),
+                StringComparer.OrdinalIgnoreCase);
 
     internal static async Task<HttpExchangeRequestSnapshot> CreateRequestAsync(
         HttpRequestMessage request,

@@ -97,6 +97,8 @@ prerequisites, common combinations, and the recommended package for each testing
 
 ## Guides
 
+- [End-to-end framework flows and runnable examples](docs/guides/end-to-end-flows.md)
+- [Complete order workflow: authorization, persistence, events, and failure paths](docs/guides/production-workflows.md)
 - [Authentication, test hosts, scenarios, and isolation](docs/guides/authentication-and-scenarios.md)
 - [External APIs, database persistence, and messaging](docs/guides/application-boundaries.md)
 - [Azure SDK testing](src/XBullet.EasyTesting.Azure/README.md)
@@ -127,6 +129,10 @@ See the maintained
 package-specific constraints.
 
 ## Examples
+
+Follow the [complete order workflow](docs/guides/production-workflows.md) for a guided, executable
+example with setup, run commands, success and failure assertions, cleanup, CI usage, and production
+testing boundaries.
 
 Executable scenarios live in:
 

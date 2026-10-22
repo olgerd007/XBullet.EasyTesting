@@ -6,14 +6,24 @@ internal static class SnapshotUrlFormatter
         Uri? uri,
         ISet<string> redactedQueryParameters,
         ISet<string> scrubbedQueryParameters,
+        IReadOnlyList<Func<string, string>> pathScrubbers) =>
+        FormatCapturedUrl(
+            uri is { IsAbsoluteUri: true } ? uri.PathAndQuery : uri?.OriginalString,
+            redactedQueryParameters,
+            scrubbedQueryParameters,
+            pathScrubbers);
+
+    internal static string? FormatCapturedUrl(
+        string? value,
+        ISet<string> redactedQueryParameters,
+        ISet<string> scrubbedQueryParameters,
         IReadOnlyList<Func<string, string>> pathScrubbers)
     {
-        if (uri is null)
+        if (value is null)
         {
             return null;
         }
 
-        var value = uri.IsAbsoluteUri ? uri.PathAndQuery : uri.OriginalString;
         var queryIndex = value.IndexOf('?');
         var fragmentIndex = value.IndexOf('#');
         var pathEnd = queryIndex >= 0

@@ -67,8 +67,8 @@ public static class ControllerSnapshotExtensions
     /// <param name="options">
     /// Complete-exchange inclusion, redaction, and scrubbing settings. When
     /// <see langword="null"/>, recorder settings are used for a recorded response; otherwise,
-    /// configured exchange defaults or package defaults apply. Options supplied for a recorded
-    /// response must be compatible with the recorder's original options.
+    /// configured exchange defaults or package defaults apply. Separate options supplied for a
+    /// recorded response transform a copy of captured data; excluded or redacted data cannot be restored.
     /// </param>
     /// <param name="settings">
     /// Verify naming, scrubbing, and comparison settings, or <see langword="null"/> to use

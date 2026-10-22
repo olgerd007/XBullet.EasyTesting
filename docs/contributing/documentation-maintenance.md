@@ -18,6 +18,9 @@ An ordinary local solution build runs the pull-request-equivalent checks once, a
 projects finish. During a source-only iteration, pass `-p:VerifyDocumentationOnBuild=false` to opt
 out temporarily. Run an ordinary build again before opening a pull request.
 
+Markdown and link checks exclude Git-ignored working files under `.codex/plans/`. Keep user-facing
+guides under `docs/` so they participate in the documentation gates and generated site.
+
 To run the documentation gate directly after a Release build:
 
 ```powershell
@@ -53,6 +56,13 @@ documented reason here and remain as narrow as possible.
 
 The Azure Functions factory guide, factory API comments, and API navigation were reviewed on
 2026-10-21 for startup and disposal boundaries, failure modes, guide links, package selection, and search.
+
+The Durable context defaults, fluent overrides, orchestration recipes, snapshot assertion options,
+and their API approvals and upgrade guidance were reviewed on 2026-10-22 for the 1.3.0 release.
+
+The Durable client, entity, connected workflow, retry, and serialization guides and API approvals
+were reviewed on 2026-10-23, together with JSON string line-ending normalization and package entry points.
+The coverage inventory includes these features and their executable tests.
 
 A review confirms examples still compile, defaults and limitations remain accurate, external
 requirements are current, links reach the intended material, and sensitive-data guidance matches

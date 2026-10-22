@@ -21,6 +21,10 @@ items:
     href: concepts/multi-target-and-parallel-execution.md
 - name: Guides
   items:
+  - name: End-to-end testing flows
+    href: guides/end-to-end-flows.md
+  - name: Complete order workflow
+    href: guides/production-workflows.md
   - name: Agent skills and instructions
     href: guides/ai-agents.md
   - name: Application boundaries
@@ -53,6 +57,14 @@ items:
     href: guides/azure-functions-triggers.md
   - name: Durable Functions boundary
     href: guides/azure-functions-durable.md
+  - name: Durable Functions recipes
+    href: guides/azure-functions-durable-recipes.md
+  - name: Connected Durable workflows
+    href: guides/azure-functions-durable-workflows.md
+  - name: Durable retry and failure sequences
+    href: guides/azure-functions-durable-retries.md
+  - name: Durable Entity tests
+    href: guides/azure-functions-durable-entities.md
   - name: Snapshots
     href: guides/snapshots.md
     items:

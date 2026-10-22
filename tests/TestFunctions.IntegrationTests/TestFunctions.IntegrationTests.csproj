@@ -5,10 +5,13 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+    <!-- Test handlers intentionally dispatch names without declaring a complete Functions app. -->
+    <NoWarn>$(NoWarn);DURABLE2003;DURABLE2004</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="xunit.v3" Version="4.0.1" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.DurableTask" Version="1.19.0" />
   </ItemGroup>
 
   <ItemGroup>

@@ -22,6 +22,7 @@ is compiled and executed on every supported target framework.
 ## Follow a task guide
 
 - [Override services and configuration](service-and-configuration-overrides.md)
+- [Run end-to-end testing flows](end-to-end-flows.md)
 - [Assert controller responses](response-assertions.md)
 - [Test with Entity Framework Core](entity-framework-core.md)
 - [Test external APIs and messaging](application-boundaries.md)

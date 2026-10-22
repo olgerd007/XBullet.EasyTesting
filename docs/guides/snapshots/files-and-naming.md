@@ -26,7 +26,22 @@ fully qualified directory when SourceLink rewrites caller paths in CI.
 ## Names and variants
 
 `Named` replaces the default method-derived snapshot name. Use `ForVariant` when one test method
-produces more than one snapshot:
+produces more than one snapshot.
+
+For serializable values, the `ShouldMatchSnapshot` extension accepts a variant directly:
+
+```csharp
+using XBullet.EasyTesting.Snapshots;
+
+await new[] { new { PortfolioCode = primaryPortfolioCode, Request = request } }
+    .ShouldMatchSnapshot("external-status-request", cancellationToken: cancellationToken);
+```
+
+This adds `.external-status-request` before `.verified.json`. The calling test name and source
+filename still identify the test. Use a `configureSnapshot` callback when a variant also needs
+local serialization or scrubbing rules.
+
+The equivalent settings API is:
 
 <!-- snippet: tests/XBullet.EasyTesting.Tests/SnapshotAssertTests.cs#docs-snapshots-variants -->
 ```csharp

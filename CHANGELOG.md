@@ -6,6 +6,69 @@ The project follows Semantic Versioning. Package versions are produced from GitH
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-23
+
+### Added
+
+- `TestDurableWorkflow.WithRetries` simulates SDK retry policies and handlers for activities and
+  children with manual time, bounded attempts, failure filters, and attempt diagnostics. Fresh
+  scopes and inspectable child retry IDs support failure/recovery tests. `TestDurableTaskSequence<TResult>`
+  supplies ordered results and failures with explicit exhaustion and reset. See the
+  [retry guide](docs/guides/azure-functions-durable-retries.md).
+- `TestDurableWorkflow.WithSerialization` optionally snapshots inputs, results, events, and custom
+  status with the SDK JSON converter or a caller-supplied `DataConverter`. Typed reads deserialize
+  independent values, metadata reuses captured payloads, and converter failures remain observable.
+  Direct assignment remains the default. See the
+  [workflow guide](docs/guides/azure-functions-durable-workflows.md#enable-serialization-compatibility-checks).
+- Added opt-in `SnapshotSettings.NormalizeStringLineEndings()` to compare JSON string values
+  across Windows and Linux. Decoded CRLF and CR become LF in actual and existing verified JSON
+  without rewriting reviewed files; literal backslash sequences and trailing newlines within
+  values are preserved. Reusable and global defaults retain the setting. See
+  [snapshot line endings](docs/guides/snapshots/stabilizing-data.md#windows-and-linux-line-endings).
+- Durable Entity test helpers record orchestrator calls/signals, provide `client.Entities` metadata
+  fixtures and explicit query/cleanup handlers, and execute real SDK entity implementations against
+  serialized test-controlled state. Scenario diagnostics/reset include entity client interactions.
+  See the [entity guide](docs/guides/azure-functions-durable-entities.md).
+- `TestDurableWorkflow` connects client scheduling to named orchestrators, activities, children,
+  and external events through host middleware and isolated DI scopes. Result and metadata waits,
+  manual context time, scenario diagnostics, and bounded cancellation/drain cleanup support
+  application workflow tests. See the [connected workflow guide](docs/guides/azure-functions-durable-workflows.md).
+- `TestDurableTaskClient` records orchestration scheduling attempts and supports HTTP starter
+  tests using the SDK's status-response helpers. Management handlers cover termination, purge,
+  restart, rewind, and history retrieval. Ordered operation recording, fluent assertions, and
+  scenario-resource diagnostics/reset support client workflow tests. `TestOrchestrationMetadataBuilder`
+  supplies seeded metadata fixtures with typed payloads, status, failure details, and timestamps.
+  See the [Durable client guide](docs/guides/azure-functions-durable.md#test-http-starters).
+- `TestOrchestrationContext` supports typed input, instance metadata, replay-aware logging, manually
+  advanced timers, buffered external events, child orchestration dispatch, and named activity handlers.
+  Fluent overrides configure metadata, GUID generation, version comparison, and entity stubs;
+  custom status and continuation requests are recorded for assertions. See the
+  [Durable context guide](docs/guides/azure-functions-durable.md) and
+  [complex orchestration recipes](docs/guides/azure-functions-durable-recipes.md), with the
+  [Azure Functions API reference](docs/api/packages/xbullet-easytesting-azurefunctions.md).
+- `ShouldMatchSnapshot` extensions support serializable values, inline settings, and named snapshot
+  variants. See [snapshot naming](docs/guides/snapshots/files-and-naming.md) and the
+  [snapshot core API reference](docs/api/packages/xbullet-easytesting-snapshots-core.md).
+- Added executable examples for complete application workflows, Durable orchestration, and
+  [end-to-end integration flows](docs/guides/end-to-end-flows.md).
+
+### Fixed
+
+- Recorder-backed responses, including `SnapshotScenario()` results, accept per-assertion HTTP
+  exchange options for additional scrubbing, omission, redaction, and format selection. Assertions
+  preserve the original recording and cannot restore data excluded or redacted during capture.
+- Durable orchestration tests can create and use replay-safe loggers without requiring a running
+  Durable runtime.
+
+### Upgrade notes
+
+- See the [Durable context upgrade guidance](docs/guides/azure-functions-durable.md#upgrade-to-130)
+  for the new in-memory defaults and explicit control of time, events, and child dispatch.
+- See the [snapshot upgrade guidance](docs/guides/snapshots/migration.md#upgrade-to-130) for
+  assertion-time exchange configuration and capture-time redaction limits.
+- Connected workflow retries, payload serialization, and JSON string line-ending normalization
+  are opt-in. Standalone contexts and existing snapshot assertions retain their documented defaults.
+
 ## [1.2.1] - 2026-10-20
 
 ### Added

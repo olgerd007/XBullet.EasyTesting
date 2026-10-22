@@ -94,6 +94,45 @@ becomes:
 {"RequestId":"{Scrubbed}","Metadata":{"CorrelationId":"{Guid}"}}
 ```
 
+## Windows and Linux line endings
+
+Snapshot files already normalize physical CRLF and CR line endings to LF. Newlines inside JSON
+string values are escaped, so they remain significant by default. For messages generated with
+platform-specific newlines, opt in to normalization:
+
+```csharp
+var settings = new SnapshotSettings().NormalizeStringLineEndings();
+await SnapshotAssert.MatchAsync(result, settings, cancellationToken);
+```
+
+For controller or complete exchange snapshots rendered as JSON:
+
+```csharp
+await response.ShouldMatchHttpExchangeSnapshot(
+    configureSnapshot: settings => settings.NormalizeStringLineEndings(),
+    cancellationToken: cancellationToken);
+```
+
+To enable the option throughout a test assembly, configure it once during initialization alongside
+any other global settings:
+
+```csharp
+SnapshotSettingsDefaults.Global = new(settings => settings.NormalizeStringLineEndings());
+```
+
+The rule converts decoded CRLF and CR to LF in string values at every nesting level, including
+arrays and a root string. It runs after scrubbing on actual JSON and on existing verified JSON in
+memory. Existing Windows snapshots can therefore match Linux results without updating reviewed
+files. New verified files and received files contain normalized string values.
+
+Trailing newlines inside values are preserved. Property names, numbers, whitespace, and literal
+backslash sequences such as `\\r\\n` are preserved. HTTP text and YAML output retain their existing
+behavior; this setting applies only to JSON snapshots produced by the built-in engine. It does not
+configure Verify.Xunit. Hashing and sorting rules run before this final normalization, so newline
+differences already represented by hashes or array order remain significant.
+If an exchange includes `Content-Length`, ignore that header separately when the platform-specific
+body length is irrelevant to the test.
+
 ## Path-specific rules
 
 Use extended JSON Pointer rules when a member name elsewhere must remain visible:
@@ -306,8 +345,10 @@ scrubs every GUID segment again. An explicit local rule replaces a reusable or g
 rule without mutating the template.
 
 Use `ScrubGuids()` separately to scrub JSON values that consist entirely of a GUID.
-For recorder-backed responses, configure exchange capture options on the recorder or
-`SnapshotScenario(...)`; passing `configureExchange` during assertion throws `InvalidOperationException`.
+For recorder-backed responses, configure required capture data on the recorder or
+`SnapshotScenario(...)`. Assertion-time `configureExchange` callbacks can omit or further scrub
+captured data and select output format without mutating the recorder. Excluded or redacted
+capture data cannot be restored.
 This settings rule transforms the captured snapshot without changing capture options or the
 recorded exchange. See [where to configure exchange options](recipes.md#choose-where-to-configure-exchange-options)
 for the direct-capture and recorder workflows.

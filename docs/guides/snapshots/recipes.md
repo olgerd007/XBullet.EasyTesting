@@ -115,14 +115,14 @@ sensitive header and query values, and scrub volatile URL segments.
 ## Complete TestServer exchanges
 
 `ShouldMatchHttpExchangeSnapshot` supports both direct capture from a response and exchanges
-already captured by an `HttpExchangeRecorder`. Configure exchange options at the point of capture.
+already captured by an `HttpExchangeRecorder`. Recorded responses also support per-assertion options.
 
 ### Choose where to configure exchange options
 
 | Response source | When capture happens | Where to configure exchange options |
 | --- | --- | --- |
 | Client without `HttpExchangeRecorder` | During the assertion, from `response` and `response.RequestMessage` | `configureExchange` or `exchangeOptions` on `ShouldMatchHttpExchangeSnapshot` |
-| Client with `HttpExchangeRecorder`, including `SnapshotScenario(...)` | Request before transport; response when received and body when consumed | Recorder or scenario/client creation, before sending the request |
+| Client with `HttpExchangeRecorder`, including `SnapshotScenario(...)` | Request before transport; response when received and body when consumed | Recorder or scenario creation for capture; `configureExchange` or `exchangeOptions` on the assertion to transform captured data |
 
 For direct capture, the assertion can configure headers, bodies, redaction, URL scrubbing, and
 output format:
@@ -135,18 +135,19 @@ await response.ShouldMatchHttpExchangeSnapshot(
     cancellationToken: cancellationToken);
 ```
 
-This example requires a client without an `HttpExchangeRecorder`. Direct capture reads the data
-still available during assertion; it cannot recover request content already consumed by transport
-or record a send failure that produced no response.
+Without an `HttpExchangeRecorder`, direct capture reads the data still available during assertion;
+it cannot recover request content already consumed by transport or record a send failure that
+produced no response.
 
-**For a recorded response, passing `configureExchange` to the assertion throws
-`InvalidOperationException`.** The callback creates a separate options instance, which the recorder
-guard rejects even if it only adds URL scrubbing or supplies values identical to the capture
-options. The message starts with
-`This response was captured by an HttpExchangeRecorder with different options.`
-The object overload also rejects a separate `exchangeOptions` instance; it accepts the original
-instance supplied to the recorder or `recorder.Options`. Passing that same instance during assertion
-does not recapture the exchange. Prefer omitting exchange options from recorded-response assertions.
+For recorded responses, `configureExchange` receives an independent copy of the recorder's effective
+options. Separate `exchangeOptions` instances override recorder settings. Both transform a copy of
+the captured exchange and can select JSON, HTTP text, or YAML output without changing the recorder
+or reading request or response content again. Capture-time path scrubbers are not replayed.
+
+Assertion options can omit headers or bodies and add redaction, query scrubbing, and path scrubbing.
+They cannot restore data excluded or redacted during capture. Capture-time query redaction remains
+authoritative over ordinary scrubbing. Configure required capture data before sending the request.
+Passing the original recorder options instance retains the recorded exchange unchanged.
 
 `configureSnapshot` and `snapshotSettings` work for both response sources. They transform the
 snapshot after capture and control naming, storage, comparison, and updates.
@@ -196,6 +197,7 @@ using var result = await scope.SnapshotScenario(options =>
     .ExecuteAsync(cancellationToken);
 
 await result.Response.ShouldMatchHttpExchangeSnapshot(
+    configureExchange: options => options.Request.ScrubbingQueryParameter("nonce"),
     configureSnapshot: settings => settings.ScrubMember("id"),
     cancellationToken: cancellationToken);
 ```

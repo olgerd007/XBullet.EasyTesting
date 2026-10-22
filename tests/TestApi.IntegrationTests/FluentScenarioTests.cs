@@ -116,6 +116,58 @@ public sealed class FluentScenarioTests : IClassFixture<TestApiFactory>
         });
 
     [Fact]
+    public Task Snapshot_scenario_accepts_exchange_options_during_assertion() =>
+        Run(async (scope, cancellationToken) =>
+        {
+            var snapshotDirectory = Path.Combine(Path.GetTempPath(), "EasyTesting", Guid.NewGuid().ToString("N"));
+            try
+            {
+                using var result = await scope.SnapshotScenario()
+                    .AsUser(user => user.WithName("Order publisher"))
+                    .PostJson(
+                        "/api/publishing/kafka/orders?nonce=volatile",
+                        new PublishOrderRequest(48, "customer-13", 725.50m))
+                    .ExecuteAsync(cancellationToken);
+
+                await result.Response.ShouldMatchHttpExchangeSnapshot(
+                    configureExchange: options =>
+                    {
+                        options.Format = HttpExchangeSnapshotFormat.Yaml;
+                        options.Request.WithoutHeaders().ScrubbingQueryParameter("nonce");
+                        options.Response.WithoutHeaders().WithoutBody();
+                    },
+                    configureSnapshot: settings => settings
+                        .InDirectory(snapshotDirectory)
+                        .Named("scenario-assertion-options")
+                        .Updating(SnapshotUpdateMode.Missing)
+                        .AllowingUpdatesInContinuousIntegration()
+                        .WithoutDiffTool(),
+                    cancellationToken: cancellationToken);
+
+                var path = Assert.Single(Directory.EnumerateFiles(snapshotDirectory, "*.verified.yaml"));
+                var verified = await File.ReadAllTextAsync(path, cancellationToken);
+                Assert.Contains("nonce={Scrubbed}", verified);
+                Assert.Contains("customer-13", verified);
+                Assert.Contains("Headers: null", verified);
+                Assert.DoesNotContain("transport", verified, StringComparison.OrdinalIgnoreCase);
+
+                var recorded = await HttpExchangeSnapshot.FromResponseAsync(
+                    result.Response,
+                    cancellationToken: cancellationToken);
+                Assert.Contains("nonce=volatile", recorded.Request!.Url);
+                Assert.NotNull(recorded.Response!.Body);
+                Assert.Equal(48, Assert.IsType<JsonElement>(recorded.Request.Body).GetProperty("orderId").GetInt32());
+            }
+            finally
+            {
+                if (Directory.Exists(snapshotDirectory))
+                {
+                    Directory.Delete(snapshotDirectory, recursive: true);
+                }
+            }
+        });
+
+    [Fact]
     public Task Scenario_json_requests_use_application_serializer_options() =>
         Run(async (scope, cancellationToken) =>
         {

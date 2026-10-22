@@ -55,6 +55,7 @@
           "SECURITY.md",
           "agent-kit/**/*.md",
           "src/*/README.md",
+          "tests/TestStartupApi/README.md",
           "tests/**/*.cs"
         ],
         "src": ".."

@@ -222,6 +222,11 @@ public static class SnapshotAssert
         string sourceFile,
         string testName)
     {
+        if (contentKind == SnapshotContentKind.Json && settings.NormalizeStringLineEndingValues)
+        {
+            content = JsonSnapshotContent.NormalizeStringLineEndings(content, settings.JsonSerializerOptions);
+        }
+
         content = NormalizeNewLines(content);
         var paths = ResolvePaths(settings, sourceFile, testName, contentKind.Extension);
         settings.Catalog?.Record(paths.Verified);
@@ -254,6 +259,11 @@ public static class SnapshotAssert
         }
 
         var expected = NormalizeNewLines(await File.ReadAllTextAsync(paths.Verified, cancellationToken));
+        if (contentKind == SnapshotContentKind.Json && settings.NormalizeStringLineEndingValues)
+        {
+            expected = JsonSnapshotContent.NormalizeStringLineEndings(expected, settings.JsonSerializerOptions);
+        }
+
         if (!string.Equals(expected, content, StringComparison.Ordinal))
         {
             if (settings.UpdateMode == SnapshotUpdateMode.All)

@@ -1,10 +1,64 @@
+using System.Buffers;
 using System.Net.Http.Headers;
+using System.Text;
 using System.Text.Json;
 
 namespace XBullet.EasyTesting.Snapshots;
 
 internal static class JsonSnapshotContent
 {
+    public static string NormalizeStringLineEndings(string json, JsonSerializerOptions serializerOptions)
+    {
+        var utf8Json = Encoding.UTF8.GetBytes(json);
+        var reader = new Utf8JsonReader(utf8Json, new JsonReaderOptions
+        {
+            AllowTrailingCommas = serializerOptions.AllowTrailingCommas,
+            CommentHandling = serializerOptions.ReadCommentHandling,
+            MaxDepth = serializerOptions.MaxDepth
+        });
+        ArrayBufferWriter<byte>? normalized = null;
+        var copiedBytes = 0;
+
+        try
+        {
+            while (reader.Read())
+            {
+                if (reader.TokenType != JsonTokenType.String || !reader.ValueIsEscaped)
+                {
+                    continue;
+                }
+
+                var value = reader.GetString()!;
+                if (!value.Contains('\r'))
+                {
+                    continue;
+                }
+
+                value = value.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
+                normalized ??= new ArrayBufferWriter<byte>(utf8Json.Length);
+                var tokenStart = checked((int)reader.TokenStartIndex);
+                normalized.Write(utf8Json.AsSpan(copiedBytes, tokenStart - copiedBytes));
+                normalized.Write("\""u8);
+                normalized.Write(JsonEncodedText.Encode(value, serializerOptions.Encoder).EncodedUtf8Bytes);
+                normalized.Write("\""u8);
+                copiedBytes = checked((int)reader.BytesConsumed);
+            }
+        }
+        catch (JsonException)
+        {
+            // Invalid verified JSON must still produce the usual snapshot mismatch diagnostics.
+            return json;
+        }
+
+        if (normalized is null)
+        {
+            return json;
+        }
+
+        normalized.Write(utf8Json.AsSpan(copiedBytes));
+        return Encoding.UTF8.GetString(normalized.WrittenSpan);
+    }
+
     public static JsonElement Parse(string json, JsonSerializerOptions serializerOptions)
     {
         using var document = JsonDocument.Parse(json, CreateDocumentOptions(serializerOptions));

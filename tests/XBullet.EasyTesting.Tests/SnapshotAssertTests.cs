@@ -22,6 +22,7 @@ public sealed class SnapshotAssertTests
         var forwardedTypes = facade.GetForwardedTypes();
 
         Assert.Contains(typeof(SnapshotAssert), forwardedTypes);
+        Assert.Contains(typeof(SnapshotAssertionExtensions), forwardedTypes);
         Assert.Contains(typeof(SnapshotLocationContext), forwardedTypes);
         Assert.Contains(typeof(ControllerSnapshotOptionsDefaults), forwardedTypes);
         Assert.Contains(typeof(StubHttpRequestSnapshot), forwardedTypes);
@@ -1550,6 +1551,255 @@ public sealed class SnapshotAssertTests
         Assert.NotEqual(first, different);
     }
 
+    [Theory]
+    [InlineData("\r\n", "\n")]
+    [InlineData("\n", "\r\n")]
+    [InlineData("\r", "\n")]
+    [InlineData("\r\n", "\r")]
+    public async Task Json_string_line_endings_match_existing_snapshots_without_rewriting_them(
+        string expectedLineEnding,
+        string actualLineEnding)
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var settings = CreateUpdatingSettings(snapshotDirectory).Named("line-endings");
+
+        try
+        {
+            await SnapshotAssert.MatchAsync(
+                new { Message = $"Validation failed:{expectedLineEnding} -- Amount must be positive{expectedLineEnding}" },
+                settings,
+                cancellationToken);
+            var verifiedPath = Directory.EnumerateFiles(snapshotDirectory, "*.verified.json").Single();
+            var original = await File.ReadAllBytesAsync(verifiedPath, cancellationToken);
+
+            Assert.Same(settings, settings.NormalizeStringLineEndings());
+            settings.Updating(SnapshotUpdateMode.None);
+            await SnapshotAssert.MatchAsync(
+                new { Message = $"Validation failed:{actualLineEnding} -- Amount must be positive{actualLineEnding}" },
+                settings,
+                cancellationToken);
+
+            Assert.Equal(original, await File.ReadAllBytesAsync(verifiedPath, cancellationToken));
+            Assert.Empty(Directory.EnumerateFiles(snapshotDirectory, "*.received.*"));
+
+            var mismatch = await Assert.ThrowsAsync<SnapshotMismatchException>(() => SnapshotAssert.MatchAsync(
+                new { Message = $"Changed:{actualLineEnding}" },
+                settings,
+                cancellationToken));
+            using var received = JsonDocument.Parse(await File.ReadAllTextAsync(mismatch.ReceivedPath, cancellationToken));
+            Assert.Equal("Changed:\n", received.RootElement.GetProperty("Message").GetString());
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Theory]
+    [InlineData("\"first\\r\\nsecond\\r\"", "\"first\\nsecond\\n\"")]
+    [InlineData("[\"first\\rsecond\",null,42,true]", "[\"first\\nsecond\",null,42,true]")]
+    [InlineData("{\"nested\":{\"messages\":[\"a\\r\\nb\",\"c\\rd\"]}}", "{\"nested\":{\"messages\":[\"a\\nb\",\"c\\nd\"]}}")]
+    [InlineData("\"first\\u000D\\u000Asecond\"", "\"first\\nsecond\"")]
+    [InlineData("null", "null")]
+    public async Task Json_string_line_endings_are_normalized_at_every_depth(string originalJson, string normalizedJson)
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var settings = CreateUpdatingSettings(snapshotDirectory)
+            .Named("normalized-json")
+            .NormalizeStringLineEndings();
+
+        try
+        {
+            await SnapshotAssert.MatchJsonAsync(originalJson, settings, cancellationToken);
+            var verified = await ReadSingleVerifiedSnapshotAsync(snapshotDirectory, cancellationToken);
+            using var expected = JsonDocument.Parse(normalizedJson);
+            Assert.Equal(
+                JsonSerializer.Serialize(expected.RootElement, settings.JsonSerializerOptions)
+                    .Replace("\r\n", "\n", StringComparison.Ordinal),
+                verified);
+
+            settings.Updating(SnapshotUpdateMode.None);
+            await SnapshotAssert.MatchJsonAsync(normalizedJson, settings, cancellationToken);
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
+    public void Json_string_line_ending_normalization_preserves_other_tokens_and_formatting()
+    {
+        const string original = """
+            { "unicode":"é😀", "line\r\nkey" : "a\r\nb\rc\n", "literal":"a\\r\\nb\\rc", "numbers": [123456789012345678901234567890,1e400,0.12345678901234567890123456789] }
+            """;
+        const string expected = """
+            { "unicode":"é😀", "line\r\nkey" : "a\nb\nc\n", "literal":"a\\r\\nb\\rc", "numbers": [123456789012345678901234567890,1e400,0.12345678901234567890123456789] }
+            """;
+
+        Assert.Equal(expected, JsonSnapshotContent.NormalizeStringLineEndings(original, new JsonSerializerOptions()));
+    }
+
+    [Fact]
+    public async Task Json_string_line_ending_normalization_is_opt_in()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var settings = CreateUpdatingSettings(snapshotDirectory).Named("strict-line-endings");
+
+        try
+        {
+            await SnapshotAssert.MatchAsync("first\r\nsecond", settings, cancellationToken);
+            settings.Updating(SnapshotUpdateMode.None);
+
+            await Assert.ThrowsAsync<SnapshotMismatchException>(() => SnapshotAssert.MatchAsync(
+                "first\nsecond", settings, cancellationToken));
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task Json_string_line_ending_normalization_survives_defaults_copy_and_global_merge()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var originalDefaults = SnapshotSettingsDefaults.Global;
+        var settings = CreateUpdatingSettings(snapshotDirectory).Named("global-line-endings");
+
+        try
+        {
+            await SnapshotAssert.MatchAsync("first\r\nsecond", settings, cancellationToken);
+            settings.Updating(SnapshotUpdateMode.None);
+
+            var defaults = new SnapshotSettingsDefaults(template => template.NormalizeStringLineEndings());
+            var copy = defaults.Create();
+            Assert.True(copy.NormalizeStringLineEndingValues);
+            Assert.True(copy.Copy().NormalizeStringLineEndingValues);
+            Assert.True(new SnapshotSettings().Merge(copy).NormalizeStringLineEndingValues);
+            Assert.False(new SnapshotSettings().NormalizeStringLineEndingValues);
+            SnapshotSettingsDefaults.Global = defaults;
+
+            await SnapshotAssert.MatchAsync("first\nsecond", settings, cancellationToken);
+        }
+        finally
+        {
+            SnapshotSettingsDefaults.Global = originalDefaults;
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task Json_string_line_ending_normalization_preserves_invalid_baseline_mismatch_diagnostics()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var settings = CreateUpdatingSettings(snapshotDirectory).Named("invalid-baseline").NormalizeStringLineEndings();
+
+        try
+        {
+            await SnapshotAssert.MatchAsync("first\r\nsecond", settings, cancellationToken);
+            var verifiedPath = Directory.EnumerateFiles(snapshotDirectory, "*.verified.json").Single();
+            await File.WriteAllTextAsync(verifiedPath, "[\"first\\rsecond\",", cancellationToken);
+            settings.Updating(SnapshotUpdateMode.None);
+
+            var mismatch = await Assert.ThrowsAsync<SnapshotMismatchException>(() => SnapshotAssert.MatchAsync(
+                "first\nsecond", settings, cancellationToken));
+
+            Assert.Equal(verifiedPath, mismatch.VerifiedPath);
+            Assert.True(File.Exists(mismatch.ReceivedPath));
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task Json_string_line_ending_normalization_applies_after_custom_scrubbers()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var settings = CreateUpdatingSettings(snapshotDirectory)
+            .Named("scrubbed-line-endings")
+            .Scrub(json => json.Replace("dynamic", "first\\r\\nsecond", StringComparison.Ordinal))
+            .NormalizeStringLineEndings();
+
+        try
+        {
+            await SnapshotAssert.MatchAsync(new { Message = "dynamic" }, settings, cancellationToken);
+
+            using var verified = JsonDocument.Parse(await ReadSingleVerifiedSnapshotAsync(snapshotDirectory, cancellationToken));
+            Assert.Equal("first\nsecond", verified.RootElement.GetProperty("Message").GetString());
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task Json_string_line_ending_normalization_applies_to_http_snapshot_entry_points()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var settings = CreateUpdatingSettings(snapshotDirectory);
+        var exchangeOptions = new HttpExchangeSnapshotOptions();
+        exchangeOptions.Response.IgnoringHeaders("Content-Length");
+        using var windows = new HttpResponseMessage(HttpStatusCode.BadRequest)
+        {
+            Content = new StringContent("""{"Message":"Validation failed:\r\n -- Amount"}""", Encoding.UTF8, "application/json")
+        };
+        using var linux = new HttpResponseMessage(HttpStatusCode.BadRequest)
+        {
+            Content = new StringContent("""{"Message":"Validation failed:\n -- Amount"}""", Encoding.UTF8, "application/json")
+        };
+
+        try
+        {
+            await windows.ShouldMatchControllerSnapshot(snapshotSettings: settings.Named("controller"), cancellationToken: cancellationToken);
+            await windows.ShouldMatchJsonBodySnapshot(snapshotSettings: settings.Named("body"), cancellationToken: cancellationToken);
+            await windows.ShouldMatchHttpExchangeSnapshot(exchangeOptions, settings.Named("exchange"), cancellationToken);
+
+            settings.NormalizeStringLineEndings().Updating(SnapshotUpdateMode.None);
+            await linux.ShouldMatchControllerSnapshot(snapshotSettings: settings.Named("controller"), cancellationToken: cancellationToken);
+            await linux.ShouldMatchJsonBodySnapshot(snapshotSettings: settings.Named("body"), cancellationToken: cancellationToken);
+            await linux.ShouldMatchHttpExchangeSnapshot(exchangeOptions, settings.Named("exchange"), cancellationToken);
+
+            Assert.Equal(3, Directory.EnumerateFiles(snapshotDirectory, "*.verified.json").Count());
+            Assert.Empty(Directory.EnumerateFiles(snapshotDirectory, "*.received.*"));
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task Json_string_line_ending_normalization_preserves_literal_escapes_in_text_snapshots()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var settings = CreateUpdatingSettings(snapshotDirectory).NormalizeStringLineEndings();
+
+        try
+        {
+            await SnapshotAssert.MatchTextAsync("literal \\r\\n", settings, cancellationToken);
+            settings.Updating(SnapshotUpdateMode.None);
+
+            await Assert.ThrowsAsync<SnapshotMismatchException>(() => SnapshotAssert.MatchTextAsync(
+                "literal \\n", settings, cancellationToken));
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
     #region docs-snapshots-plain-text
 
     [Fact]
@@ -2225,11 +2475,11 @@ public sealed class SnapshotAssertTests
 
         var snapshot = Assert.Single(snapshots);
         Assert.Same(snapshot, responseSnapshot);
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            HttpExchangeSnapshot.FromResponseAsync(
-                response,
-                new HttpExchangeSnapshotOptions(),
-                cancellationToken));
+        var configuredSnapshot = await HttpExchangeSnapshot.FromResponseAsync(
+            response,
+            new HttpExchangeSnapshotOptions(),
+            cancellationToken);
+        Assert.Equivalent(snapshot, configuredSnapshot);
         Assert.Equal(1, recorder.CallCount);
         Assert.NotNull(snapshot.Request);
         Assert.DoesNotContain("X-Integration-Test-User", snapshot.Request.Headers!);
@@ -3244,7 +3494,7 @@ public sealed class SnapshotAssertTests
             Assert.Equal(
                 HttpExchangeSnapshotFormat.Http,
                 HttpExchangeRecorder.ResolveFormat(recordedResponse, local));
-            Assert.Throws<InvalidOperationException>(() =>
+            Assert.Equal(HttpExchangeSnapshotFormat.Http,
                 HttpExchangeRecorder.ResolveFormat(
                     recordedResponse,
                     new HttpExchangeSnapshotOptions()));
@@ -3345,6 +3595,124 @@ public sealed class SnapshotAssertTests
         {
             DeleteTemporarySnapshotDirectory(snapshotDirectory);
         }
+    }
+
+    [Theory]
+    [InlineData(HttpExchangeSnapshotFormat.Json, "json")]
+    [InlineData(HttpExchangeSnapshotFormat.Http, "txt")]
+    [InlineData(HttpExchangeSnapshotFormat.Yaml, "yaml")]
+    public async Task Recorded_http_exchange_accepts_per_assertion_configuration(
+        HttpExchangeSnapshotFormat format,
+        string extension)
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        using var recorder = new HttpExchangeRecorder();
+        recorder.Options.Format = HttpExchangeSnapshotFormat.Yaml;
+        recorder.Options.Request.ScrubbingUrlPath(path => "/captured" + path);
+        recorder.InnerHandler = new CallbackHttpMessageHandler(async (request, token) =>
+        {
+            _ = await request.Content!.ReadAsStringAsync(token);
+            request.Content = null;
+            var response = new HttpResponseMessage(HttpStatusCode.Created)
+            {
+                RequestMessage = request,
+                Content = JsonContent.Create(new { Accepted = true })
+            };
+            response.Headers.Add("X-Session", "session-secret");
+            return response;
+        });
+        using var client = new HttpClient(recorder);
+        using var response = await client.PostAsJsonAsync(
+            "https://example.test/orders/f5111111-1111-1111-1111-111111111111?nonce=volatile&token=secret",
+            new { Amount = 42 },
+            cancellationToken);
+        var original = await HttpExchangeSnapshot.FromResponseAsync(response, cancellationToken: cancellationToken);
+        var callbackCount = 0;
+
+        try
+        {
+            await response.ShouldMatchHttpExchangeSnapshot(
+                configureExchange: options =>
+                {
+                    callbackCount++;
+                    Assert.Equal(HttpExchangeSnapshotFormat.Yaml, options.Format);
+                    options.Format = format;
+                    options.Request.ScrubbingUrlPathGuids().ScrubbingQueryParameter("nonce");
+                    options.Response.RedactingHeader("X-Session").WithoutBody();
+                },
+                configureSnapshot: settings => settings
+                    .InDirectory(snapshotDirectory)
+                    .Named("assertion-options")
+                    .Updating(SnapshotUpdateMode.Missing)
+                    .AllowingUpdatesInContinuousIntegration()
+                    .WithoutDiffTool(),
+                cancellationToken: cancellationToken);
+
+            var path = Assert.Single(Directory.EnumerateFiles(snapshotDirectory, $"*.verified.{extension}"));
+            var verified = await File.ReadAllTextAsync(path, cancellationToken);
+            Assert.Contains("/captured/orders/{Guid}?nonce={Scrubbed}", verified);
+            Assert.Contains("token={Redacted}", verified);
+            Assert.Contains("42", verified);
+            Assert.DoesNotContain("session-secret", verified);
+            Assert.DoesNotContain("Accepted", verified, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("/captured/captured", verified);
+            Assert.Equal(1, callbackCount);
+            Assert.Equal(HttpExchangeSnapshotFormat.Yaml, recorder.Options.Format);
+            Assert.Single(recorder.Options.Request.UrlPathScrubbers);
+            Assert.Same(original, await HttpExchangeSnapshot.FromResponseAsync(response, cancellationToken: cancellationToken));
+            Assert.Same(original, Assert.Single(await recorder.CreateSnapshotsAsync(cancellationToken)));
+            Assert.Equal(["session-secret"], original.Response!.Headers!["X-Session"]);
+            Assert.NotNull(original.Response.Body);
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task Recorded_http_exchange_options_cannot_restore_excluded_or_redacted_data()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var recorder = new HttpExchangeRecorder();
+        recorder.Options.Request.WithoutBody().RedactingHeader("X-Secret");
+        recorder.Options.Request.IgnoringHeaders("X-Omitted");
+        recorder.Options.Response.WithoutHeaders().WithoutBody();
+        recorder.InnerHandler = new CallbackHttpMessageHandler((request, _) => Task.FromResult(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                RequestMessage = request,
+                Content = JsonContent.Create(new { Secret = "response-secret" })
+            }));
+        using var client = new HttpClient(recorder);
+        client.DefaultRequestHeaders.Add("X-Secret", "header-secret");
+        client.DefaultRequestHeaders.Add("X-Omitted", "omitted-secret");
+        using var response = await client.PostAsJsonAsync(
+            "https://example.test/orders?token=query-secret&nonce=volatile",
+            new { Secret = "request-secret" },
+            cancellationToken);
+        var options = new HttpExchangeSnapshotOptions();
+        options.Request.IncludeBody = true;
+        options.Request.IncludingHeader("X-Secret").IncludingHeader("X-Omitted")
+            .IncludingQueryParameter("token").ScrubbingQueryParameter("nonce");
+        options.Response.IncludeHeaders = true;
+        options.Response.IncludeBody = true;
+
+        var snapshot = await HttpExchangeSnapshot.FromResponseAsync(response, options, cancellationToken);
+        Assert.Null(snapshot.Request!.Body);
+        Assert.Equal(["{Redacted}"], snapshot.Request.Headers!["X-Secret"]);
+        Assert.DoesNotContain("X-Omitted", snapshot.Request.Headers);
+        Assert.Equal("/orders?token={Redacted}&nonce={Scrubbed}", snapshot.Request.Url);
+        Assert.Null(snapshot.Response!.Headers);
+        Assert.Null(snapshot.Response.Body);
+
+        options.Request.ScrubbingQueryParameter("token");
+        options.Request.WithoutHeaders();
+        var scrubbed = await HttpExchangeSnapshot.FromResponseAsync(response, options, cancellationToken);
+        Assert.Equal("/orders?token={Redacted}&nonce={Scrubbed}", scrubbed.Request!.Url);
+        Assert.Null(scrubbed.Request.Headers);
+        Assert.NotNull(snapshot.Request.Headers);
     }
 
     [Fact]
@@ -3975,6 +4343,207 @@ public sealed class SnapshotAssertTests
         }
         finally
         {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task Fluent_snapshot_variants_use_caller_identity_and_global_settings()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var originalDefaults = SnapshotSettingsDefaults.Global;
+        const string testName = nameof(Fluent_snapshot_variants_use_caller_identity_and_global_settings);
+
+        try
+        {
+            SnapshotSettingsDefaults.Global = new(settings => settings
+                .InDirectory(snapshotDirectory)
+                .ForVariant("global")
+                .ScrubMember("Secret")
+                .Updating(SnapshotUpdateMode.Missing)
+                .AllowingUpdatesInContinuousIntegration()
+                .WithoutDiffTool());
+
+            var request = new { Status = "accepted", Secret = "sensitive-value" };
+            var actual = new[] { new { PortfolioCode = "primary", Request = request } };
+            await actual.ShouldMatchSnapshot("external-status-request", cancellationToken: cancellationToken);
+            await actual.ShouldMatchSnapshot("external-status-request", cancellationToken: cancellationToken);
+            await actual.ShouldMatchSnapshot("another-request", cancellationToken: cancellationToken);
+
+            var verifiedPath = Path.Combine(
+                snapshotDirectory,
+                $"SnapshotAssertTests.{testName}.external-status-request.verified.json");
+            var json = await File.ReadAllTextAsync(verifiedPath, cancellationToken);
+            using var snapshot = JsonDocument.Parse(json);
+            Assert.Equal(JsonValueKind.Array, snapshot.RootElement.ValueKind);
+            Assert.Equal("primary", snapshot.RootElement[0].GetProperty("PortfolioCode").GetString());
+            Assert.Equal("{Scrubbed}", snapshot.RootElement[0].GetProperty("Request").GetProperty("Secret").GetString());
+            Assert.DoesNotContain("sensitive-value", json);
+            Assert.Equal(2, Directory.EnumerateFiles(snapshotDirectory, "*.verified.json").Count());
+            Assert.Equal("global", SnapshotSettingsDefaults.Global.Create().Variant);
+
+            var mismatch = await Assert.ThrowsAsync<SnapshotMismatchException>(() =>
+                new[] { new { PortfolioCode = "changed", Request = request } }
+                    .ShouldMatchSnapshot("external-status-request", cancellationToken: cancellationToken));
+            Assert.Equal(verifiedPath, mismatch.VerifiedPath);
+            Assert.True(File.Exists(mismatch.ReceivedPath));
+        }
+        finally
+        {
+            SnapshotSettingsDefaults.Global = originalDefaults;
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task Fluent_snapshot_without_settings_supports_null_values_and_global_defaults()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var originalDefaults = SnapshotSettingsDefaults.Global;
+
+        try
+        {
+            SnapshotSettingsDefaults.Global = new(settings => settings
+                .InDirectory(snapshotDirectory)
+                .Updating(SnapshotUpdateMode.Missing)
+                .AllowingUpdatesInContinuousIntegration()
+                .WithoutDiffTool());
+            object? actual = null;
+
+            await actual.ShouldMatchSnapshot(cancellationToken: cancellationToken);
+
+            var path = Directory.EnumerateFiles(snapshotDirectory, "*.verified.json").Single();
+            Assert.Equal(
+                $"SnapshotAssertTests.{nameof(Fluent_snapshot_without_settings_supports_null_values_and_global_defaults)}.verified.json",
+                Path.GetFileName(path));
+            Assert.Equal("null", await File.ReadAllTextAsync(path, cancellationToken));
+        }
+        finally
+        {
+            SnapshotSettingsDefaults.Global = originalDefaults;
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task Fluent_snapshot_accepts_settings_and_explicit_caller_information()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var settings = CreateUpdatingSettings(snapshotDirectory)
+            .ForVariant("accepted")
+            .IgnoreMember("Secret");
+
+        try
+        {
+            await new { Status = "accepted", Secret = "sensitive-value" }.ShouldMatchSnapshot(
+                settings,
+                cancellationToken,
+                sourceFile: Path.Combine(snapshotDirectory, "Caller.cs"),
+                testName: "Calling_test");
+
+            var path = Path.Combine(snapshotDirectory, "Caller.Calling_test.accepted.verified.json");
+            using var snapshot = JsonDocument.Parse(await File.ReadAllTextAsync(path, cancellationToken));
+            Assert.Equal("accepted", snapshot.RootElement.GetProperty("Status").GetString());
+            Assert.False(snapshot.RootElement.TryGetProperty("Secret", out _));
+        }
+        finally
+        {
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task Fluent_snapshot_callback_extends_global_settings_without_mutating_them()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var originalDefaults = SnapshotSettingsDefaults.Global;
+        var callbackCount = 0;
+
+        try
+        {
+            SnapshotSettingsDefaults.Global = new(settings => settings
+                .InDirectory(snapshotDirectory)
+                .ScrubMember("Secret")
+                .Updating(SnapshotUpdateMode.Missing)
+                .AllowingUpdatesInContinuousIntegration()
+                .WithoutDiffTool());
+
+            await new { Secret = "sensitive-value", Ignored = "local-only", Status = "accepted" }
+                .ShouldMatchSnapshot(
+                    configureSnapshot: settings =>
+                    {
+                        callbackCount++;
+                        settings.ForVariant("local").IgnoreMember("Ignored");
+                    },
+                    cancellationToken: cancellationToken);
+
+            Assert.Equal(1, callbackCount);
+            var json = await ReadSingleVerifiedSnapshotAsync(snapshotDirectory, cancellationToken);
+            Assert.Contains("{Scrubbed}", json);
+            Assert.DoesNotContain("sensitive-value", json);
+            Assert.DoesNotContain("Ignored", json);
+            Assert.Null(SnapshotSettingsDefaults.Global.Create().Variant);
+            Assert.Empty(SnapshotSettingsDefaults.Global.Create().IgnoredMembers);
+        }
+        finally
+        {
+            SnapshotSettingsDefaults.Global = originalDefaults;
+            DeleteTemporarySnapshotDirectory(snapshotDirectory);
+        }
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    public async Task Fluent_snapshot_rejects_invalid_variants(string? variant)
+    {
+        var exception = await Assert.ThrowsAnyAsync<ArgumentException>(() =>
+            new { Status = "accepted" }.ShouldMatchSnapshot(variant!, TestContext.Current.CancellationToken));
+
+        Assert.Equal("variant", exception.ParamName);
+    }
+
+    [Fact]
+    public async Task Fluent_snapshot_rejects_null_configuration()
+    {
+        var exception = await Assert.ThrowsAsync<ArgumentNullException>(() =>
+            new { Status = "accepted" }.ShouldMatchSnapshot(
+                configureSnapshot: null!,
+                cancellationToken: TestContext.Current.CancellationToken));
+
+        Assert.Equal("configure", exception.ParamName);
+    }
+
+    [Fact]
+    public async Task Fluent_snapshot_propagates_cancellation_without_writing_files()
+    {
+        var snapshotDirectory = CreateTemporarySnapshotDirectory();
+        var originalDefaults = SnapshotSettingsDefaults.Global;
+        using var cancellation = new CancellationTokenSource();
+        await cancellation.CancelAsync();
+
+        try
+        {
+            SnapshotSettingsDefaults.Global = new(settings => settings
+                .InDirectory(snapshotDirectory)
+                .Updating(SnapshotUpdateMode.Missing)
+                .AllowingUpdatesInContinuousIntegration()
+                .WithoutDiffTool());
+
+            var exception = await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                new { Status = "accepted" }.ShouldMatchSnapshot("canceled", cancellation.Token));
+
+            Assert.Equal(cancellation.Token, exception.CancellationToken);
+            Assert.False(Directory.Exists(snapshotDirectory) && Directory.EnumerateFiles(snapshotDirectory).Any());
+        }
+        finally
+        {
+            SnapshotSettingsDefaults.Global = originalDefaults;
             DeleteTemporarySnapshotDirectory(snapshotDirectory);
         }
     }

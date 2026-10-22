@@ -114,9 +114,9 @@ public static class HttpResponseSnapshotExtensions
     /// <param name="response">The caller-owned, non-null response to capture. It and its request and content objects are read but not disposed.</param>
     /// <param name="exchangeOptions">
     /// Optional capture, redaction, and format options for direct capture during assertion.
-    /// For a recorded response, omit this argument or supply the original options instance passed
-    /// to the recorder or its Options instance; a separate instance is rejected even when its
-    /// values match. Supplying the same instance does not recapture the exchange.
+    /// For a recorded response, separate options override recorder settings on a copy of captured
+    /// data without reading content again. Excluded or redacted capture data cannot be restored.
+    /// Supplying the original recorder options instance uses the recorded exchange unchanged.
     /// <see langword="null"/> uses recorder options when available, otherwise global or package defaults.
     /// </param>
     /// <param name="snapshotSettings">Optional snapshot settings. <see langword="null"/> uses the effective global or default settings.</param>
@@ -124,7 +124,6 @@ public static class HttpResponseSnapshotExtensions
     /// <param name="sourceFile">Calling source-file path used to locate and name the snapshot. The compiler supplies this value by default.</param>
     /// <param name="testName">Calling member name used as the default snapshot name. The compiler supplies this value by default.</param>
     /// <returns>A task that completes when the captured exchange matches or is updated; a mismatch writes a received file and throws.</returns>
-    /// <exception cref="InvalidOperationException">Separate exchange options were supplied for a response already captured by an HttpExchangeRecorder.</exception>
     public static async Task ShouldMatchHttpExchangeSnapshot(
         this HttpResponseMessage response,
         HttpExchangeSnapshotOptions? exchangeOptions = null,

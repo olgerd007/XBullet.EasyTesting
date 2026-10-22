@@ -25,7 +25,9 @@ function Add-Diagnostic(
 
 $files = Get-ChildItem -LiteralPath $resolvedRepositoryDirectory -Recurse -File -Filter "*.md" |
     Where-Object {
-        $_.FullName -notmatch "[\\/](?:\.git|\.vs|artifacts|bin|obj|TestResults[^\\/]*)[\\/]"
+        # Ignored local plans are working files, not published documentation.
+        $_.FullName -notmatch "[\\/](?:\.git|\.vs|artifacts|bin|obj|TestResults[^\\/]*)[\\/]" -and
+        $_.FullName -notmatch "[\\/]\.codex[\\/]plans[\\/]"
     } |
     Sort-Object FullName
 
