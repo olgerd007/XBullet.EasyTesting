@@ -23,6 +23,7 @@ public void Compatibility_facade_forwards_to_split_snapshot_assemblies()
     var forwardedTypes = facade.GetForwardedTypes();
 
     Assert.Contains(typeof(SnapshotAssert), forwardedTypes);
+    Assert.Contains(typeof(SnapshotAssertionExtensions), forwardedTypes);
     Assert.Contains(typeof(SnapshotLocationContext), forwardedTypes);
     Assert.Contains(typeof(ControllerSnapshotOptionsDefaults), forwardedTypes);
     Assert.Contains(typeof(StubHttpRequestSnapshot), forwardedTypes);

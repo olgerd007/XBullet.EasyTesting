@@ -11,6 +11,7 @@ using XBullet.EasyTesting.Messaging;
 
 namespace TestStartupApi.IntegrationTests;
 
+#region docs-order-workflow-factory
 public sealed class StartupApiFactory
     : StartupEntityFrameworkWebApplicationFactory<Startup, OrdersDbContext>
 {
@@ -73,3 +74,4 @@ public sealed class StartupApiFactory
         public override DateTimeOffset GetUtcNow() => now;
     }
 }
+#endregion

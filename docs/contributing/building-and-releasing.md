@@ -45,7 +45,7 @@ guidance, API pages, generated-site inspection, and post-deployment verification
 Publishing uses NuGet.org trusted publishing instead of a long-lived API key. Configure a GitHub
 trusted publisher for the `olgerd007/XBullet.EasyTesting` repository and
 `.github/workflows/publish-nuget.yml`, update `CHANGELOG.md`, and publish a GitHub Release with a
-semantic-version tag such as `v1.2.3`. The release workflow exchanges its GitHub OIDC token for a
+semantic-version tag such as `v1.3.0`. The release workflow exchanges its GitHub OIDC token for a
 short-lived NuGet API key, then publishes all `XBullet.EasyTesting.*` packages and their symbol
 packages.
 
@@ -56,18 +56,18 @@ Unapproved public changes and binary compatibility breaks fail the build or pack
 ### Preview flow
 
 Every CI run creates preview packages using the current `VersionPrefix` and the workflow run number,
-for example `1.0.4-preview.42`. Download the `nuget-preview-42` workflow artifact and use its
+for example `1.3.0-preview.42`. Download the `nuget-preview-42` workflow artifact and use its
 directory as a local NuGet source to test the complete package set without publishing it.
 
 To publish a public preview to NuGet.org, create a GitHub Release with a tag such as
-`v1.0.4-preview.1` and select **Set as a pre-release**. The release workflow verifies that the
+`v1.3.0-preview.1` and select **Set as a pre-release**. The release workflow verifies that the
 GitHub release type and semantic version agree before publishing. Install public previews with:
 
 ```shell
 dotnet add package XBullet.EasyTesting --prerelease
 ```
 
-For a stable release, use a tag without a suffix, such as `v1.0.4`, and do not mark the GitHub Release as a pre-release.
+For a stable release, use a tag without a suffix, such as `v1.3.0`, and do not mark the GitHub Release as a pre-release.
 
 See the [contribution guidelines](../../CONTRIBUTING.md) and
 [security policy](../../SECURITY.md) for private vulnerability reporting. Documentation owners and

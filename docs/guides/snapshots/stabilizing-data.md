@@ -306,8 +306,10 @@ scrubs every GUID segment again. An explicit local rule replaces a reusable or g
 rule without mutating the template.
 
 Use `ScrubGuids()` separately to scrub JSON values that consist entirely of a GUID.
-For recorder-backed responses, configure exchange capture options on the recorder or
-`SnapshotScenario(...)`; passing `configureExchange` during assertion throws `InvalidOperationException`.
+For recorder-backed responses, configure required capture data on the recorder or
+`SnapshotScenario(...)`. Assertion-time `configureExchange` callbacks can omit or further scrub
+captured data and select output format without mutating the recorder. Excluded or redacted
+capture data cannot be restored.
 This settings rule transforms the captured snapshot without changing capture options or the
 recorded exchange. See [where to configure exchange options](recipes.md#choose-where-to-configure-exchange-options)
 for the direct-capture and recorder workflows.

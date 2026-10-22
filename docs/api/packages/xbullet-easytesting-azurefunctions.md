@@ -21,7 +21,8 @@ In-process invocation tools for .NET isolated-worker functions and trigger data.
 - <xref:XBullet.EasyTesting.AzureFunctions.FunctionScenario> provides guarded, single-use domain arrangement.
 - <xref:XBullet.EasyTesting.AzureFunctions.FunctionScopedTest> provides a borrowed host and isolated scenario runner.
 - <xref:XBullet.EasyTesting.AzureFunctions.TestHttpRequestBuilder> creates HTTP trigger requests.
-- <xref:XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext> emulates supported activity dispatch.
+- <xref:XBullet.EasyTesting.AzureFunctions.TestOrchestrationContext> provides typed input, identity,
+  replay flags, manual timers, buffered events, recorded dispatch, and configurable runtime stubs.
 
 See the [host guide](../../guides/azure-functions.md), [trigger recipes](../../guides/azure-functions-triggers.md),
 and [Durable boundary](../../guides/azure-functions-durable.md).

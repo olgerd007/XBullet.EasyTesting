@@ -22,6 +22,10 @@ If you are testing an ASP.NET Core endpoint for the first time:
    [scenarios and isolation](concepts/scenarios-and-isolation.md).
 4. Add extension packages only for the external boundaries that the test needs.
 
+Continue with [end-to-end testing flows](guides/end-to-end-flows.md) to follow the framework lifecycle
+through CRUD, external HTTP, event publication, credential validation, snapshots, Functions, and
+distributed applications. Each flow includes executable examples and states what it verifies.
+
 The core package supports both `Program`-based and `Startup`-based applications. It can simulate
 identities inside `TestServer` or send credentials through the application's real authentication
 handlers. These are different kinds of tests: simulated authentication is fast and focused, while
@@ -43,6 +47,8 @@ installation and example requests using the three skill names.
 | --- | --- | --- |
 | Help a coding agent write and maintain EasyTesting tests | [Install and use agent skills](guides/ai-agents.md) | Source-distributed agent kit |
 | Test an authenticated controller | [Run your first controller test](getting-started/first-controller-test.md) | `XBullet.EasyTesting` |
+| Follow a complete framework flow from setup to cleanup | [End-to-end testing flows](guides/end-to-end-flows.md) | Core and selected extensions |
+| Test a complete business workflow and its failure paths | [Import orders with persistence and events](guides/production-workflows.md) | Core, EF Core, Messaging |
 | Isolate setup and cleanup for every test | [Scenarios and isolation](concepts/scenarios-and-isolation.md) | `XBullet.EasyTesting` |
 | Test a `Startup`-based application without executing `Program.Main` | [Choose a test host](concepts/test-hosts.md#host-a-startup-application) | `XBullet.EasyTesting` |
 | Test multiple authentication schemes | [Authentication models](concepts/authentication.md#map-named-schemes) | `XBullet.EasyTesting` |
@@ -133,11 +139,16 @@ baseline and the package guides for feature-specific constraints.
 
 ## Examples and source
 
-The repository currently uses integration tests as the primary executable examples:
+Start with the [complete order workflow](guides/production-workflows.md) for a guided example of
+authorization, upstream responses, persisted state, published events, duplicates, and failure paths.
+The guide includes executable snippets and run commands; you do not need to browse the full test
+suite to follow it.
+
+Additional executable examples live in the integration-test projects:
 
 - [`TestApi.IntegrationTests`](../tests/TestApi.IntegrationTests/DocumentationExamples.cs) covers ASP.NET Core hosts,
   authentication, EF Core, outbound HTTP, messaging, observability, Testcontainers, and snapshots.
-- [`TestStartupApi.IntegrationTests`](../tests/TestStartupApi.IntegrationTests/OrderRouteTests.cs) covers
+- [`TestStartupApi.IntegrationTests`](../tests/TestStartupApi.IntegrationTests/DocumentationExamples.cs) covers
   `Startup`-based hosts and larger composed scenarios.
 - [`TestFunctions.IntegrationTests`](../tests/TestFunctions.IntegrationTests/FunctionTriggerTests.cs) covers Azure
   Functions hosts, triggers, middleware, bindings, and Durable activity dispatch.

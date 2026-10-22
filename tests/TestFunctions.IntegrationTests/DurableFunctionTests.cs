@@ -1,4 +1,5 @@
 using Microsoft.DurableTask;
+using Microsoft.Extensions.Logging;
 using XBullet.EasyTesting.AzureFunctions;
 using Xunit;
 
@@ -30,16 +31,44 @@ public sealed class DurableFunctionTests
 
     #endregion
 
+    [Fact]
+    public void Replay_safe_logging_is_supported_during_in_process_execution()
+    {
+        var context = new TestOrchestrationContext(_ => Task.FromResult<object?>(null));
+        ILogger[] loggers =
+        [
+            context.CreateReplaySafeLogger<DurableFunctionTests>(),
+            context.CreateReplaySafeLogger(typeof(DurableFunctionTests)),
+            context.CreateReplaySafeLogger("Orchestrator"),
+            context.ReplaySafeLoggerFactory.CreateLogger("Orchestrator")
+        ];
+
+        Assert.False(context.IsReplaying);
+        foreach (var logger in loggers)
+        {
+            Assert.False(logger.IsEnabled(LogLevel.Information));
+            using var scope = logger.BeginScope("Activity dispatch");
+            logger.LogInformation("Dispatching activity {ActivityName}", nameof(GreetingActivity));
+        }
+
+        Assert.Empty(context.ActivityCalls);
+    }
+
     #region docs-functions-durable-limitations
 
     [Fact]
-    public void Runtime_dependent_members_are_not_supported()
+    public void Runtime_dependent_members_have_in_memory_defaults()
     {
-        var context = new TestOrchestrationContext(_ => Task.FromResult<object?>(null));
+        var context = new TestOrchestrationContext();
 
-        Assert.Throws<NotSupportedException>(() => _ = context.InstanceId);
-        Assert.Throws<NotSupportedException>(() => context.GetInput<string>());
-        Assert.Throws<NotSupportedException>(() => context.NewGuid());
+        Assert.NotNull(context.Entities);
+        Assert.Equal("TestOrchestrator", context.Name.Name);
+        Assert.Null(context.Parent);
+        Assert.Empty(context.Version);
+        Assert.Empty(context.Properties);
+        context.ContinueAsNew();
+        Assert.Single(context.ContinueAsNewRequests);
+        Assert.NotEqual(Guid.Empty, context.NewGuid());
     }
 
     #endregion
@@ -61,10 +90,16 @@ public sealed class DurableFunctionTests
 
     private static class GreetingOrchestrator
     {
-        public static Task<string> RunAsync(TaskOrchestrationContext context) =>
-            context.CallActivityAsync<string>(
+        public static async Task<string> RunAsync(TaskOrchestrationContext context)
+        {
+            var logger = context.CreateReplaySafeLogger(nameof(GreetingOrchestrator));
+            logger.LogInformation("Scheduling activity {ActivityName}", nameof(GreetingActivity));
+            var result = await context.CallActivityAsync<string>(
                 new TaskName(nameof(GreetingActivity)),
                 "Ada");
+            logger.LogInformation("Activity {ActivityName} completed", nameof(GreetingActivity));
+            return result;
+        }
     }
 
     private sealed class GreetingActivity(string prefix)

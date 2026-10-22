@@ -6,6 +6,29 @@ The project follows Semantic Versioning. Package versions are produced from GitH
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-22
+
+### Added
+
+- `TestOrchestrationContext` supports typed input, instance metadata, replay-aware logging, manually
+  advanced timers, buffered external events, child orchestration dispatch, and named activity handlers.
+  Fluent overrides configure metadata, GUID generation, version comparison, and entity stubs;
+  custom status and continuation requests are recorded for assertions. See the
+  [Durable context guide](docs/guides/azure-functions-durable.md) and
+  [complex orchestration recipes](docs/guides/azure-functions-durable-recipes.md).
+- `ShouldMatchSnapshot` extensions support serializable values, inline settings, and named snapshot
+  variants. See [snapshot naming](docs/guides/snapshots/files-and-naming.md).
+- Added executable examples for complete application workflows, Durable orchestration, and
+  [end-to-end integration flows](docs/guides/end-to-end-flows.md).
+
+### Fixed
+
+- Recorder-backed responses, including `SnapshotScenario()` results, accept per-assertion HTTP
+  exchange options for additional scrubbing, omission, redaction, and format selection. Assertions
+  preserve the original recording and cannot restore data excluded or redacted during capture.
+- Durable orchestration tests can create and use replay-safe loggers without requiring a running
+  Durable runtime.
+
 ## [1.2.1] - 2026-10-20
 
 ### Added

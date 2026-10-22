@@ -141,16 +141,49 @@ public sealed class HttpExchangeRecorder : DelegatingHandler
             return false;
         }
 
+        snapshot = recorded.Exchange.CreateSnapshot();
         if (!IsCompatible(options, recorded))
         {
-            throw new InvalidOperationException(
-                "This response was captured by an HttpExchangeRecorder with different options. " +
-                "Configure the options when creating the recorder, then call the response " +
-                "snapshot assertion without separate exchange options.");
+            var assertionOptions = recorded.Options.Merge(options!);
+            // Captured URLs already contain these transformations. Only apply new local scrubbers.
+            var capturedScrubbers = recorded.Options.Request.UrlPathScrubbers;
+            var localScrubbers = options!.Request.UrlPathScrubbers;
+            var sharedPrefix = 0;
+            while (sharedPrefix < capturedScrubbers.Count && sharedPrefix < localScrubbers.Count &&
+                capturedScrubbers[sharedPrefix] == localScrubbers[sharedPrefix])
+            {
+                sharedPrefix++;
+            }
+
+            assertionOptions.Request.UrlPathScrubbers.Clear();
+            assertionOptions.Request.UrlPathScrubbers.AddRange(localScrubbers.Skip(sharedPrefix));
+            // Further scrubbing must never downgrade capture-time security redaction.
+            assertionOptions.Request.RedactedQueryParameters.UnionWith(recorded.Options.Request.RedactedQueryParameters);
+            snapshot = snapshot.ApplyOptions(assertionOptions);
+        }
+        return true;
+    }
+
+    internal static HttpExchangeSnapshotOptions ConfigureAssertionOptions(
+        HttpResponseMessage response,
+        Action<HttpExchangeSnapshotOptions> configure)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+        ArgumentNullException.ThrowIfNull(configure);
+        RecordedExchange? recorded;
+        lock (RecordedExchangeGate)
+        {
+            RecordedExchanges.TryGetValue(response, out recorded);
         }
 
-        snapshot = recorded.Exchange.CreateSnapshot();
-        return true;
+        if (recorded is null)
+        {
+            return HttpExchangeSnapshotOptionsDefaults.ExtendGlobal(configure);
+        }
+
+        var options = recorded.Options.Copy();
+        configure(options);
+        return options;
     }
 
     internal static HttpExchangeSnapshotFormat ResolveFormat(
@@ -168,15 +201,9 @@ public sealed class HttpExchangeRecorder : DelegatingHandler
             return HttpExchangeSnapshotOptionsDefaults.MergeGlobalOrDefault(options).Format;
         }
 
-        if (!IsCompatible(options, recorded))
-        {
-            throw new InvalidOperationException(
-                "This response was captured by an HttpExchangeRecorder with different options. " +
-                "Configure the options when creating the recorder, then call the response " +
-                "snapshot assertion without separate exchange options.");
-        }
-
-        return recorded.Options.Format;
+        return IsCompatible(options, recorded)
+            ? recorded.Options.Format
+            : recorded.Options.Merge(options!).Format;
     }
 
     private void Attach(HttpResponseMessage response, PendingExchange exchange)

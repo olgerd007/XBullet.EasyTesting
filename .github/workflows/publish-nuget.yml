@@ -38,12 +38,12 @@ jobs:
         run: |
           version="${RELEASE_TAG#v}"
           if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
-            echo "Release tag '$RELEASE_TAG' must be a semantic version such as v1.2.3 or v1.2.3-preview.1."
+            echo "Release tag '$RELEASE_TAG' must be a semantic version such as v1.3.0 or v1.3.0-preview.1."
             exit 1
           fi
 
           if [[ "$RELEASE_IS_PRERELEASE" == "true" && "$version" != *-* ]]; then
-            echo "A GitHub pre-release must use a pre-release tag such as v1.2.3-preview.1."
+            echo "A GitHub pre-release must use a pre-release tag such as v1.3.0-preview.1."
             exit 1
           fi
 

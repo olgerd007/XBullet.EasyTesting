@@ -54,6 +54,8 @@ source regions synchronized into Markdown by `eng/sync-documentation-snippets.ps
 | --- | --- | --- | --- | --- |
 | Choose packages | [Documentation home](../index.md#choose-packages) | Detailed | Maintain package boundaries and combinations | M1 |
 | First authenticated controller test | [Executable getting-started tutorial](../getting-started/first-controller-test.md) | Detailed | Maintain and extend from canonical source regions | M2 |
+| Complete business workflow | [Order import walkthrough](../guides/production-workflows.md) | Detailed | Maintain executable `OrderWorkflowDocumentationExamples`, factory setup, duplicate and failure assertions, CI commands, and production testing boundaries | Core and extension maintainers |
+| End-to-end framework flows | [Flow guide](../guides/end-to-end-flows.md) | Detailed | Maintain the shared lifecycle, synchronized flow examples, run commands, diagnostics, and runtime boundaries | Core and extension maintainers |
 | Host selection | [Test-host concept](../concepts/test-hosts.md) | Detailed | Maintain selection and lifecycle guidance | M3 |
 | Scenario lifecycle, domain scenarios, scoped test bases, and isolation | [Scenario concept](../concepts/scenarios-and-isolation.md) | Detailed | Maintain concurrency, ownership, diagnostics, and executable `ScenarioPrimitiveTests` and `ProductScenarioExamples` | M3 |
 | Authentication models | [Authentication concept](../concepts/authentication.md) | Detailed | Maintain simulated and end-to-end recipes | M3 |
@@ -97,9 +99,9 @@ changes.
 | Database lifecycle | The default per-scenario lifecycle is `EnsureDeleted` followed by `EnsureCreated`; applications using migrations or shared databases must override it | EF lifecycle guide |
 | Testcontainers | Tests require a Docker-compatible runtime; the Service Bus emulator requires explicit license acceptance | Testcontainers prerequisites and Service Bus guide |
 | Optional real-service tests | Real container tests are intentionally separate from the ordinary unit-test run | Testcontainers CI guide |
-| Durable Functions | Only `CallActivityAsync` is emulated; timers, external events, sub-orchestrators, and replay state are unsupported | Durable Functions guide and package README |
+| Durable Functions | Manual time/events and dispatch, metadata defaults, entity stubs, repeatable GUIDs, status/continuation recording, and fluent overrides are supported; durable history, persistence, retries, and lifecycle operations are not emulated | Durable Functions guide and package README |
 | Snapshot package boundary | Snapshot core has no dependency on outbound HTTP stubs; stub request/exchange adapters require `XBullet.EasyTesting.Snapshots.Http` | Snapshot package-selection and migration guides |
-| Recorded exchange options | Recorder-backed response assertions reject separate exchange capture options; use recorder/scenario configuration before sending or snapshot settings for assertion-time scrubbing | [Exchange option ownership](../guides/snapshots/recipes.md#choose-where-to-configure-exchange-options) and [URL stability](../guides/snapshots/stabilizing-data.md#http-redaction-and-url-stability) |
+| Recorded exchange options | Recorder-backed response assertions accept local exchange options to transform captured data without recapture or recorder mutation; capture-time exclusions and redactions cannot be reversed | [Exchange option ownership](../guides/snapshots/recipes.md#choose-where-to-configure-exchange-options) and [URL stability](../guides/snapshots/stabilizing-data.md#http-redaction-and-url-stability) |
 | Snapshot updates | `all` update mode can replace verified files and must not be enabled in a normal CI verification run; CI writes require explicit authorization | Snapshot acceptance and CI guide |
 | Sensitive data | Authentication headers, cookies, API keys, tokens, and sensitive query values must be excluded or redacted before recording or snapshotting | HTTP, observability, Azure, and snapshot safety sections |
 | Verify recorder | Controller snapshots describe a real `TestServer` call; they do not replace transport with an outbound HTTP stub | Verify guide |

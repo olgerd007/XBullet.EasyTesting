@@ -72,6 +72,7 @@ public sealed class ExternalApiControllerTests : IClassFixture<TestApiFactory>
             Assert.Equal(1, _factory.ExternalCatalog.CallCount);
         });
 
+    #region docs-http-workflow-failure
     [Fact]
     public Task External_failure_returns_bad_gateway_without_saving_a_product() =>
         Run(async (scope, cancellationToken) =>
@@ -91,6 +92,7 @@ public sealed class ExternalApiControllerTests : IClassFixture<TestApiFactory>
             Assert.Equal(0, productCount);
             Assert.Equal(1, _factory.ExternalCatalog.CallCount);
         });
+    #endregion
 
     [Fact]
     public Task Anonymous_request_is_rejected_before_calling_external_api() =>

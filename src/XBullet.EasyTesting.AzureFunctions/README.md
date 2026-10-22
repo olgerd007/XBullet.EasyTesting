@@ -73,10 +73,49 @@ var result = await orchestrator.RunAsync(context);
 Assert.Equal(nameof(CreateOrderActivity), context.ActivityCalls.Single().ActivityName);
 ```
 
+## Orchestration controls
+
+Use `WithInput(request)` and `WithInstanceId("parent-42")` to configure orchestration input and identity.
+`GetInput<T>()` returns the retained typed value without serialization.
+
+Timers use manual time starting at `DateTime.UnixEpoch`. Drive `CurrentUtcDateTime` and due timers
+with `AdvanceTimeTo(utcDateTime)` or `AdvanceTimeBy(duration)`. Raise events with
+`RaiseEvent(name, payload)`; events are buffered and delivered once in FIFO order, matching names
+case-insensitively. Timer and event waits support cancellation, and event timeout overloads use simulated time.
+
+Configure `SubOrchestratorHandler` to dispatch child calls and inspect `SubOrchestrationCalls` afterward.
+The handler can invoke a real child orchestrator with its own test context. `SendEvent` records
+`SentEvents` and delivers events locally when targeting the current instance ID.
+
+`WithReplayState(true)` controls `IsReplaying` for replay branches and log suppression. Logging is
+silent by default; supply a caller-owned logger factory with `WithLoggerFactory(factory)` before
+creating replay-safe loggers to inspect output.
+
+## Default stubs and fluent overrides
+
+`new TestOrchestrationContext()` returns typed default values for activity and child calls. Override
+dispatch with `WithActivityHandler(handler)` and `WithSubOrchestratorHandler(handler)`.
+Use `WithActivityHandler("ActivityName", (name, input) => ...)` to route a specific activity.
+Names match case-sensitively; named registrations take precedence over the fallback, and registering
+the same name again replaces its handler for future calls. All calls are still recorded and type-checked.
+
+Metadata defaults to `TestOrchestrator`, no parent, an empty version, and empty read-only properties.
+Override it with `WithName`, `WithParent`, `WithVersion`, and `WithProperties`.
+
+Entity calls return typed defaults, signals complete, and local lock scopes update critical-section
+markers. Use `WithEntities(feature)` to provide custom behavior. `NewGuid()` generates a repeatable
+per-instance sequence, overridable with `WithGuidGenerator`. Version comparison is ordinal by default;
+`WithVersionComparer` can supply another ordering.
+
+`SetCustomStatus` retains `CustomStatus`. `ContinueAsNew` records copied options in
+`ContinueAsNewRequests` without restarting or changing current input, time, version, or events.
+Use `WithCustomStatus`, `WithCustomStatusHandler`, and `WithContinueAsNewHandler` to configure or observe these stubs.
+
 ## Limitations
 
-Only `CallActivityAsync` is emulated; Durable runtime operations such as timers, external events,
-sub-orchestrators, and replay state throw `NotSupportedException`.
+These controls do not implement durable history, automatic replay, persistence, retries, child-instance
+lifecycle management, or remote event delivery. Entity defaults do not implement state or distributed
+locking; GUID sequences do not reproduce the runtime algorithm, and continuation requests do not restart execution.
 
 ## Documentation
 
@@ -84,4 +123,5 @@ sub-orchestrators, and replay state throw `NotSupportedException`.
 - [Detailed Azure Functions guide](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/azure-functions.md)
 - [Trigger recipes](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/azure-functions-triggers.md)
 - [Durable activity-dispatch boundary](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/azure-functions-durable.md)
+- [Complex orchestration recipes](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/azure-functions-durable-recipes.md)
 - [Executable Functions examples](https://github.com/olgerd007/XBullet.EasyTesting/tree/main/tests/TestFunctions.IntegrationTests)

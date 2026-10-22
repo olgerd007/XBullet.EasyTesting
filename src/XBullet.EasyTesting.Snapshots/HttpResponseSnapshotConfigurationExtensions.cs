@@ -105,23 +105,20 @@ public static class HttpResponseSnapshotConfigurationExtensions
             sourceFile: sourceFile,
             testName: testName);
 
-    /// <summary>Configures direct exchange capture and optional snapshot settings inline.</summary>
+    /// <summary>Configures an HTTP exchange and optional snapshot settings inline.</summary>
     /// <remarks>
     /// For responses without an HttpExchangeRecorder, capture happens during this assertion.
-    /// This overload creates a separate exchange options instance and throws for recorder-backed
-    /// responses, even when the options only add scrubbing or match the capture options by value.
-    /// Configure recorded exchanges when creating the recorder or snapshot scenario, then assert
-    /// without configureExchange. Use configureSnapshot for assertion-time transformations such
-    /// as SnapshotSettings.ScrubbingUrlPathGuids().
+    /// For recorder-backed responses, the callback starts from independent effective recorder
+    /// options and transforms a copy of captured data without reading content again or changing
+    /// the recorder. Capture-time exclusions and redactions cannot be reversed.
     /// </remarks>
     /// <param name="response">The non-null caller-owned response representing the exchange.</param>
-    /// <param name="configureExchange">The non-null callback applied once to independent effective exchange options.</param>
+    /// <param name="configureExchange">The non-null callback applied once to independent recorder options, or global or package defaults for direct capture.</param>
     /// <param name="configureSnapshot">An optional callback applied once to independent effective snapshot settings.</param>
     /// <param name="cancellationToken">Token that cancels exchange reading and snapshot file operations.</param>
     /// <param name="sourceFile">Calling source-file path supplied by the compiler for snapshot placement.</param>
     /// <param name="testName">Calling member name supplied by the compiler for snapshot naming.</param>
     /// <returns>A task that completes when the configured exchange snapshot matches or is updated.</returns>
-    /// <exception cref="InvalidOperationException">The response was already captured by an HttpExchangeRecorder.</exception>
     public static Task ShouldMatchHttpExchangeSnapshot(
         this HttpResponseMessage response,
         Action<HttpExchangeSnapshotOptions> configureExchange,
@@ -130,7 +127,7 @@ public static class HttpResponseSnapshotConfigurationExtensions
         [CallerFilePath] string sourceFile = "",
         [CallerMemberName] string testName = "") =>
         response.ShouldMatchHttpExchangeSnapshot(
-            HttpExchangeSnapshotOptionsDefaults.ExtendGlobal(configureExchange),
+            HttpExchangeRecorder.ConfigureAssertionOptions(response, configureExchange),
             CreateSnapshotSettings(configureSnapshot),
             cancellationToken,
             sourceFile,

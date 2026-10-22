@@ -16,6 +16,10 @@ slow or nondeterministic edge. Choose a focused guide for the boundary being con
 
 ## Combine boundaries in one scenario
 
+Follow the [complete order workflow](production-workflows.md) for executable examples combining
+authorization, an external order service, EF Core persistence, and recorded Kafka events, including
+duplicate requests and rejected callers.
+
 A realistic workflow may read an outbound HTTP response, write database state, publish an event,
 and emit telemetry. Build all replacements into one factory and register stateful test doubles as
 scenario resources. Each test should then:

@@ -18,6 +18,9 @@ An ordinary local solution build runs the pull-request-equivalent checks once, a
 projects finish. During a source-only iteration, pass `-p:VerifyDocumentationOnBuild=false` to opt
 out temporarily. Run an ordinary build again before opening a pull request.
 
+Markdown and link checks exclude Git-ignored working files under `.codex/plans/`. Keep user-facing
+guides under `docs/` so they participate in the documentation gates and generated site.
+
 To run the documentation gate directly after a Release build:
 
 ```powershell

@@ -15,6 +15,21 @@ The initial examples live in
 Reuse the existing sample applications and fixtures when they remain easy to explain. Add a smaller
 application or fixture only when unrelated setup would obscure the feature being taught.
 
+The [complete order workflow](../guides/production-workflows.md) uses
+[order-workflow examples](../../tests/TestStartupApi.IntegrationTests/DocumentationExamples.cs)
+and the named factory region in
+[`StartupApiFactory.cs`](../../tests/TestStartupApi.IntegrationTests/StartupApiFactory.cs).
+These examples demonstrate composed application behavior and its failure paths without external
+infrastructure.
+
+The [end-to-end flow guide](../guides/end-to-end-flows.md) composes existing canonical regions from
+the controller, HTTP, messaging, authentication, snapshot, Functions, and Aspire test classes. Keep
+these snippets tied to their owning tests instead of creating duplicate implementations for the guide.
+
+The [Durable orchestration recipes](../guides/azure-functions-durable-recipes.md) use
+[`DurableWorkflowExamples.cs`](../../tests/TestFunctions.IntegrationTests/DurableWorkflowExamples.cs)
+for partial batch failures, approval races, isolated child contexts, and explicitly driven continuations.
+
 ## Add a source region
 
 Wrap a complete, focused example in a uniquely named region:
@@ -78,6 +93,14 @@ dotnet test tests/TestApi.IntegrationTests/TestApi.IntegrationTests.csproj --fra
 
 The regular solution test job already runs the complete multi-target integration-test project. The
 focused commands are useful while editing examples.
+
+Run all five order-workflow cases on each supported framework:
+
+```shell
+dotnet test tests/TestStartupApi.IntegrationTests/TestStartupApi.IntegrationTests.csproj --framework net8.0 --filter-class TestStartupApi.IntegrationTests.OrderWorkflowDocumentationExamples
+dotnet test tests/TestStartupApi.IntegrationTests/TestStartupApi.IntegrationTests.csproj --framework net9.0 --filter-class TestStartupApi.IntegrationTests.OrderWorkflowDocumentationExamples
+dotnet test tests/TestStartupApi.IntegrationTests/TestStartupApi.IntegrationTests.csproj --framework net10.0 --filter-class TestStartupApi.IntegrationTests.OrderWorkflowDocumentationExamples
+```
 
 ## Review checklist
 

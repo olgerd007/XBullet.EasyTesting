@@ -1,5 +1,9 @@
 # Startup API template
 
+Follow the [complete order workflow guide](../../docs/guides/production-workflows.md) to run the
+matching tests on .NET 8, .NET 9, and .NET 10 without external infrastructure. It explains the
+factory, success and failure cases, scenario cleanup, and additional production-provider coverage.
+
 This sample is a conventional `Startup`-based ASP.NET Core API. It shows the production wiring for:
 
 - Azure AD JWT bearer authentication and an `orders.write` scope policy;

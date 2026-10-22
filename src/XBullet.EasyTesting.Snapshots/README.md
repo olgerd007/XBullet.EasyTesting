@@ -18,6 +18,18 @@ remain temporarily through the compatibility facade.
 
 ## Example
 
+Import `XBullet.EasyTesting.Snapshots` to assert values and anonymous arrays directly:
+
+```csharp
+using XBullet.EasyTesting.Snapshots;
+
+await new[] { new { PortfolioCode = primaryPortfolioCode, Request = request } }
+    .ShouldMatchSnapshot("external-status-request", cancellationToken: cancellationToken);
+```
+
+The string selects a snapshot variant within the calling test. Omit it for a single snapshot, or
+pass settings or a `configureSnapshot` callback to customize serialization and scrubbing.
+
 ```csharp
 var settings = new SnapshotSettings()
     .Named("administrator-order")
@@ -47,9 +59,10 @@ await response.ShouldMatchHttpExchangeSnapshot(
 Snapshot assertions also continue to accept prebuilt `SnapshotSettings` instances.
 
 Attach `HttpExchangeRecorder` to the real client pipeline when the complete request body must be
-captured before TestServer consumes it. For recorded responses, configure exchange options before
-sending the request; passing `configureExchange` during assertion throws `InvalidOperationException`.
-Use `configureSnapshot` for assertion-time scrubbing. See
+captured before TestServer consumes it. Recorded responses accept `configureExchange` and separate
+`exchangeOptions` during assertion to omit or further scrub captured data and select output format.
+Callbacks start from independent recorder options; the original recording remains unchanged.
+Data excluded or redacted during capture cannot be restored. See
 [where to configure exchange options](https://github.com/olgerd007/XBullet.EasyTesting/blob/main/docs/guides/snapshots/recipes.md#choose-where-to-configure-exchange-options).
 
 ## Safety and maintenance

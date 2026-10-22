@@ -21,6 +21,7 @@ using XBullet.EasyTesting.Snapshots;
 [assembly: TypeForwardedTo(typeof(HttpExchangeResponseSnapshot))]
 [assembly: TypeForwardedTo(typeof(HttpExchangeResponseSnapshotOptions))]
 [assembly: TypeForwardedTo(typeof(SnapshotAssert))]
+[assembly: TypeForwardedTo(typeof(SnapshotAssertionExtensions))]
 [assembly: TypeForwardedTo(typeof(SnapshotCatalog))]
 [assembly: TypeForwardedTo(typeof(SnapshotDiffTool))]
 [assembly: TypeForwardedTo(typeof(SnapshotMaintenance))]

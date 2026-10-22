@@ -30,9 +30,13 @@ using var result = await scope.SnapshotScenario(options =>
     .ExecuteAsync(cancellationToken);
 
 await result.Response.ShouldMatchHttpExchangeSnapshot(
+    configureExchange: options => options.Response.IgnoringHeaders("Location"),
     configureSnapshot: settings => settings.ScrubMember("id"),
     cancellationToken: cancellationToken);
 ```
+
+Assertion-time exchange options transform a copy of recorded data without reading content again
+or changing the recorder. Data excluded or redacted during capture cannot be restored.
 
 Outbound request and exchange assertions likewise accept `configureRequest`, `configureExchange`,
 and `configureSnapshot` callbacks in addition to prebuilt option and settings instances.
