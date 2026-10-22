@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Testcontainers.Azurite" Version="4.15.0" />
+    <PackageReference Include="Testcontainers.Azurite" Version="4.16.0" />
     <PackageReference Include="Testcontainers.Kafka" Version="4.15.0" />
     <PackageReference Include="Testcontainers.MsSql" Version="4.15.0" />
     <PackageReference Include="Testcontainers.PostgreSql" Version="4.15.0" />
